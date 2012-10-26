@@ -40,14 +40,6 @@ public:
     c_mstwpdf* pdf_object;
     DSSpiNLO* ff_object;
 
-    Context(const char* pdf_filename, const char* ff_filename) :
-     x0(0.000304), A(1), c(1), lambda(0.288), mu2(1), Nc(3), Nf(3), CF(1.5), Sperp(1), pT2(0), sqs(0), Y(0), alphasbar_fixed(0.1 / (2 * M_PI)) {
-         Q02x0lambda = c * pow(A, 1.0d/3.0d) * pow(x0, lambda);
-         tau = sqrt(pT2)/sqs*exp(Y);
-         pdf_object = new c_mstwpdf(pdf_filename);
-         ff_object = new DSSpiNLO(ff_filename);
-    }
-    
     Context(double x0, double A, double c, double lambda, double mu2, double Nc, double Nf, double CF, double Sperp, double pT2, double sqs, double Y, double alphasbar_fixed, const char* pdf_filename, const char* ff_filename) :
      x0(x0), A(A), c(c), lambda(lambda), mu2(mu2), Nc(Nc), Nf(Nf), CF(CF), Sperp(Sperp), pT2(pT2), sqs(sqs), Y(Y), alphasbar_fixed(alphasbar_fixed) {
          Q02x0lambda = c * pow(A, 1.0d/3.0d) * pow(x0, lambda);
@@ -412,19 +404,21 @@ double calculateNLOterm(Context* ctx) {
 
 void fillYieldArray(double sqs, double Y, int pTlen, double* pT, double* yield) {
     int i;
-    Context gctx("mstw2008nlo.00.dat", "PINLO.DAT");
-    gctx.Sperp = 1.0d;
-    gctx.mu2 = 10;
-    gctx.Nc = 3;
-    gctx.Nf = 3;
-    gctx.CF = 1.5;
-    gctx.sqs = sqs;
-    gctx.Y = Y;
-    gctx.A = 197;
-    gctx.c = 0.56;
-    gctx.x0 = 0.000304;
-    gctx.lambda = 0.288;
-    gctx.alphasbar_fixed = 0.2 / (2 * M_PI);
+    Context gctx(
+      0.000304, // x0
+      197,      // A
+      0.56,     // c
+      0.288,    // lambda
+      10,       // mu2
+      3,        // Nc
+      3,        // Nf
+      1.5,      // CF
+      1.0,      // Sperp
+      1.0,      // pT2 (dummy value)
+      sqs,
+      Y,
+      0.2 / (2*M_PI), // alphasbar
+      "mstw2008nlo.00.dat", "PINLO.DAT");
     for (i = 0; i < pTlen; i++) {
         gctx.pT2 = pT[i]*pT[i];
         cerr << "Beginning calculation at pT = " << pT[i] << endl;
