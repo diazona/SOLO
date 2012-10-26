@@ -319,8 +319,8 @@ void Integrator::evaluate_2D_integrand(double* real, double* imag) {
         l_real -= hflist[i]->real_singular_contribution(ictx) * xi_factor;
         l_imag -= hflist[i]->imag_singular_contribution(ictx) * xi_factor;
     }
-    *real = l_real;
-    *imag = l_imag;
+    *real = jacobian * l_real;
+    *imag = jacobian * l_imag;
 }
 
 void cubature_wrapper_1D(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nvalues, double* values) {
