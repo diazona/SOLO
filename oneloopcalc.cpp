@@ -129,7 +129,7 @@ void IntegrationContext::update(double z, double y, double xx, double xy, double
     this->yy = yy;
     this->bx = bx;
     this->by = by;
-    this->r2 = (xx - yx) * (xx- yx) - (xy - yy) * (xy - yy);
+    this->r2 = (xx - yx) * (xx- yx) + (xy - yy) * (xy - yy);
     this->xp = ctx->tau / (z * xi);
     this->kT2 = ctx->pT2 / this->z2;
     this->kT = sqrt(this->kT2);
