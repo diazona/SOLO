@@ -14,6 +14,9 @@ const double EULER_GAMMA = 0.57721566490153286060651209008240243104215933593992;
 
 void eprint(char* s) { cerr << s << endl; }
 
+class IntegrationContext;
+class HardFactor;
+
 class Context {
 public:
     double x0;
@@ -23,6 +26,7 @@ public:
     double mu2;
     double Nc;
     double Nf;
+    double CF;
     double Sperp;
     double pT2;
     double sqs;
@@ -31,25 +35,27 @@ public:
     double tau;
     double alphasbar_fixed;
 
+    // NOTE: these contain state that should be associated with IntegrationContext.
+    // So don't use one Context with more than one IntegrationContext at once.
     c_mstwpdf* pdf_object;
     DSSpiNLO* ff_object;
-    
+
     Context(const char* pdf_filename, const char* ff_filename) :
-     x0(0.000304), A(1), c(1), lambda(0.288), mu2(1), Nc(3), Nf(3), Sperp(1), pT2(0), sqs(0), Y(0), alphasbar_fixed(0.1 / (2 * M_PI)) {
+     x0(0.000304), A(1), c(1), lambda(0.288), mu2(1), Nc(3), Nf(3), CF(1.5), Sperp(1), pT2(0), sqs(0), Y(0), alphasbar_fixed(0.1 / (2 * M_PI)) {
          Q02x0lambda = c * pow(A, 1.0d/3.0d) * pow(x0, lambda);
          tau = sqrt(pT2)/sqs*exp(Y);
-         ff_object = new DSSpiNLO(ff_filename);
          pdf_object = new c_mstwpdf(pdf_filename);
+         ff_object = new DSSpiNLO(ff_filename);
     }
     
-    Context(double x0, double A, double c, double lambda, double mu2, double Nc, double Nf, double Sperp, double pT2, double sqs, double Y, double alphasbar_fixed, const char* pdf_filename, const char* ff_filename) :
-     x0(x0), A(A), c(c), lambda(lambda), mu2(mu2), Nc(Nc), Nf(Nf), Sperp(Sperp), pT2(pT2), sqs(sqs), Y(Y), alphasbar_fixed(alphasbar_fixed) {
+    Context(double x0, double A, double c, double lambda, double mu2, double Nc, double Nf, double CF, double Sperp, double pT2, double sqs, double Y, double alphasbar_fixed, const char* pdf_filename, const char* ff_filename) :
+     x0(x0), A(A), c(c), lambda(lambda), mu2(mu2), Nc(Nc), Nf(Nf), CF(CF), Sperp(Sperp), pT2(pT2), sqs(sqs), Y(Y), alphasbar_fixed(alphasbar_fixed) {
          Q02x0lambda = c * pow(A, 1.0d/3.0d) * pow(x0, lambda);
          tau = sqrt(pT2)/sqs*exp(Y);
-         ff_object = new DSSpiNLO(ff_filename);
          pdf_object = new c_mstwpdf(pdf_filename);
+         ff_object = new DSSpiNLO(ff_filename);
     }
-    
+
     ~Context() {
         if (pdf_object) {
             delete pdf_object;
@@ -72,24 +78,15 @@ public:
 
 class GBWGluonDistribution: public GluonDistribution {
 public:
-    double S2(IntegrationContext* ictx) {
-        return 1 / (M_PI * ictx->Qs2) * exp(-0.25 * ((ictx->xx - ictx->yx)*(ictx->xx - ictx->yx) + (ictx->xy - ictx->yy)*(ictx->xy - ictx->yy)) * ictx->Qs2);
-    }
-    double S4(IntegrationContext* ictx) {
-        return 1 / (M_PI * ictx->Qs2) * exp(-0.25 * (
-            (ictx->xx - ictx->bx)*(ictx->xx - ictx->bx) + (ictx->xy - ictx->by)*(ictx->xy - ictx->by)
-          + (ictx->yx - ictx->bx)*(ictx->yx - ictx->bx) + (ictx->yy - ictx->by)*(ictx->yy - ictx->by)
-        ) * ictx->Qs2);
-    }
-}
+    double S2(IntegrationContext* ictx);
+    double S4(IntegrationContext* ictx);
+};
 
 // Not even anywhere close to thread-safe!
 class IntegrationContext {
 public:
     Context* ctx;
     GluonDistribution* gdist;
-    HardFactor** hflist;
-    size_t hflen;
     // updated
     double z;
     double xi;
@@ -100,30 +97,36 @@ public:
     double z2, xi2;
     double kT2, kT;
     double xp, xg;
+    double r2;
     double Qs2;
     double alphasbar;
     double quarkfactor;
     double S2, S4;
     
-    IntegrationContext(Context* ctx, GluonDistribution* gdist, HardFactor** hflist, size_t hflen) :
+    IntegrationContext(Context* ctx, GluonDistribution* gdist) :
       ctx(ctx), gdist(gdist),
-      z(0), x(0), xi(0),
+      z(0), xi(0),
+      z2(0), xi2(0),
       xx(0), xy(0),
       yx(0), yy(0),
       bx(0), by(0),
+      kT2(0), kT(0),
+      xp(0), xg(0),
+      Qs2(0), r2(0),
+      alphasbar(0),
       quarkfactor(0),
-      S2(0), S4(0),
-      hflist(hflist),
-      hflen(hflen) {
+      S2(0), S4(0) {
     };
     void update(double z, double y, double xx, double xy, double yx, double yy, double bx, double by);
 };
 
-IntegrationContext::update(double z, double y, double xx, double xy, double yx, double yy, double bx, double by) {
+void IntegrationContext::update(double z, double y, double xx, double xy, double yx, double yy, double bx, double by) {
     double real_singular = 0.0, imag_singular = 0.0,
            real_normal   = 0.0, imag_normal   = 0.0,
            real_delta    = 0.0, imag_delta    = 0.0;
     double quarkfactor = 0.0d;
+    c_mstwpdf* pdf_object = ctx->pdf_object;
+    DSSpiNLO* ff_object = ctx->ff_object;
     this->z = z;
     this->z2 = z*z;
     this->xi = (y * (z - ctx->tau) - ctx->tau * (z - 1)) / (z * (1 - ctx->tau));
@@ -135,11 +138,11 @@ IntegrationContext::update(double z, double y, double xx, double xy, double yx, 
     this->bx = bx;
     this->by = by;
     this->r2 = (xx - yx) * (xx- yx) - (xy - yy) * (xy - yy);
-    this->xp = ctx->tau / (z * xi)
+    this->xp = ctx->tau / (z * xi);
     this->kT2 = ctx->pT2 / this->z2;
     this->kT = sqrt(this->kT2);
-    this->xg = ctx->kT / ctx->sqs * exp(-ctx->Y);
-    this->Qs2 = Q02x0lambda / pow(this->xg, ctx->lambda); // Q_0^2 (x_0 / x)^lambda
+    this->xg = kT / ctx->sqs * exp(-ctx->Y);
+    this->Qs2 = ctx->Q02x0lambda / pow(this->xg, ctx->lambda); // Q_0^2 (x_0 / x)^lambda
     this->alphasbar = ctx->alphasbar(this->kT2);
 
     // Calculate the new gluon distribution values
@@ -148,8 +151,8 @@ IntegrationContext::update(double z, double y, double xx, double xy, double yx, 
     this->S4 = gdist->S4(this);
 
     // Calculate the new quark factor
-    pdf_object->update(xp, sqrt(mu2));
-    ff_object->update(z, mu2);
+    pdf_object->update(xp, sqrt(ctx->mu2));
+    ff_object->update(z, ctx->mu2);
     
     // Proton contributions:
     // up quark
@@ -182,6 +185,16 @@ IntegrationContext::update(double z, double y, double xx, double xy, double yx, 
     this->quarkfactor = quarkfactor;
 }
 
+double GBWGluonDistribution::S2(IntegrationContext* ictx) {
+    return 1 / (M_PI * ictx->Qs2) * exp(-0.25 * ictx->r2 * ictx->Qs2);
+}
+double GBWGluonDistribution::S4(IntegrationContext* ictx) {
+    return 1 / (M_PI * ictx->Qs2) * exp(-0.25 * (
+        (ictx->xx - ictx->bx)*(ictx->xx - ictx->bx) + (ictx->xy - ictx->by)*(ictx->xy - ictx->by)
+        + (ictx->yx - ictx->bx)*(ictx->yx - ictx->bx) + (ictx->yy - ictx->by)*(ictx->yy - ictx->by)
+    ) * ictx->Qs2);
+}
+
 class HardFactor {
 public:
     virtual double real_singular_contribution(IntegrationContext* ictx) { return 0; }
@@ -190,7 +203,7 @@ public:
     virtual double imag_normal_contribution(IntegrationContext* ictx) { return 0; }
     virtual double real_delta_contribution(IntegrationContext* ictx) { return 0; }
     virtual double imag_delta_contribution(IntegrationContext* ictx) { return 0; }
-}
+};
 
 class H02qq : public HardFactor {
 public:
@@ -204,7 +217,7 @@ public:
          // imaginary part of the hard factor
          sin(ictx->kT * (ictx->xx - ictx->yx)); 
     }
-}
+};
 
 class H12qq : public HardFactor {
 public:
@@ -215,7 +228,7 @@ public:
          * (cos(ictx->kT * (ictx->xx - ictx->yx)) + cos(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi) / ictx->xi2);
     }
     double imag_singular_contribution(IntegrationContext* ictx) {
-        return -1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->quarkfactor / ictx->z2 * ictx->S2 * (
+        return -1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->quarkfactor / ictx->z2 * ictx->S2 *
          // imaginary part of the singular contribution
          ictx->ctx->CF * (1 + ictx->xi2) * (2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
          * (sin(ictx->kT * (ictx->xx - ictx->yx)) + sin(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi) / ictx->xi2);
@@ -238,7 +251,7 @@ public:
          * sin(ictx->kT * (ictx->xx - ictx->yx))
         );
     }
-}
+};
 
 class H14qq : public HardFactor {
 public:
@@ -263,7 +276,7 @@ public:
 //          // real part of the delta contribution
 //          1; // TODO: implement
 //     }
-}
+};
 
 class Integrator {
 private:
@@ -271,8 +284,8 @@ private:
     HardFactor** hflist;
     size_t hflen;
 public:
-    Integrator(Context* ctx, size_t hflen, HardFactor** hflist) : hflist(hflist), hflen(hflen) {
-        ictx = new IntegrationContext(ctx);
+    Integrator(Context* ctx, GluonDistribution* gdist, size_t hflen, HardFactor** hflist) : hflist(hflist), hflen(hflen) {
+        ictx = new IntegrationContext(ctx, gdist);
     }
     ~Integrator() {
         delete ictx;
@@ -283,7 +296,7 @@ public:
     void evaluate_1D_integrand(double* real, double* imag);
     void evaluate_2D_integrand(double* real, double* imag);
     void integrate(double* real, double* imag);
-}
+};
 
 void Integrator::evaluate_1D_integrand(double* real, double* imag) {
     double l_real = 0.0, l_imag = 0.0; // l for "local"
@@ -301,7 +314,7 @@ void Integrator::evaluate_1D_integrand(double* real, double* imag) {
 
 void Integrator::evaluate_2D_integrand(double* real, double* imag) {
     double l_real = 0.0, l_imag = 0.0; // l for "local"
-    double jacobian =  (1 - tau / z) / (1 - tau); // Jacobian from y to xi
+    double jacobian =  (1 - ictx->ctx->tau / ictx->z) / (1 - ictx->ctx->tau); // Jacobian from y to xi
     double xi_factor = 1.0 / (1 - ictx->xi);
     for (size_t i = 0; i < hflen; i++) {
         l_real += hflist[i]->real_singular_contribution(ictx) * xi_factor;
@@ -319,7 +332,7 @@ void Integrator::evaluate_2D_integrand(double* real, double* imag) {
 }
 
 void cubature_wrapper_1D(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nvalues, double* values) {
-    Integrator integrator = (Integrator*)closure;
+    Integrator* integrator = (Integrator*)closure;
     assert(ncoords == 7);
     assert(nvalues == 2);
     //                    z            y      xx              xy            yx               yy              bx              by
@@ -328,7 +341,7 @@ void cubature_wrapper_1D(unsigned int ncoords, const double* coordinates, void* 
 }
 
 void cubature_wrapper_2D(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nvalues, double* values) {
-    Integrator integrator = (Integrator*)closure;
+    Integrator* integrator = (Integrator*)closure;
     assert(ncoords == 8);
     assert(nvalues == 2);
     //                    z               y               xx              xy              yx               yy              bx              by
@@ -341,10 +354,10 @@ void Integrator::integrate(double* real, double* imag) {
     double l_real = 0.0, l_imag = 0.0;
     double tmp_result[] = {0.0, 0.0};
     double tmp_error[] = {0.0, 0.0};
-    double min1D[] = {tau, -100, -100, -100, -100, -100, -100};
+    double min1D[] = {ictx->ctx->tau, -100, -100, -100, -100, -100, -100};
     double max1D[] = {1.0, 100, 100, 100, 100, 100, 100};
-    double min2D[] = {tau, tau, -100, -100, -100, -100, -100, -100};
-    double max1D[] = {1.0, 1.0, 100, 100, 100, 100, 100, 100};
+    double min2D[] = {ictx->ctx->tau, ictx->ctx->tau, -100, -100, -100, -100, -100, -100};
+    double max2D[] = {1.0, 1.0, 100, 100, 100, 100, 100, 100};
     int status = 0;
     // the 2D integration
     status = adapt_integrate(2, cubature_wrapper_2D, this, 8, min2D, max2D, 100000, 0, 1e-2, tmp_result, tmp_error);
@@ -355,7 +368,7 @@ void Integrator::integrate(double* real, double* imag) {
     l_real += tmp_result[0];
     l_imag += tmp_result[1];
     // the 1D integration
-    status = adapt_integrate(2, cubature_wrapper_1D, this, 1, xmin1D, xmaxxD, 100000, 0, 1e-2, tmp_result, tmp_error);
+    status = adapt_integrate(2, cubature_wrapper_1D, this, 7, min1D, max1D, 100000, 0, 1e-2, tmp_result, tmp_error);
     if (status != SUCCESS) {
         cerr << "Error in 1D integration (probably memory)" << endl;
         exit(1);
@@ -368,13 +381,14 @@ void Integrator::integrate(double* real, double* imag) {
 
 double calculateLOterm(Context* ctx) {
     double real, imag;
+    GBWGluonDistribution* gdist = new GBWGluonDistribution();
     HardFactor* hflist[1];
     size_t hflen = sizeof(hflist)/sizeof(hflist[0]);
-    Integrator integrator = new Integrator(ctx, hflen, hflist);
-    hflist[0] = new H02qq(ctx);
+    Integrator* integrator = new Integrator(ctx, gdist, hflen, hflist);
+    hflist[0] = new H02qq();
     integrator->integrate(&real, &imag);
     delete integrator;
-    for (size_t i = 0; i < hflen, i++) {
+    for (size_t i = 0; i < hflen; i++) {
         delete hflist[i];
     }
     return real;
@@ -383,13 +397,14 @@ double calculateLOterm(Context* ctx) {
 double calculateNLOterm(Context* ctx) {
     // this only calculates part of the NLO term
     double real, imag;
+    GBWGluonDistribution* gdist = new GBWGluonDistribution();
     HardFactor* hflist[1];
     size_t hflen = sizeof(hflist)/sizeof(hflist[0]);
-    Integrator integrator = new Integrator(ctx, hflen, hflist);
-    hflist[0] = new H12qq(ctx);
+    Integrator* integrator = new Integrator(ctx, gdist, hflen, hflist);
+    hflist[0] = new H12qq();
     integrator->integrate(&real, &imag);
     delete integrator;
-    for (size_t i = 0; i < hflen, i++) {
+    for (size_t i = 0; i < hflen; i++) {
         delete hflist[i];
     }
     return real;
@@ -402,6 +417,7 @@ void fillYieldArray(double sqs, double Y, int pTlen, double* pT, double* yield) 
     gctx.mu2 = 10;
     gctx.Nc = 3;
     gctx.Nf = 3;
+    gctx.CF = 1.5;
     gctx.sqs = sqs;
     gctx.Y = Y;
     gctx.A = 197;
@@ -411,8 +427,10 @@ void fillYieldArray(double sqs, double Y, int pTlen, double* pT, double* yield) 
     gctx.alphasbar_fixed = 0.2 / (2 * M_PI);
     for (i = 0; i < pTlen; i++) {
         gctx.pT2 = pT[i]*pT[i];
+        cerr << "Beginning calculation at pT = " << pT[i] << endl;
         yield[2*i] = calculateLOterm(&gctx);
         yield[2*i+1] = calculateNLOterm(&gctx);
+        cerr << "...done" << endl;
     }
 }
 
