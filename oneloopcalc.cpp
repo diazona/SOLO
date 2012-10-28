@@ -388,58 +388,54 @@ double gsl_monte_wrapper_2D(double* coordinates, size_t ncoords, void* closure) 
     return real;
 }
 
-void Integrator::integrate(double* real, double* imag) {
-    double l_real = 0.0, l_imag = 0.0;
-    double tmp_result[] = {0.0, 0.0};
-    double tmp_error[] = {0.0, 0.0};
-    double min1D[] = {ictx->ctx->tau, -100, -100, -100, -100, -100, -100};
-    double max1D[] = {1.0, 100, 100, 100, 100, 100, 100};
-    double min2D[] = {ictx->ctx->tau, ictx->ctx->tau, -100, -100, -100, -100, -100, -100};
-    double max2D[] = {1.0, 1.0, 100, 100, 100, 100, 100, 100};
-    int status = 0;
-#if 0
-    // CUBATURE
-    // the 2D integration
-    status = adapt_integrate(2, cubature_wrapper_2D, this, 8, min2D, max2D, 100000, 0, 1e-2, tmp_result, tmp_error);
-    if (status != SUCCESS) {
-        cerr << "Error in 2D integration (probably memory)" << endl;
-        exit(1);
-    }
-    l_real += tmp_result[0];
-    l_imag += tmp_result[1];
-    // the 1D integration
-    status = adapt_integrate(2, cubature_wrapper_1D, this, 7, min1D, max1D, 100000, 0, 1e-2, tmp_result, tmp_error);
-    if (status != SUCCESS) {
-        cerr << "Error in 1D integration (probably memory)" << endl;
-        exit(1);
-    }
-    l_real += tmp_result[0];
-    l_imag += tmp_result[1];
-    *real = l_real;
-    *imag = l_imag;
-#endif
-    // MONTE CARLO
-    double result;
-    double abserr;
-    // the 2D integration
+void vegas_integrate(double (*func)(double*, size_t, void*), size_t dim, void* closure, double* min, double* max, double* p_result, double* p_abserr,
+               void (*callback)(double*, double*, gsl_monte_vegas_state*)) {
     gsl_monte_function f;
-    f.f = &gsl_monte_wrapper_2D;
-    f.dim = 8;
-    f.params = this;
-    
+    f.f = func;
+    f.dim = dim;
+    f.params = closure;
+
     gsl_rng_env_setup();
     gsl_rng* rng = gsl_rng_alloc(gsl_rng_default);
-    gsl_monte_vegas_state* s = gsl_monte_vegas_alloc(8);
-    gsl_monte_vegas_integrate(&f, min2D, max2D, 8, 10000, rng, s, &result, &abserr);
-    cerr << "VEGAS output: " << result << " err: " << abserr << " chisq:" << gsl_monte_vegas_chisq(s) << endl;
+    gsl_monte_vegas_state* s = gsl_monte_vegas_alloc(dim);
+    gsl_monte_vegas_integrate(&f, min, max, dim, 10000, rng, s, p_result, p_abserr);
+    if (callback) {
+        (*callback)(p_result, p_abserr, s);
+    }
     do {
-        gsl_monte_vegas_integrate(&f, min2D, max2D, 8, 100000, rng, s, &result, &abserr);
-        cerr << "VEGAS output: " << result << " err: " << abserr << " chisq:" << gsl_monte_vegas_chisq(s) << endl;
+        gsl_monte_vegas_integrate(&f, min, max, dim, 100000, rng, s, p_result, p_abserr);
+        if (callback) {
+            (*callback)(p_result, p_abserr, s);
+        }
     } while (fabs(gsl_monte_vegas_chisq(s) - 1.0) > 0.2);
     gsl_monte_vegas_free(s);
     s = NULL;
     gsl_rng_free(rng);
     rng = NULL;
+}
+
+void eprint_callback(double* p_result, double* p_abserr, gsl_monte_vegas_state* s) {
+    cerr << "VEGAS output: " << *p_result << " err: " << *p_abserr << " chisq:" << gsl_monte_vegas_chisq(s) << endl;
+}
+
+void Integrator::integrate(double* real, double* imag) {
+    double l_real = 0.0, l_imag = 0.0;
+    double tmp_result;
+    double tmp_error;
+    double min1D[] = {ictx->ctx->tau, -100, -100, -100, -100, -100, -100};
+    double max1D[] = {1.0, 100, 100, 100, 100, 100, 100};
+    double min2D[] = {ictx->ctx->tau, ictx->ctx->tau, -100, -100, -100, -100, -100, -100};
+    double max2D[] = {1.0, 1.0, 100, 100, 100, 100, 100, 100};
+    int status = 0;
+    double result = 0.0;
+    double abserr = 0.0;
+    // cubature doesn't work because of the endpoint singularity at xi = 1
+    vegas_integrate(gsl_monte_wrapper_2D, 8, this, min2D, max2D, &tmp_result, &tmp_error, eprint_callback);
+    result += tmp_result;
+    abserr += tmp_error;
+    vegas_integrate(gsl_monte_wrapper_1D, 7, this, min1D, max1D, &tmp_result, &tmp_error, eprint_callback);
+    result += tmp_result;
+    abserr += tmp_error;
     *real = result;
     *imag = 0;
 }
