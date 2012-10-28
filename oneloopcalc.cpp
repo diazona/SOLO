@@ -499,14 +499,20 @@ int main(int argc, char** argv) {
     return 0;
 }
 #else
+#ifdef TRACE
+static size_t count = 0;
 void write_data_point(IntegrationContext* ictx, double real, double imag) {
     if (ictx) {
-        cout << ictx->z << "\t" << ictx->xi << "\t" << ictx->xx << "\t" << ictx->xy << "\t" << ictx->yx << "\t" << ictx->yy << "\t" << ictx->bx << "\t" << ictx->by << "\t" << real << "\t" << imag << endl;
+        if (count++ % 100 == 0) {
+            cout << ictx->z << "\t" << ictx->xi << "\t" << ictx->xx << "\t" << ictx->xy << "\t" << ictx->yx << "\t" << ictx->yy << "\t" << ictx->bx << "\t" << ictx->by << "\t" << real << "\t" << imag << endl;
+            count = 0;
+        }
     }
     else {
         cout << endl;
     }
 }
+#endif
 
 double calculateLOterm(Context* ctx) {
     double real, imag;
@@ -514,7 +520,9 @@ double calculateLOterm(Context* ctx) {
     HardFactor* hflist[1];
     size_t hflen = sizeof(hflist)/sizeof(hflist[0]);
     Integrator* integrator = new Integrator(ctx, gdist, hflen, hflist);
+#ifdef TRACE
     integrator->set_callback(write_data_point);
+#endif
     hflist[0] = new H02qq();
     integrator->integrate(&real, &imag);
     delete integrator;
@@ -531,7 +539,9 @@ double calculateNLOterm(Context* ctx) {
     HardFactor* hflist[1];
     size_t hflen = sizeof(hflist)/sizeof(hflist[0]);
     Integrator* integrator = new Integrator(ctx, gdist, hflen, hflist);
+#ifdef TRACE
     integrator->set_callback(write_data_point);
+#endif
     hflist[0] = new H12qq();
     integrator->integrate(&real, &imag);
     delete integrator;
