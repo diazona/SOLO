@@ -445,11 +445,15 @@ void Integrator::integrate(double* real, double* imag) {
     double abserr = 0.0;
     // cubature doesn't work because of the endpoint singularity at xi = 1
     vegas_integrate(gsl_monte_wrapper_2D, 6, this, min2D, max2D, &tmp_result, &tmp_error, eprint_callback);
-    callback(NULL, 0, 0);
+    if (callback) {
+        callback(NULL, 0, 0);
+    }
     result += tmp_result;
     abserr += tmp_error;
     vegas_integrate(gsl_monte_wrapper_1D, 5, this, min1D, max1D, &tmp_result, &tmp_error, eprint_callback);
-    callback(NULL, 0, 0);
+    if (callback) {
+        callback(NULL, 0, 0);
+    }
     result += tmp_result;
     abserr += tmp_error;
     *real = result;
