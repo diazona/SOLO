@@ -421,7 +421,7 @@ void vegas_integrate(double (*func)(double*, size_t, void*), size_t dim, void* c
         if (callback) {
             (*callback)(p_result, p_abserr, s);
         }
-    } while (fabs(gsl_monte_vegas_chisq(s) - 1.0) > 0.2);
+    } while (*p_abserr > 0 && fabs(gsl_monte_vegas_chisq(s) - 1.0) > 0.2);
     gsl_monte_vegas_free(s);
     s = NULL;
     gsl_rng_free(rng);
