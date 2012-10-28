@@ -1,8 +1,10 @@
 #include <cassert>
 #include <iostream>
 #include <cstdlib>
+#include <cstring>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_monte.h>
+#include <gsl/gsl_monte_miser.h>
 #include <gsl/gsl_monte_vegas.h>
 #include "mstwpdf.h"
 #include "dss_pinlo.h"
@@ -10,6 +12,8 @@
 using namespace std;
 
 const int SUCCESS = 0;
+
+static enum {MC_PLAIN, MC_MISER, MC_VEGAS} integration_strategy = MC_VEGAS;
 
 /** Euler-Mascheroni constant. Value is copy-pasted from Wikipedia. */
 const double EULER_GAMMA = 0.57721566490153286060651209008240243104215933593992;
@@ -406,6 +410,25 @@ double gsl_monte_wrapper_2D(double* coordinates, size_t ncoords, void* closure) 
     return real;
 }
 
+void miser_integrate(double (*func)(double*, size_t, void*), size_t dim, void* closure, double* min, double* max, double* p_result, double* p_abserr,
+               void (*callback)(double*, double*, gsl_monte_miser_state*)) {
+    gsl_monte_function f;
+    f.f = func;
+    f.dim = dim;
+    f.params = closure;
+
+    gsl_rng* rng = gsl_rng_alloc(gsl_rng_default);
+    gsl_monte_miser_state* s = gsl_monte_miser_alloc(dim);
+    gsl_monte_miser_integrate(&f, min, max, dim, 10000, rng, s, p_result, p_abserr);
+    if (callback) {
+        (*callback)(p_result, p_abserr, s);
+    }
+    gsl_monte_miser_free(s);
+    s = NULL;
+    gsl_rng_free(rng);
+    rng = NULL;
+}
+
 void vegas_integrate(double (*func)(double*, size_t, void*), size_t dim, void* closure, double* min, double* max, double* p_result, double* p_abserr,
                void (*callback)(double*, double*, gsl_monte_vegas_state*)) {
     gsl_monte_function f;
@@ -432,8 +455,11 @@ void vegas_integrate(double (*func)(double*, size_t, void*), size_t dim, void* c
     rng = NULL;
 }
 
-void eprint_callback(double* p_result, double* p_abserr, gsl_monte_vegas_state* s) {
+void vegas_eprint_callback(double* p_result, double* p_abserr, gsl_monte_vegas_state* s) {
     cerr << "VEGAS output: " << *p_result << " err: " << *p_abserr << " chisq:" << gsl_monte_vegas_chisq(s) << endl;
+}
+void miser_eprint_callback(double* p_result, double* p_abserr, gsl_monte_miser_state* s) {
+    cerr << "MISER output: " << *p_result << " err: " << *p_abserr << endl;
 }
 
 void Integrator::integrate(double* real, double* imag) {
@@ -448,13 +474,23 @@ void Integrator::integrate(double* real, double* imag) {
     double result = 0.0;
     double abserr = 0.0;
     // cubature doesn't work because of the endpoint singularity at xi = 1
-    vegas_integrate(gsl_monte_wrapper_2D, 6, this, min2D, max2D, &tmp_result, &tmp_error, eprint_callback);
+    if (integration_strategy == MC_VEGAS) {
+        vegas_integrate(gsl_monte_wrapper_2D, 6, this, min2D, max2D, &tmp_result, &tmp_error, vegas_eprint_callback);
+    }
+    else if (integration_strategy == MC_MISER) {
+        miser_integrate(gsl_monte_wrapper_2D, 6, this, min2D, max2D, &tmp_result, &tmp_error, miser_eprint_callback);
+    }
     if (callback) {
         callback(NULL, 0, 0);
     }
     result += tmp_result;
     abserr += tmp_error;
-    vegas_integrate(gsl_monte_wrapper_1D, 5, this, min1D, max1D, &tmp_result, &tmp_error, eprint_callback);
+    if (integration_strategy == MC_VEGAS) {
+        vegas_integrate(gsl_monte_wrapper_1D, 5, this, min1D, max1D, &tmp_result, &tmp_error, vegas_eprint_callback);
+    }
+    else if (integration_strategy == MC_MISER) {
+        miser_integrate(gsl_monte_wrapper_1D, 5, this, min1D, max1D, &tmp_result, &tmp_error, miser_eprint_callback);
+    }
     if (callback) {
         callback(NULL, 0, 0);
     }
@@ -583,7 +619,16 @@ void fillYieldArray(double sqs, double Y, int pTlen, double* pT, double* yield) 
 }
 
 int main(int argc, char** argv) {
-    double pT[] = {0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4};
+    for (size_t i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--miser")==0) {
+            integration_strategy = MC_MISER;
+        }
+        else if (strcmp(argv[i], "--vegas")==0) {
+            integration_strategy = MC_VEGAS;
+        }
+    }
+//     double pT[] = {0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4};
+    double pT[] = {0.4};
     size_t len = sizeof(pT)/sizeof(double);
     double yield[2*len];
     
