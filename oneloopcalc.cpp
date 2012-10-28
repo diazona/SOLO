@@ -370,9 +370,11 @@ double gsl_monte_wrapper_1D(double* coordinates, size_t ncoords, void* closure) 
     double real;
     double imag;
     Integrator* integrator = (Integrator*)closure;
-    assert(ncoords == 7);
-    //                    z            y      xx              xy            yx               yy              bx              by
-    integrator->update(coordinates[0], 1, coordinates[1], coordinates[2], coordinates[3], coordinates[4], coordinates[5], coordinates[6]);
+    assert(ncoords == 5);
+    // coordinates passed are (z, sx, sy, tx, ty)
+    // I need (z = z, y = 1, xx = sx + bx, xy = sy + by, yx = tx + bx, yy = ty + by
+    // we assume no impact parameter dependence, so I can arbitrarily set bx and by to 0
+    integrator->update(coordinates[0], 1, coordinates[1], coordinates[2], coordinates[3], coordinates[4], 0, 0);
     integrator->evaluate_1D_integrand(&real, &imag);
     return real;
 }
@@ -381,9 +383,11 @@ double gsl_monte_wrapper_2D(double* coordinates, size_t ncoords, void* closure) 
     double real;
     double imag;
     Integrator* integrator = (Integrator*)closure;
-    assert(ncoords == 8);
-    //                    z               y               xx              xy              yx               yy              bx              by
-    integrator->update(coordinates[0], coordinates[1], coordinates[2], coordinates[3], coordinates[4], coordinates[5], coordinates[6], coordinates[7]);
+    assert(ncoords == 6);
+    // coordinates passed are (z, y, sx, sy, tx, ty)
+    // I need (z = z, y = y, xx = sx + bx, xy = sy + by, yx = tx + bx, yy = ty + by
+    // we assume no impact parameter dependence, so I can arbitrarily set bx and by to 0
+    integrator->update(coordinates[0], coordinates[1], coordinates[2], coordinates[3], coordinates[4], coordinates[5], 0, 0);
     integrator->evaluate_2D_integrand(&real, &imag);
     return real;
 }
@@ -422,18 +426,18 @@ void Integrator::integrate(double* real, double* imag) {
     double l_real = 0.0, l_imag = 0.0;
     double tmp_result;
     double tmp_error;
-    double min1D[] = {ictx->ctx->tau, -100, -100, -100, -100, -100, -100};
-    double max1D[] = {1.0, 100, 100, 100, 100, 100, 100};
-    double min2D[] = {ictx->ctx->tau, ictx->ctx->tau, -100, -100, -100, -100, -100, -100};
-    double max2D[] = {1.0, 1.0, 100, 100, 100, 100, 100, 100};
+    double min1D[] = {ictx->ctx->tau, -100, -100, -100, -100};
+    double max1D[] = {1.0, 100, 100, 100, 100};
+    double min2D[] = {ictx->ctx->tau, ictx->ctx->tau, -100, -100, -100, -100};
+    double max2D[] = {1.0, 1.0, 100, 100, 100, 100};
     int status = 0;
     double result = 0.0;
     double abserr = 0.0;
     // cubature doesn't work because of the endpoint singularity at xi = 1
-    vegas_integrate(gsl_monte_wrapper_2D, 8, this, min2D, max2D, &tmp_result, &tmp_error, eprint_callback);
+    vegas_integrate(gsl_monte_wrapper_2D, 6, this, min2D, max2D, &tmp_result, &tmp_error, eprint_callback);
     result += tmp_result;
     abserr += tmp_error;
-    vegas_integrate(gsl_monte_wrapper_1D, 7, this, min1D, max1D, &tmp_result, &tmp_error, eprint_callback);
+    vegas_integrate(gsl_monte_wrapper_1D, 5, this, min1D, max1D, &tmp_result, &tmp_error, eprint_callback);
     result += tmp_result;
     abserr += tmp_error;
     *real = result;
