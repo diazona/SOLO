@@ -422,14 +422,18 @@ double calculateLOterm(Context* ctx) {
     return result;
 }
 
-double calculateNLOterm(Context* ctx) {
+double calculateNLO12term(Context* ctx) {
     H12qq* h12qq = new H12qq(ctx);
-    H14qq* h14qq = new H14qq(ctx);
     double result12 = h12qq->hardFactorIntegral();
-    double result14 = h14qq->hardFactorIntegral();
     delete h12qq;
+    return result12;
+}
+
+double calculateNLO14term(Context* ctx) {
+    H14qq* h14qq = new H14qq(ctx);
+    double result14 = h14qq->hardFactorIntegral();
     delete h14qq;
-    return result12 + result14;
+    return result14;
 }
 
 void fillYieldArray(double sqs, double Y, int pTlen, double* pT, double* yield) {
@@ -448,20 +452,22 @@ void fillYieldArray(double sqs, double Y, int pTlen, double* pT, double* yield) 
     gctx.alphasbar_fixed = 0.2 / (2 * M_PI);
     for (i = 0; i < pTlen; i++) {
         gctx.pT2 = pT[i]*pT[i];
-        yield[2*i] = calculateLOterm(&gctx);
-        yield[2*i+1] = calculateNLOterm(&gctx);
+        yield[3*i] = calculateLOterm(&gctx);
+        yield[3*i+1] = calculateNLO12term(&gctx);
+        yield[3*i+2] = calculateNLO14term(&gctx);
     }
 }
 
 int main(int argc, char** argv) {
-    double pT[] = {0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4};
+//     double pT[] = {0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4};
+    double pT[] = {0.435};
     size_t len = sizeof(pT)/sizeof(double);
-    double yield[2*len];
+    double yield[3*len];
     
     fillYieldArray(200, 3.2, len, pT, yield);
     cout << "pT\tLOqq\tNLOqq\tLOqq+NLOqq" << endl;
     for (size_t i = 0; i < len; i++) {
-        cout << pT[i] << "\t" << yield[2*i] << "\t" << yield[2*i+1] << "\t" << yield[2*i] + yield[2*i+1] << endl;
+        cout << pT[i] << "\t" << yield[3*i] << "\t" << yield[3*i+1] << "\t" << yield[3*i+2] << "\t" << yield[3*i] + yield[3*i+1] + yield[3*i+2] << endl;
     }
     return 0;
 }
