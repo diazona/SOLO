@@ -44,8 +44,7 @@ public:
 
     Context(double x0, double A, double c, double lambda, double mu2, double Nc, double Nf, double CF, double Sperp, double pT2, double sqs, double Y, double alphasbar_fixed, const char* pdf_filename, const char* ff_filename) :
      x0(x0), A(A), c(c), lambda(lambda), mu2(mu2), Nc(Nc), Nf(Nf), CF(CF), Sperp(Sperp), pT2(pT2), sqs(sqs), Y(Y), alphasbar_fixed(alphasbar_fixed) {
-         Q02x0lambda = c * pow(A, 1.0d/3.0d) * pow(x0, lambda);
-         tau = sqrt(pT2)/sqs*exp(Y);
+         recalculate();
          pdf_object = new c_mstwpdf(pdf_filename);
          ff_object = new DSSpiNLO(ff_filename);
     }
@@ -59,6 +58,11 @@ public:
         }
     }
 
+    void recalculate() {
+         Q02x0lambda = c * pow(A, 1.0d/3.0d) * pow(x0, lambda);
+         tau = sqrt(pT2)/sqs*exp(Y);
+    }
+    
     virtual double alphasbar(double kT2) {
         return alphasbar_fixed;
     }
@@ -570,6 +574,7 @@ void fillYieldArray(double sqs, double Y, int pTlen, double* pT, double* yield) 
       "mstw2008nlo.00.dat", "PINLO.DAT");
     for (i = 0; i < pTlen; i++) {
         gctx.pT2 = pT[i]*pT[i];
+        gctx.recalculate();
         cerr << "Beginning calculation at pT = " << pT[i] << endl;
         yield[2*i] = calculateLOterm(&gctx);
         yield[2*i+1] = calculateNLOterm(&gctx);
