@@ -190,13 +190,13 @@ void IntegrationContext::update(double z, double y, double xx, double xy, double
 }
 
 double GBWGluonDistribution::S2(IntegrationContext* ictx) {
-    return 1 / (M_PI * ictx->Qs2) * exp(-0.25 * ictx->r2 * ictx->Qs2);
+    return exp(-0.25 * ictx->r2 * ictx->Qs2);
 }
 double GBWGluonDistribution::S4(IntegrationContext* ictx) {
-    return 1 / (M_PI * ictx->Qs2) * exp(-0.25 * (
+    return exp(-0.25 * ictx->Qs2 * (
         (ictx->xx - ictx->bx)*(ictx->xx - ictx->bx) + (ictx->xy - ictx->by)*(ictx->xy - ictx->by)
         + (ictx->yx - ictx->bx)*(ictx->yx - ictx->bx) + (ictx->yy - ictx->by)*(ictx->yy - ictx->by)
-    ) * ictx->Qs2);
+    ));
 }
 
 class HardFactor {
