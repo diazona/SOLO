@@ -287,8 +287,9 @@ private:
     IntegrationContext* ictx;
     HardFactor** hflist;
     size_t hflen;
+    void (*callback)(IntegrationContext*, double, double);
 public:
-    Integrator(Context* ctx, GluonDistribution* gdist, size_t hflen, HardFactor** hflist) : hflist(hflist), hflen(hflen) {
+    Integrator(Context* ctx, GluonDistribution* gdist, size_t hflen, HardFactor** hflist) : hflist(hflist), hflen(hflen), callback(NULL) {
         ictx = new IntegrationContext(ctx, gdist);
     }
     ~Integrator() {
@@ -300,6 +301,9 @@ public:
     void evaluate_1D_integrand(double* real, double* imag);
     void evaluate_2D_integrand(double* real, double* imag);
     void integrate(double* real, double* imag);
+    void set_callback(void (*callback)(IntegrationContext*, double, double)) {
+        this->callback = callback;
+    }
 };
 
 void Integrator::evaluate_1D_integrand(double* real, double* imag) {
@@ -319,6 +323,9 @@ void Integrator::evaluate_1D_integrand(double* real, double* imag) {
     }
     *real = l_real;
     *imag = l_imag;
+    if (callback) {
+        callback(ictx, *real, *imag);
+    }
 }
 
 void Integrator::evaluate_2D_integrand(double* real, double* imag) {
@@ -346,6 +353,9 @@ void Integrator::evaluate_2D_integrand(double* real, double* imag) {
     }
     *real = jacobian * l_real;
     *imag = jacobian * l_imag;
+    if (callback) {
+        callback(ictx, *real, *imag);
+    }
 }
 
 void cubature_wrapper_1D(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nvalues, double* values) {
@@ -435,9 +445,11 @@ void Integrator::integrate(double* real, double* imag) {
     double abserr = 0.0;
     // cubature doesn't work because of the endpoint singularity at xi = 1
     vegas_integrate(gsl_monte_wrapper_2D, 6, this, min2D, max2D, &tmp_result, &tmp_error, eprint_callback);
+    callback(NULL, 0, 0);
     result += tmp_result;
     abserr += tmp_error;
     vegas_integrate(gsl_monte_wrapper_1D, 5, this, min1D, max1D, &tmp_result, &tmp_error, eprint_callback);
+    callback(NULL, 0, 0);
     result += tmp_result;
     abserr += tmp_error;
     *real = result;
@@ -483,6 +495,14 @@ int main(int argc, char** argv) {
     return 0;
 }
 #else
+void write_data_point(IntegrationContext* ictx, double real, double imag) {
+    if (ictx) {
+        cout << ictx->z << "\t" << ictx->xi << "\t" << ictx->xx << "\t" << ictx->xy << "\t" << ictx->yx << "\t" << ictx->yy << "\t" << ictx->bx << "\t" << ictx->by << "\t" << real << "\t" << imag << endl;
+    }
+    else {
+        cout << endl;
+    }
+}
 
 double calculateLOterm(Context* ctx) {
     double real, imag;
@@ -490,6 +510,7 @@ double calculateLOterm(Context* ctx) {
     HardFactor* hflist[1];
     size_t hflen = sizeof(hflist)/sizeof(hflist[0]);
     Integrator* integrator = new Integrator(ctx, gdist, hflen, hflist);
+    integrator->set_callback(write_data_point);
     hflist[0] = new H02qq();
     integrator->integrate(&real, &imag);
     delete integrator;
@@ -506,6 +527,7 @@ double calculateNLOterm(Context* ctx) {
     HardFactor* hflist[1];
     size_t hflen = sizeof(hflist)/sizeof(hflist[0]);
     Integrator* integrator = new Integrator(ctx, gdist, hflen, hflist);
+    integrator->set_callback(write_data_point);
     hflist[0] = new H12qq();
     integrator->integrate(&real, &imag);
     delete integrator;
