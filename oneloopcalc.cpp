@@ -121,6 +121,16 @@ void IntegrationContext::update(double z, double y, double xx, double xy, double
     double quarkfactor = 0.0d;
     c_mstwpdf* pdf_object = ctx->pdf_object;
     DSSpiNLO* ff_object = ctx->ff_object;
+    assert(z <= 1);
+    assert(z >= ctx->tau);
+    assert(y <= 1);
+    assert(y >= ctx->tau);
+    assert(xx == xx);
+    assert(xy == xy);
+    assert(yx == yx);
+    assert(yy == yy);
+    assert(bx == bx);
+    assert(by == by);
     this->z = z;
     this->z2 = z*z;
     this->xi = (y * (z - ctx->tau) - ctx->tau * (z - 1)) / (z * (1 - ctx->tau));
@@ -295,12 +305,17 @@ public:
 void Integrator::evaluate_1D_integrand(double* real, double* imag) {
     double l_real = 0.0, l_imag = 0.0; // l for "local"
     double log_factor = log(1 - ictx->ctx->tau / ictx->z);
+    assert(log_factor == log_factor);
     ictx->xi = 1;
     for (size_t i = 0; i < hflen; i++) {
         l_real += hflist[i]->real_singular_contribution(ictx) * log_factor;
+        assert(l_real == l_real);
         l_imag += hflist[i]->imag_singular_contribution(ictx) * log_factor;
+        assert(l_imag == l_imag);
         l_real += hflist[i]->real_delta_contribution(ictx);
+        assert(l_real == l_real);
         l_imag += hflist[i]->imag_delta_contribution(ictx);
+        assert(l_imag == l_imag);
     }
     *real = l_real;
     *imag = l_imag;
@@ -309,17 +324,25 @@ void Integrator::evaluate_1D_integrand(double* real, double* imag) {
 void Integrator::evaluate_2D_integrand(double* real, double* imag) {
     double l_real = 0.0, l_imag = 0.0; // l for "local"
     double jacobian =  (1 - ictx->ctx->tau / ictx->z) / (1 - ictx->ctx->tau); // Jacobian from y to xi
+    assert(jacobian == jacobian);
     double xi_factor = 1.0 / (1 - ictx->xi);
+    assert(xi_factor == xi_factor);
     for (size_t i = 0; i < hflen; i++) {
         l_real += hflist[i]->real_singular_contribution(ictx) * xi_factor;
+        assert(l_real == l_real);
         l_imag += hflist[i]->imag_singular_contribution(ictx) * xi_factor;
+        assert(l_imag == l_imag);
         l_real += hflist[i]->real_delta_contribution(ictx);
+        assert(l_real == l_real);
         l_imag += hflist[i]->imag_delta_contribution(ictx);
+        assert(l_imag == l_imag);
     }
     ictx->xi = 1;
     for (size_t i = 0; i < hflen; i++) {
         l_real -= hflist[i]->real_singular_contribution(ictx) * xi_factor;
+        assert(l_real == l_real);
         l_imag -= hflist[i]->imag_singular_contribution(ictx) * xi_factor;
+        assert(l_imag == l_imag);
     }
     *real = jacobian * l_real;
     *imag = jacobian * l_imag;
