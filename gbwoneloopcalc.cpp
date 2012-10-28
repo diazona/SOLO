@@ -1,6 +1,11 @@
 #include <cassert>
 #include <gsl/gsl_sf_expint.h>
 #include <gsl/gsl_sf_gamma.h>
+#ifdef MONTECARLO
+#include <gsl/gsl_rng.h>
+#include <gsl/gsl_monte.h>
+#include <gsl/gsl_monte_vegas.h>
+#endif
 #include <iostream>
 #include <cstdlib>
 #include "cubature.h"
@@ -151,6 +156,51 @@ double HardFactor::hard_integrand_1D(double z){
     return result;
 }
 
+#ifdef MONTECARLO
+double gsl_monte_wrapper_1D(double* coordinates, size_t ncoords, void* closure) {
+    assert(ncoords == 1);
+    double value = ((HardFactor*)closure)->hard_integrand_1D(coordinates[0]);
+    return value;
+}
+
+double gsl_monte_wrapper_2D(double* coordinates, size_t ncoords, void* closure) {
+    assert(ncoords == 2);
+    double value = ((HardFactor*)closure)->hard_integrand_2D(coordinates[0], coordinates[1]);
+    return value;
+}
+
+void vegas_integrate(double (*func)(double*, size_t, void*), size_t dim, void* closure, double* min, double* max, double* p_result, double* p_abserr,
+               void (*callback)(double*, double*, gsl_monte_vegas_state*)) {
+    double old_result = NAN;
+    gsl_monte_function f;
+    f.f = func;
+    f.dim = dim;
+    f.params = closure;
+
+    gsl_rng_env_setup();
+    gsl_rng* rng = gsl_rng_alloc(gsl_rng_default);
+    gsl_monte_vegas_state* s = gsl_monte_vegas_alloc(dim);
+    gsl_monte_vegas_integrate(&f, min, max, dim, 10000, rng, s, p_result, p_abserr);
+    if (callback) {
+        (*callback)(p_result, p_abserr, s);
+    }
+    do {
+        gsl_monte_vegas_integrate(&f, min, max, dim, 100000, rng, s, p_result, p_abserr);
+        if (callback) {
+            (*callback)(p_result, p_abserr, s);
+        }
+        old_result = *p_result;
+    } while (old_result != *p_result && fabs(gsl_monte_vegas_chisq(s) - 1.0) > 0.2);
+    gsl_monte_vegas_free(s);
+    s = NULL;
+    gsl_rng_free(rng);
+    rng = NULL;
+}
+
+void eprint_callback(double* p_result, double* p_abserr, gsl_monte_vegas_state* s) {
+    cerr << "VEGAS output: " << *p_result << " err: " << *p_abserr << " chisq:" << gsl_monte_vegas_chisq(s) << endl;
+}
+#else
 void cubature_wrapper_1D(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nvalues, double* values) {
     assert(ncoords == 1);
     assert(nvalues == 1);
@@ -162,6 +212,7 @@ void cubature_wrapper_2D(unsigned int ncoords, const double* coordinates, void* 
     assert(nvalues == 1);
     values[0] = ((HardFactor*)closure)->hard_integrand_2D(coordinates[0], coordinates[1]);
 }
+#endif
 
 /** Computes the integral of a hard factor over z and xi. */
 double HardFactor::hardFactorIntegral() {
@@ -173,6 +224,14 @@ double HardFactor::hardFactorIntegral() {
     double xmin2D[] = {tau, tau};
     double xmax2D[] = {1.0d, 1.0d};
     int status = 0;
+#ifdef MONTECARLO
+    // the 2D integration
+    vegas_integrate(gsl_monte_wrapper_2D, 2, this, xmin2D, xmax2D, &tmp_result, &tmp_error, eprint_callback);
+    result += tmp_result;
+    // the 1D integration
+    vegas_integrate(gsl_monte_wrapper_1D, 1, this, xmin1D, xmax1D, &tmp_result, &tmp_error, eprint_callback);
+    result += tmp_result;
+#else
     // the 2D integration
     status = adapt_integrate(1, cubature_wrapper_2D, this, 2, xmin2D, xmax2D, 100000, 0, 1e-3, &tmp_result, &tmp_error);
     if (status != SUCCESS) {
@@ -187,6 +246,7 @@ double HardFactor::hardFactorIntegral() {
         exit(1);
     }
     result += tmp_result;
+#endif
     return result;
 }
 
