@@ -14,6 +14,7 @@ using namespace std;
 const int SUCCESS = 0;
 
 static enum {MC_PLAIN, MC_MISER, MC_VEGAS} integration_strategy = MC_VEGAS;
+static bool trace = false;
 
 /** Euler-Mascheroni constant. Value is copy-pasted from Wikipedia. */
 const double EULER_GAMMA = 0.57721566490153286060651209008240243104215933593992;
@@ -538,7 +539,6 @@ int main(int argc, char** argv) {
     return 0;
 }
 #else
-#ifdef TRACE
 static size_t count = 0;
 void write_data_point(IntegrationContext* ictx, double real, double imag) {
     if (ictx) {
@@ -551,7 +551,6 @@ void write_data_point(IntegrationContext* ictx, double real, double imag) {
         cout << endl;
     }
 }
-#endif
 
 double calculateLOterm(Context* ctx) {
     double real, imag;
@@ -559,9 +558,9 @@ double calculateLOterm(Context* ctx) {
     HardFactor* hflist[1];
     size_t hflen = sizeof(hflist)/sizeof(hflist[0]);
     Integrator* integrator = new Integrator(ctx, gdist, hflen, hflist);
-#ifdef TRACE
-    integrator->set_callback(write_data_point);
-#endif
+    if (trace) {
+        integrator->set_callback(write_data_point);
+    }
     hflist[0] = new H02qq();
     integrator->integrate(&real, &imag);
     delete integrator;
@@ -578,9 +577,9 @@ double calculateNLOterm(Context* ctx) {
     HardFactor* hflist[1];
     size_t hflen = sizeof(hflist)/sizeof(hflist[0]);
     Integrator* integrator = new Integrator(ctx, gdist, hflen, hflist);
-#ifdef TRACE
-    integrator->set_callback(write_data_point);
-#endif
+    if (trace) {
+        integrator->set_callback(write_data_point);
+    }
     hflist[0] = new H12qq();
     integrator->integrate(&real, &imag);
     delete integrator;
@@ -624,6 +623,9 @@ int main(int argc, char** argv) {
         }
         else if (strcmp(argv[i], "--vegas")==0) {
             integration_strategy = MC_VEGAS;
+        }
+        else if (strcmp(argv[i], "--trace")==0) {
+            trace = true;
         }
     }
 //     double pT[] = {0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4};
