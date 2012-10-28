@@ -436,7 +436,6 @@ void vegas_integrate(double (*func)(double*, size_t, void*), size_t dim, void* c
     f.dim = dim;
     f.params = closure;
 
-    gsl_rng_env_setup();
     gsl_rng* rng = gsl_rng_alloc(gsl_rng_default);
     gsl_monte_vegas_state* s = gsl_monte_vegas_alloc(dim);
     gsl_monte_vegas_integrate(&f, min, max, dim, 10000, rng, s, p_result, p_abserr);
@@ -632,6 +631,7 @@ int main(int argc, char** argv) {
     size_t len = sizeof(pT)/sizeof(double);
     double yield[2*len];
     
+    gsl_rng_env_setup();
     fillYieldArray(200, 3.2, len, pT, yield);
     cout << "pT\tLOqq\tNLOqq\tLOqq+NLOqq" << endl;
     for (size_t i = 0; i < len; i++) {
