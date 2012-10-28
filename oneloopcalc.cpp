@@ -108,13 +108,13 @@ public:
     IntegrationContext(Context* ctx, GluonDistribution* gdist) :
       ctx(ctx), gdist(gdist),
       z(0), xi(0),
-      z2(0), xi2(0),
       xx(0), xy(0),
       yx(0), yy(0),
       bx(0), by(0),
+      z2(0), xi2(0),
       kT2(0), kT(0),
       xp(0), xg(0),
-      Qs2(0), r2(0),
+      r2(0), Qs2(0),
       alphasbar(0),
       quarkfactor(0),
       S2(0), S4(0) {
