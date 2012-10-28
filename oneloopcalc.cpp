@@ -339,9 +339,9 @@ void Integrator::evaluate_2D_integrand(double* real, double* imag) {
         assert(l_real == l_real);
         l_imag += hflist[i]->imag_singular_contribution(ictx) * xi_factor;
         assert(l_imag == l_imag);
-        l_real += hflist[i]->real_delta_contribution(ictx);
+        l_real += hflist[i]->real_normal_contribution(ictx);
         assert(l_real == l_real);
-        l_imag += hflist[i]->imag_delta_contribution(ictx);
+        l_imag += hflist[i]->imag_normal_contribution(ictx);
         assert(l_imag == l_imag);
     }
     ictx->xi = 1;
