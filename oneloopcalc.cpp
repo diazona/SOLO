@@ -1,7 +1,9 @@
 #include <cassert>
 #include <iostream>
 #include <cstdlib>
-#include "cubature.h"
+#include <gsl/gsl_rng.h>
+#include <gsl/gsl_monte.h>
+#include <gsl/gsl_monte_vegas.h>
 #include "mstwpdf.h"
 #include "dss_pinlo.h"
 
@@ -341,6 +343,27 @@ void cubature_wrapper_2D(unsigned int ncoords, const double* coordinates, void* 
     integrator->evaluate_2D_integrand(&(values[0]), &(values[1]));
 }
 
+double gsl_monte_wrapper_1D(double* coordinates, size_t ncoords, void* closure) {
+    double real;
+    double imag;
+    Integrator* integrator = (Integrator*)closure;
+    assert(ncoords == 7);
+    //                    z            y      xx              xy            yx               yy              bx              by
+    integrator->update(coordinates[0], 1, coordinates[1], coordinates[2], coordinates[3], coordinates[4], coordinates[5], coordinates[6]);
+    integrator->evaluate_1D_integrand(&real, &imag);
+    return real;
+}
+
+double gsl_monte_wrapper_2D(double* coordinates, size_t ncoords, void* closure) {
+    double real;
+    double imag;
+    Integrator* integrator = (Integrator*)closure;
+    assert(ncoords == 8);
+    //                    z               y               xx              xy              yx               yy              bx              by
+    integrator->update(coordinates[0], coordinates[1], coordinates[2], coordinates[3], coordinates[4], coordinates[5], coordinates[6], coordinates[7]);
+    integrator->evaluate_2D_integrand(&real, &imag);
+    return real;
+}
 
 void Integrator::integrate(double* real, double* imag) {
     double l_real = 0.0, l_imag = 0.0;
@@ -351,6 +374,8 @@ void Integrator::integrate(double* real, double* imag) {
     double min2D[] = {ictx->ctx->tau, ictx->ctx->tau, -100, -100, -100, -100, -100, -100};
     double max2D[] = {1.0, 1.0, 100, 100, 100, 100, 100, 100};
     int status = 0;
+#if 0
+    // CUBATURE
     // the 2D integration
     status = adapt_integrate(2, cubature_wrapper_2D, this, 8, min2D, max2D, 100000, 0, 1e-2, tmp_result, tmp_error);
     if (status != SUCCESS) {
@@ -369,6 +394,31 @@ void Integrator::integrate(double* real, double* imag) {
     l_imag += tmp_result[1];
     *real = l_real;
     *imag = l_imag;
+#endif
+    // MONTE CARLO
+    double result;
+    double abserr;
+    // the 2D integration
+    gsl_monte_function f;
+    f.f = &gsl_monte_wrapper_2D;
+    f.dim = 8;
+    f.params = this;
+    
+    gsl_rng_env_setup();
+    gsl_rng* rng = gsl_rng_alloc(gsl_rng_default);
+    gsl_monte_vegas_state* s = gsl_monte_vegas_alloc(8);
+    gsl_monte_vegas_integrate(&f, min2D, max2D, 8, 10000, rng, s, &result, &abserr);
+    cerr << "VEGAS output: " << result << " err: " << abserr << " chisq:" << gsl_monte_vegas_chisq(s) << endl;
+    do {
+        gsl_monte_vegas_integrate(&f, min2D, max2D, 8, 100000, rng, s, &result, &abserr);
+        cerr << "VEGAS output: " << result << " err: " << abserr << " chisq:" << gsl_monte_vegas_chisq(s) << endl;
+    } while (fabs(gsl_monte_vegas_chisq(s) - 1.0) > 0.2);
+    gsl_monte_vegas_free(s);
+    s = NULL;
+    gsl_rng_free(rng);
+    rng = NULL;
+    *real = result;
+    *imag = 0;
 }
 
 double calculateLOterm(Context* ctx) {
