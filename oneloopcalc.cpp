@@ -14,6 +14,7 @@ using namespace std;
 const int SUCCESS = 0;
 
 static enum {MC_PLAIN, MC_MISER, MC_VEGAS} integration_strategy = MC_VEGAS;
+typedef enum {NONE=0, dipole=2, quadrupole=4} term_type;
 static bool trace = false;
 
 /** Euler-Mascheroni constant. Value is copy-pasted from Wikipedia. */
@@ -210,6 +211,7 @@ double GBWGluonDistribution::S4(IntegrationContext* ictx) {
 
 class HardFactor {
 public:
+    virtual term_type get_type() = 0;
     virtual double real_singular_contribution(IntegrationContext* ictx) { return 0; }
     virtual double imag_singular_contribution(IntegrationContext* ictx) { return 0; }
     virtual double real_normal_contribution(IntegrationContext* ictx) { return 0; }
@@ -220,6 +222,9 @@ public:
 
 class H02qq : public HardFactor {
 public:
+    term_type get_type() {
+        return dipole;
+    }
     double real_delta_contribution(IntegrationContext* ictx) {
         return 1/(4*M_PI*M_PI) * ictx->quarkfactor / ictx->z2 * ictx->S2 *
          // real part of the hard factor
@@ -234,6 +239,9 @@ public:
 
 class H12qq : public HardFactor {
 public:
+    term_type get_type() {
+        return dipole;
+    }
     double real_singular_contribution(IntegrationContext* ictx) {
         return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->quarkfactor / ictx->z2 * ictx->S2 *
          // real part of the singular contribution
@@ -268,6 +276,9 @@ public:
 
 class H14qq : public HardFactor {
 public:
+    term_type get_type() {
+        return quadrupole;
+    }
     double real_singular_contribution(IntegrationContext* ictx) {
         return -1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->quarkfactor / ictx->z2 * ictx->S4 *
          // real part of the singular contribution
@@ -294,22 +305,69 @@ public:
 class Integrator {
 private:
     IntegrationContext* ictx;
-    HardFactor** hflist;
-    size_t hflen;
+    HardFactor** dipole_terms;
+    size_t n_dipole_terms;
+    HardFactor** quadrupole_terms;
+    size_t n_quadrupole_terms;
+    term_type current_term_type;
     void (*callback)(IntegrationContext*, double, double);
 public:
-    Integrator(Context* ctx, GluonDistribution* gdist, size_t hflen, HardFactor** hflist) : hflist(hflist), hflen(hflen), callback(NULL) {
+    Integrator(Context* ctx, GluonDistribution* gdist, size_t hflen, HardFactor** hflist) : n_dipole_terms(0), n_quadrupole_terms(0), current_term_type(NONE), callback(NULL) {
+        size_t i, j;
         ictx = new IntegrationContext(ctx, gdist);
+        // separate the hard factors provided into dipole and quadrupole terms
+        for (i = 0; i < hflen; i++) {
+            assert(hflist[i]->get_type() != NONE);
+            assert(hflist[i]->get_type() == dipole || hflist[i]->get_type() == quadrupole);
+            if (hflist[i]->get_type() == dipole) {
+                n_dipole_terms++;
+            }
+            else if (hflist[i]->get_type() == quadrupole) {
+                n_quadrupole_terms++;
+            }
+        }
+        assert(n_dipole_terms + n_quadrupole_terms == hflen);
+        dipole_terms = (HardFactor**)calloc(n_dipole_terms, sizeof(HardFactor*));
+        quadrupole_terms = (HardFactor**)calloc(n_quadrupole_terms, sizeof(HardFactor*));
+        for (i = 0, j = 0; i + j < hflen;) {
+            if (hflist[i + j]->get_type() == dipole) {
+                dipole_terms[i] = hflist[i + j];
+                i++;
+            }
+            else {
+                assert(hflist[i + j]->get_type() == quadrupole);
+                quadrupole_terms[j] = hflist[i + j];
+                j++;
+            }
+        }
+        assert(i == n_dipole_terms);
+        assert(j == n_quadrupole_terms);
     }
     ~Integrator() {
+        free(dipole_terms);
+        dipole_terms = NULL;
+        free(quadrupole_terms);
+        quadrupole_terms = NULL;
         delete ictx;
     }
-    void update(double z, double y, double xx, double xy, double yx, double yy, double bx, double by) {
-        ictx->update(z, y, xx, xy, yx, yy, bx, by);
+    void update(double z, double y, double rx, double ry) {
+        // I need (z = z, y = y, xx = sx + bx, xy = sy + by, yx = tx + bx, yy = ty + by
+        // we assume no impact parameter dependence, so I can arbitrarily set bx, by, tx, ty to 0
+        assert(current_term_type == dipole);
+        ictx->update(z, y, rx, ry, 0, 0, 0, 0);
+    }
+    void update(double z, double y, double sx, double sy, double tx, double ty) {
+        // I need (z = z, y = y, xx = sx + bx, xy = sy + by, yx = tx + bx, yy = ty + by
+        // we assume no impact parameter dependence, so I can arbitrarily set bx, by to 0
+        assert(current_term_type == quadrupole);
+        ictx->update(z, y, sx, sy, tx, ty, 0, 0);
     }
     void evaluate_1D_integrand(double* real, double* imag);
     void evaluate_2D_integrand(double* real, double* imag);
     void integrate(double* real, double* imag);
+    void set_current_term_type(term_type new_term_type) {
+        current_term_type = new_term_type;
+    }
     void set_callback(void (*callback)(IntegrationContext*, double, double)) {
         this->callback = callback;
     }
@@ -319,15 +377,31 @@ void Integrator::evaluate_1D_integrand(double* real, double* imag) {
     double l_real = 0.0, l_imag = 0.0; // l for "local"
     double log_factor = log(1 - ictx->ctx->tau / ictx->z);
     assert(log_factor == log_factor);
+    size_t n_terms;
+    HardFactor** terms;
+    assert(current_term_type == dipole || current_term_type == quadrupole);
+    if (current_term_type == dipole) {
+        n_terms = n_dipole_terms;
+        terms = dipole_terms;
+    }
+    else {
+        n_terms = n_quadrupole_terms;
+        terms = quadrupole_terms;
+    }
+    if (n_terms == 0) {
+        *real = 0;
+        *imag = 0;
+        return;
+    }
     ictx->xi = 1;
-    for (size_t i = 0; i < hflen; i++) {
-        l_real += hflist[i]->real_singular_contribution(ictx) * log_factor;
+    for (size_t i = 0; i < n_terms; i++) {
+        l_real += terms[i]->real_singular_contribution(ictx) * log_factor;
         assert(l_real == l_real);
-        l_imag += hflist[i]->imag_singular_contribution(ictx) * log_factor;
+        l_imag += terms[i]->imag_singular_contribution(ictx) * log_factor;
         assert(l_imag == l_imag);
-        l_real += hflist[i]->real_delta_contribution(ictx);
+        l_real += terms[i]->real_delta_contribution(ictx);
         assert(l_real == l_real);
-        l_imag += hflist[i]->imag_delta_contribution(ictx);
+        l_imag += terms[i]->imag_delta_contribution(ictx);
         assert(l_imag == l_imag);
     }
     *real = l_real;
@@ -343,21 +417,37 @@ void Integrator::evaluate_2D_integrand(double* real, double* imag) {
     assert(jacobian == jacobian);
     double xi_factor = 1.0 / (1 - ictx->xi);
     assert(xi_factor == xi_factor);
-    for (size_t i = 0; i < hflen; i++) {
-        l_real += hflist[i]->real_singular_contribution(ictx) * xi_factor;
+    size_t n_terms;
+    HardFactor** terms;
+    assert(current_term_type == dipole || current_term_type == quadrupole);
+    if (current_term_type == dipole) {
+        n_terms = n_dipole_terms;
+        terms = dipole_terms;
+    }
+    else {
+        n_terms = n_quadrupole_terms;
+        terms = quadrupole_terms;
+    }
+    if (n_terms == 0) {
+        *real = 0;
+        *imag = 0;
+        return;
+    }
+    for (size_t i = 0; i < n_terms; i++) {
+        l_real += terms[i]->real_singular_contribution(ictx) * xi_factor;
         assert(l_real == l_real);
-        l_imag += hflist[i]->imag_singular_contribution(ictx) * xi_factor;
+        l_imag += terms[i]->imag_singular_contribution(ictx) * xi_factor;
         assert(l_imag == l_imag);
-        l_real += hflist[i]->real_normal_contribution(ictx);
+        l_real += terms[i]->real_normal_contribution(ictx);
         assert(l_real == l_real);
-        l_imag += hflist[i]->imag_normal_contribution(ictx);
+        l_imag += terms[i]->imag_normal_contribution(ictx);
         assert(l_imag == l_imag);
     }
     ictx->xi = 1;
-    for (size_t i = 0; i < hflen; i++) {
-        l_real -= hflist[i]->real_singular_contribution(ictx) * xi_factor;
+    for (size_t i = 0; i < n_terms; i++) {
+        l_real -= terms[i]->real_singular_contribution(ictx) * xi_factor;
         assert(l_real == l_real);
-        l_imag -= hflist[i]->imag_singular_contribution(ictx) * xi_factor;
+        l_imag -= terms[i]->imag_singular_contribution(ictx) * xi_factor;
         assert(l_imag == l_imag);
     }
     *real = jacobian * l_real;
@@ -371,11 +461,13 @@ double gsl_monte_wrapper_1D(double* coordinates, size_t ncoords, void* closure) 
     double real;
     double imag;
     Integrator* integrator = (Integrator*)closure;
-    assert(ncoords == 5);
-    // coordinates passed are (z, sx, sy, tx, ty)
-    // I need (z = z, y = 1, xx = sx + bx, xy = sy + by, yx = tx + bx, yy = ty + by
-    // we assume no impact parameter dependence, so I can arbitrarily set bx and by to 0
-    integrator->update(coordinates[0], 1, coordinates[1], coordinates[2], coordinates[3], coordinates[4], 0, 0);
+    assert(ncoords == 3 || ncoords == 5);
+    if (ncoords == 3) {
+        integrator->update(coordinates[0], 1, coordinates[1], coordinates[2]);
+    }
+    else {
+        integrator->update(coordinates[0], 1, coordinates[1], coordinates[2], coordinates[3], coordinates[4]);
+    }
     integrator->evaluate_1D_integrand(&real, &imag);
     return real;
 }
@@ -384,11 +476,13 @@ double gsl_monte_wrapper_2D(double* coordinates, size_t ncoords, void* closure) 
     double real;
     double imag;
     Integrator* integrator = (Integrator*)closure;
-    assert(ncoords == 6);
-    // coordinates passed are (z, y, sx, sy, tx, ty)
-    // I need (z = z, y = y, xx = sx + bx, xy = sy + by, yx = tx + bx, yy = ty + by
-    // we assume no impact parameter dependence, so I can arbitrarily set bx and by to 0
-    integrator->update(coordinates[0], coordinates[1], coordinates[2], coordinates[3], coordinates[4], coordinates[5], 0, 0);
+    assert(ncoords == 4 || ncoords == 6);
+    if (ncoords == 4) {
+        integrator->update(coordinates[0], coordinates[1], coordinates[2], coordinates[3]);
+    }
+    else {
+        integrator->update(coordinates[0], coordinates[1], coordinates[2], coordinates[3], coordinates[4], coordinates[5]);
+    }
     integrator->evaluate_2D_integrand(&real, &imag);
     return real;
 }
@@ -456,28 +550,64 @@ void Integrator::integrate(double* real, double* imag) {
     double result = 0.0;
     double abserr = 0.0;
     // cubature doesn't work because of the endpoint singularity at xi = 1
-    if (integration_strategy == MC_VEGAS) {
-        vegas_integrate(gsl_monte_wrapper_2D, 6, this, min2D, max2D, &tmp_result, &tmp_error, vegas_eprint_callback);
+    
+    // dipole
+    if (n_dipole_terms > 0) {
+        set_current_term_type(dipole);
+        // 2D integral
+        if (integration_strategy == MC_VEGAS) {
+            vegas_integrate(gsl_monte_wrapper_2D, 4, this, min2D, max2D, &tmp_result, &tmp_error, vegas_eprint_callback);
+        }
+        else if (integration_strategy == MC_MISER) {
+            miser_integrate(gsl_monte_wrapper_2D, 4, this, min2D, max2D, &tmp_result, &tmp_error, miser_eprint_callback);
+        }
+        if (callback) {
+            callback(NULL, 0, 0);
+        }
+        result += tmp_result;
+        abserr += tmp_error;
+        // 1D integral
+        if (integration_strategy == MC_VEGAS) {
+            vegas_integrate(gsl_monte_wrapper_1D, 3, this, min1D, max1D, &tmp_result, &tmp_error, vegas_eprint_callback);
+        }
+        else if (integration_strategy == MC_MISER) {
+            miser_integrate(gsl_monte_wrapper_1D, 3, this, min1D, max1D, &tmp_result, &tmp_error, miser_eprint_callback);
+        }
+        if (callback) {
+            callback(NULL, 0, 0);
+        }
+        result += tmp_result;
+        abserr += tmp_error;
     }
-    else if (integration_strategy == MC_MISER) {
-        miser_integrate(gsl_monte_wrapper_2D, 6, this, min2D, max2D, &tmp_result, &tmp_error, miser_eprint_callback);
+    if (n_quadrupole_terms > 0) {
+        // quadrupole
+        set_current_term_type(quadrupole);
+        // 2D integral
+        if (integration_strategy == MC_VEGAS) {
+            vegas_integrate(gsl_monte_wrapper_2D, 6, this, min2D, max2D, &tmp_result, &tmp_error, vegas_eprint_callback);
+        }
+        else if (integration_strategy == MC_MISER) {
+            miser_integrate(gsl_monte_wrapper_2D, 6, this, min2D, max2D, &tmp_result, &tmp_error, miser_eprint_callback);
+        }
+        if (callback) {
+            callback(NULL, 0, 0);
+        }
+        result += tmp_result;
+        abserr += tmp_error;
+        // 1D integral
+        if (integration_strategy == MC_VEGAS) {
+            vegas_integrate(gsl_monte_wrapper_1D, 5, this, min1D, max1D, &tmp_result, &tmp_error, vegas_eprint_callback);
+        }
+        else if (integration_strategy == MC_MISER) {
+            miser_integrate(gsl_monte_wrapper_1D, 5, this, min1D, max1D, &tmp_result, &tmp_error, miser_eprint_callback);
+        }
+        if (callback) {
+            callback(NULL, 0, 0);
+        }
+        result += tmp_result;
+        abserr += tmp_error;
     }
-    if (callback) {
-        callback(NULL, 0, 0);
-    }
-    result += tmp_result;
-    abserr += tmp_error;
-    if (integration_strategy == MC_VEGAS) {
-        vegas_integrate(gsl_monte_wrapper_1D, 5, this, min1D, max1D, &tmp_result, &tmp_error, vegas_eprint_callback);
-    }
-    else if (integration_strategy == MC_MISER) {
-        miser_integrate(gsl_monte_wrapper_1D, 5, this, min1D, max1D, &tmp_result, &tmp_error, miser_eprint_callback);
-    }
-    if (callback) {
-        callback(NULL, 0, 0);
-    }
-    result += tmp_result;
-    abserr += tmp_error;
+
     *real = result;
     *imag = 0;
 }
@@ -539,11 +669,11 @@ double calculateLOterm(Context* ctx) {
     GBWGluonDistribution* gdist = new GBWGluonDistribution();
     HardFactor* hflist[1];
     size_t hflen = sizeof(hflist)/sizeof(hflist[0]);
+    hflist[0] = new H02qq(); // do this before initializing integrator
     Integrator* integrator = new Integrator(ctx, gdist, hflen, hflist);
     if (trace) {
         integrator->set_callback(write_data_point);
     }
-    hflist[0] = new H02qq();
     integrator->integrate(&real, &imag);
     delete integrator;
     for (size_t i = 0; i < hflen; i++) {
@@ -558,11 +688,11 @@ double calculateNLOterm(Context* ctx) {
     GBWGluonDistribution* gdist = new GBWGluonDistribution();
     HardFactor* hflist[1];
     size_t hflen = sizeof(hflist)/sizeof(hflist[0]);
+    hflist[0] = new H12qq();
     Integrator* integrator = new Integrator(ctx, gdist, hflen, hflist);
     if (trace) {
         integrator->set_callback(write_data_point);
     }
-    hflist[0] = new H12qq();
     integrator->integrate(&real, &imag);
     delete integrator;
     for (size_t i = 0; i < hflen; i++) {
