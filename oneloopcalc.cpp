@@ -654,7 +654,7 @@ int main(int argc, char** argv) {
 static size_t count = 0;
 void write_data_point(IntegrationContext* ictx, double real, double imag) {
     if (ictx) {
-        if (count++ % 100 == 0) {
+        if ((++count) % 500 == 0) {
             cout << ictx->z << "\t" << ictx->xi << "\t" << ictx->xx << "\t" << ictx->xy << "\t" << ictx->yx << "\t" << ictx->yy << "\t" << ictx->bx << "\t" << ictx->by << "\t" << real << "\t" << imag << endl;
             count = 0;
         }
