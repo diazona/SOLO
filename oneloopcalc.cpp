@@ -393,7 +393,7 @@ void Integrator::evaluate_1D_integrand(double* real, double* imag) {
         *imag = 0;
         return;
     }
-    ictx->xi = 1;
+    assert(ictx->xi == 1.0d);
     for (size_t i = 0; i < n_terms; i++) {
         l_real += terms[i]->real_singular_contribution(ictx) * log_factor;
         assert(l_real == l_real);
@@ -443,7 +443,7 @@ void Integrator::evaluate_2D_integrand(double* real, double* imag) {
         l_imag += terms[i]->imag_normal_contribution(ictx);
         assert(l_imag == l_imag);
     }
-    ictx->xi = 1;
+    ictx->update(ictx->z, 1, ictx->xx, ictx->xy, ictx->yx, ictx->yy, ictx->bx, ictx->by);
     for (size_t i = 0; i < n_terms; i++) {
         l_real -= terms[i]->real_singular_contribution(ictx) * xi_factor;
         assert(l_real == l_real);
