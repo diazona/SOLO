@@ -367,24 +367,6 @@ void Integrator::evaluate_2D_integrand(double* real, double* imag) {
     }
 }
 
-void cubature_wrapper_1D(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nvalues, double* values) {
-    Integrator* integrator = (Integrator*)closure;
-    assert(ncoords == 7);
-    assert(nvalues == 2);
-    //                    z            y      xx              xy            yx               yy              bx              by
-    integrator->update(coordinates[0], 1, coordinates[1], coordinates[2], coordinates[3], coordinates[4], coordinates[5], coordinates[6]);
-    integrator->evaluate_2D_integrand(&(values[0]), &(values[1]));
-}
-
-void cubature_wrapper_2D(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nvalues, double* values) {
-    Integrator* integrator = (Integrator*)closure;
-    assert(ncoords == 8);
-    assert(nvalues == 2);
-    //                    z               y               xx              xy              yx               yy              bx              by
-    integrator->update(coordinates[0], coordinates[1], coordinates[2], coordinates[3], coordinates[4], coordinates[5], coordinates[6], coordinates[7]);
-    integrator->evaluate_2D_integrand(&(values[0]), &(values[1]));
-}
-
 double gsl_monte_wrapper_1D(double* coordinates, size_t ncoords, void* closure) {
     double real;
     double imag;
