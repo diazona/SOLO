@@ -127,9 +127,6 @@ public:
 };
 
 void IntegrationContext::update(double z, double y, double xx, double xy, double yx, double yy, double bx, double by) {
-    double real_singular = 0.0, imag_singular = 0.0,
-           real_normal   = 0.0, imag_normal   = 0.0,
-           real_delta    = 0.0, imag_delta    = 0.0;
     double quarkfactor = 0.0d;
     c_mstwpdf* pdf_object = ctx->pdf_object;
     DSSpiNLO* ff_object = ctx->ff_object;
@@ -659,14 +656,12 @@ void miser_eprint_callback(double* p_result, double* p_abserr, gsl_monte_miser_s
 }
 
 void Integrator::integrate(double* real, double* imag) {
-    double l_real = 0.0, l_imag = 0.0;
     double tmp_result;
     double tmp_error;
     double min1D[] = {ictx->ctx->tau, -100, -100, -100, -100};
     double max1D[] = {1.0, 100, 100, 100, 100};
     double min2D[] = {ictx->ctx->tau, ictx->ctx->tau, -100, -100, -100, -100};
     double max2D[] = {1.0, 1.0, 100, 100, 100, 100};
-    int status = 0;
     double result = 0.0;
     double abserr = 0.0;
     // cubature doesn't work because of the endpoint singularity at xi = 1
@@ -849,7 +844,7 @@ void fillYieldArray(double sqs, double Y, int pTlen, double* pT, double* yield) 
 }
 
 int main(int argc, char** argv) {
-    for (size_t i = 1; i < argc; i++) {
+    for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--miser")==0) {
             integration_strategy = MC_MISER;
         }
