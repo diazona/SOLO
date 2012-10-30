@@ -524,11 +524,11 @@ void Integrator::evaluate_1D_integrand(double* real, double* imag) {
         l_imag += terms[i]->imag_delta_contribution(ictx);
         assert(l_imag == l_imag);
     }
+    if (callback) {
+        callback(ictx, l_real, l_imag);
+    }
     *real = l_real;
     *imag = l_imag;
-    if (callback) {
-        callback(ictx, *real, *imag);
-    }
 }
 
 void Integrator::evaluate_2D_integrand(double* real, double* imag) {
@@ -563,6 +563,9 @@ void Integrator::evaluate_2D_integrand(double* real, double* imag) {
         l_imag += terms[i]->imag_normal_contribution(ictx);
         assert(l_imag == l_imag);
     }
+    if (callback) {
+        callback(ictx, jacobian * l_real, jacobian * l_imag);
+    }
     ictx->update(ictx->z, 1, ictx->xx, ictx->xy, ictx->yx, ictx->yy, ictx->bx, ictx->by);
     for (size_t i = 0; i < n_terms; i++) {
         l_real -= terms[i]->real_singular_contribution(ictx) * xi_factor;
@@ -570,11 +573,11 @@ void Integrator::evaluate_2D_integrand(double* real, double* imag) {
         l_imag -= terms[i]->imag_singular_contribution(ictx) * xi_factor;
         assert(l_imag == l_imag);
     }
+    if (callback) {
+        callback(ictx, jacobian * l_real, jacobian * l_imag);
+    }
     *real = jacobian * l_real;
     *imag = jacobian * l_imag;
-    if (callback) {
-        callback(ictx, *real, *imag);
-    }
 }
 
 double gsl_monte_wrapper_1D(double* coordinates, size_t ncoords, void* closure) {
