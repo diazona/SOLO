@@ -772,81 +772,43 @@ int main(int argc, char** argv) {
     return 0;
 }
 #else
-static size_t count = 0;
 void write_data_point(IntegrationContext* ictx, double real, double imag) {
     if (ictx) {
-        if ((++count) % 500 == 0) {
-            cout << ictx->z << "\t" << ictx->xi << "\t" << ictx->xx << "\t" << ictx->xy << "\t" << ictx->yx << "\t" << ictx->yy << "\t" << ictx->bx << "\t" << ictx->by << "\t" << real << "\t" << imag << endl;
-            count = 0;
-        }
+//         if ((++count) % 500 == 0) {
+            cout
+            << ictx->z << "\t"
+            << ictx->xi << "\t"
+            << ictx->xx << "\t"
+            << ictx->xy << "\t"
+            << ictx->yx << "\t"
+            << ictx->yy << "\t"
+            << ictx->bx << "\t"
+            << ictx->by << "\t"
+            << ictx->kT2 << "\t"
+            << ictx->Qs2 << "\t"
+            << ictx->xp << "\t"
+            << ictx->xg << "\t"
+            << ictx->qqfactor << "\t"
+            << ictx->gqfactor << "\t"
+            << real << "\t"
+            << imag << endl;
+//         }
     }
     else {
         cout << endl;
     }
 }
 
-double calculateLOterm(Context* ctx) {
+double calculateHardFactor(Context* ctx, size_t hflen, HardFactor** hflist) {
     double real, imag;
     GBWGluonDistribution* gdist = new GBWGluonDistribution();
-    HardFactor* hflist[1];
-    size_t hflen = sizeof(hflist)/sizeof(hflist[0]);
-    hflist[0] = new H02qq(); // do this before initializing integrator
     Integrator* integrator = new Integrator(ctx, gdist, hflen, hflist);
     if (trace) {
         integrator->set_callback(write_data_point);
     }
     integrator->integrate(&real, &imag);
     delete integrator;
-    for (size_t i = 0; i < hflen; i++) {
-        delete hflist[i];
-    }
     return real;
-}
-
-double calculateNLOterm(Context* ctx) {
-    // this only calculates part of the NLO term
-    double real, imag;
-    GBWGluonDistribution* gdist = new GBWGluonDistribution();
-    HardFactor* hflist[1];
-    size_t hflen = sizeof(hflist)/sizeof(hflist[0]);
-    hflist[0] = new H12qq();
-    Integrator* integrator = new Integrator(ctx, gdist, hflen, hflist);
-    if (trace) {
-        integrator->set_callback(write_data_point);
-    }
-    integrator->integrate(&real, &imag);
-    delete integrator;
-    for (size_t i = 0; i < hflen; i++) {
-        delete hflist[i];
-    }
-    return real;
-}
-
-void fillYieldArray(double sqs, double Y, int pTlen, double* pT, double* yield) {
-    int i;
-    Context gctx(
-      0.000304, // x0
-      197,      // A
-      0.56,     // c
-      0.288,    // lambda
-      10,       // mu2
-      3,        // Nc
-      3,        // Nf
-      1.5,      // CF
-      1.0,      // Sperp
-      1.0,      // pT2 (dummy value)
-      sqs,
-      Y,
-      0.2 / (2*M_PI), // alphasbar
-      "mstw2008nlo.00.dat", "PINLO.DAT");
-    for (i = 0; i < pTlen; i++) {
-        gctx.pT2 = pT[i]*pT[i];
-        gctx.recalculate();
-        cerr << "Beginning calculation at pT = " << pT[i] << endl;
-        yield[2*i] = calculateLOterm(&gctx);
-        yield[2*i+1] = calculateNLOterm(&gctx);
-        cerr << "...done" << endl;
-    }
 }
 
 int main(int argc, char** argv) {
@@ -861,16 +823,54 @@ int main(int argc, char** argv) {
             trace = true;
         }
     }
-//     double pT[] = {0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4};
-    double pT[] = {0.4};
-    size_t len = sizeof(pT)/sizeof(double);
-    double yield[2*len];
-    
     gsl_rng_env_setup();
-    fillYieldArray(200, 3.2, len, pT, yield);
-    cout << "pT\tLOqq\tNLOqq\tLOqq+NLOqq" << endl;
-    for (size_t i = 0; i < len; i++) {
-        cout << pT[i] << "\t" << yield[2*i] << "\t" << yield[2*i+1] << "\t" << yield[2*i] + yield[2*i+1] << endl;
+    Context gctx(
+      0.000304, // x0
+      197,      // A
+      0.56,     // c
+      0.288,    // lambda
+      10,       // mu2
+      3,        // Nc
+      3,        // Nf
+      1.5,      // CF
+      1.0,      // Sperp
+      1.0,      // pT2 (dummy value)
+      200,      // sqs
+      3.2,      // Y
+      0.2 / (2*M_PI), // alphasbar
+      "mstw2008nlo.00.dat", "PINLO.DAT");
+
+//     double pT[] = {0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4};
+    double pT[] = {1.01};
+    size_t pTlen = sizeof(pT)/sizeof(double);
+    HardFactor* h02qq[] = {new H02qq()};
+    HardFactor* h12qq[] = {new H12qq()};
+    HardFactor* h14qq[] = {new H14qq(), new H14qqResidual()};
+    HardFactor* h112gq[] = {new H112gq()};
+    HardFactor* h122gq[] = {new H122gq()};
+    HardFactor* h14gq[] = {new H14gq()};
+    size_t hflen = 6;
+    double yield[hflen*pTlen];
+    
+    for (size_t i = 0; i < pTlen; i++) {
+        gctx.pT2 = pT[i]*pT[i];
+        gctx.recalculate();
+        cerr << "Beginning calculation at pT = " << pT[i] << endl;
+        yield[hflen*i + 0] = calculateHardFactor(&gctx, 1, h02qq);
+        yield[hflen*i + 1] = calculateHardFactor(&gctx, 1, h12qq);
+        yield[hflen*i + 2] = calculateHardFactor(&gctx, 2, h14qq);
+        yield[hflen*i + 3] = calculateHardFactor(&gctx, 1, h112gq);
+        yield[hflen*i + 4] = calculateHardFactor(&gctx, 1, h122gq);
+        yield[hflen*i + 5] = calculateHardFactor(&gctx, 1, h14gq);
+        cerr << "...done" << endl;
+    }
+    cout << "pT\th02qq\th12qq\th14qq\th112gq\th122gq\th14gq" << endl;
+    for (size_t i = 0; i < pTlen; i++) {
+        cout << pT[i] << "\t";
+        for (size_t j = 0; j < hflen; j++) {
+            cout << yield[hflen*i + j] << "\t";
+        }
+        cout << endl;
     }
     return 0;
 }
