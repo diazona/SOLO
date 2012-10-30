@@ -246,30 +246,30 @@ public:
     double real_singular_contribution(IntegrationContext* ictx) {
         return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->S2r *
          // real part of the singular contribution
-         ictx->ctx->CF * (1 + ictx->xi2) * (2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
+         ictx->ctx->CF * (1 + ictx->xi2) * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
          * (cos(ictx->kT * (ictx->xx - ictx->yx)) + cos(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi) / ictx->xi2);
     }
     double imag_singular_contribution(IntegrationContext* ictx) {
         return -1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->S2r *
          // imaginary part of the singular contribution
-         ictx->ctx->CF * (1 + ictx->xi2) * (2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
+         ictx->ctx->CF * (1 + ictx->xi2) * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
          * (sin(ictx->kT * (ictx->xx - ictx->yx)) + sin(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi) / ictx->xi2);
     }
     double real_delta_contribution(IntegrationContext* ictx) {
         return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->S2r * (
          // real part of the delta contribution
-         1.5 * ictx->ctx->CF * (2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
+         1.5 * ictx->ctx->CF * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
          * (cos(ictx->kT * (ictx->xx - ictx->yx)) + cos(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi) / ictx->xi2)
-         - 3.0 * ictx->ctx->CF * (2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->kT2))
+         - 3.0 * ictx->ctx->CF * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->kT2))
          * cos(ictx->kT * (ictx->xx - ictx->yx))
         );
     }
     double imag_delta_contribution(IntegrationContext* ictx) {
         return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->S2r * (
          // imaginary part of the delta contribution
-         1.5 * ictx->ctx->CF * (2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
+         1.5 * ictx->ctx->CF * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
          * (sin(ictx->kT * (ictx->xx - ictx->yx)) + sin(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi) / ictx->xi2)
-         - 3.0 * ictx->ctx->CF * (2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->kT2))
+         - 3.0 * ictx->ctx->CF * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->kT2))
          * sin(ictx->kT * (ictx->xx - ictx->yx))
         );
     }
@@ -369,13 +369,13 @@ public:
     double real_normal_contribution(IntegrationContext* ictx) {
         return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->gqfactor / ictx->z2 * ictx->S2r *
          // real part of the normal contribution
-         0.5 * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / (ictx->xi * ictx->xi2) * (2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
+         0.5 * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / (ictx->xi * ictx->xi2) * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
          * cos(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi);
     }
     double imag_normal_contribution(IntegrationContext* ictx) {
         return -1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->gqfactor / ictx->z2 * ictx->S2r *
          // imaginary part of the normal contribution
-         0.5 * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / (ictx->xi * ictx->xi2) * (2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
+         0.5 * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / (ictx->xi * ictx->xi2) * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
          * sin(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi);
     }
 };
@@ -388,13 +388,13 @@ public:
     double real_normal_contribution(IntegrationContext* ictx) {
         return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->gqfactor / ictx->z2 * ictx->S2r * ictx->S2r *
          // real part of the normal contribution
-         0.5 * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / ictx->xi * (2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
+         0.5 * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / ictx->xi * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
          * cos(ictx->kT * (ictx->xx - ictx->yx));
     }
     double imag_normal_contribution(IntegrationContext* ictx) {
         return -1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->gqfactor / ictx->z2 * ictx->S2r * ictx->S2r * // assumes S2 depends only on the magnitude of x - y
          // imaginary part of the normal contribution
-         0.5 * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / ictx->xi * (2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
+         0.5 * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / ictx->xi * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
          * sin(ictx->kT * (ictx->xx - ictx->yx));
     }
 };
