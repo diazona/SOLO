@@ -664,10 +664,10 @@ void miser_eprint_callback(double* p_result, double* p_abserr, gsl_monte_miser_s
 void Integrator::integrate(double* real, double* imag) {
     double tmp_result;
     double tmp_error;
-    double min1D[] = {ictx->ctx->tau, -100, -100, -100, -100};
-    double max1D[] = {1.0, 100, 100, 100, 100};
-    double min2D[] = {ictx->ctx->tau, ictx->ctx->tau, -100, -100, -100, -100};
-    double max2D[] = {1.0, 1.0, 100, 100, 100, 100};
+    double min1D[] = {ictx->ctx->tau, -10, -10, -10, -10};
+    double max1D[] = {1.0, 10, 10, 10, 10};
+    double min2D[] = {ictx->ctx->tau, ictx->ctx->tau, -10, -10, -10, -10};
+    double max2D[] = {1.0, 1.0, 10, 10, 10, 10};
     double result = 0.0;
     double abserr = 0.0;
     // cubature doesn't work because of the endpoint singularity at xi = 1
