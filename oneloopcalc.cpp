@@ -24,6 +24,7 @@ const double EULER_GAMMA = 0.57721566490153286060651209008240243104215933593992;
 void eprint(char* s) { cerr << s << endl; }
 
 class IntegrationContext;
+class GluonDistribution;
 class HardFactor;
 
 class Context {
@@ -43,14 +44,16 @@ public:
     double Q02x0lambda;
     double tau;
     double alphasbar_fixed;
+    
+    GluonDistribution* gdist;
 
     // NOTE: these contain state that should be associated with IntegrationContext.
     // So don't use one Context with more than one IntegrationContext at once.
     c_mstwpdf* pdf_object;
     DSSpiNLO* ff_object;
 
-    Context(double x0, double A, double c, double lambda, double mu2, double Nc, double Nf, double CF, double Sperp, double pT2, double sqs, double Y, double alphasbar_fixed, const char* pdf_filename, const char* ff_filename) :
-     x0(x0), A(A), c(c), lambda(lambda), mu2(mu2), Nc(Nc), Nf(Nf), CF(CF), Sperp(Sperp), pT2(pT2), sqs(sqs), Y(Y), alphasbar_fixed(alphasbar_fixed) {
+    Context(double x0, double A, double c, double lambda, double mu2, double Nc, double Nf, double CF, double TR, double Sperp, double pT2, double sqs, double Y, double alphasbar_fixed, GluonDistribution* gdist, const char* pdf_filename, const char* ff_filename) :
+     x0(x0), A(A), c(c), lambda(lambda), mu2(mu2), Nc(Nc), Nf(Nf), CF(CF), TR(TR), Sperp(Sperp), pT2(pT2), sqs(sqs), Y(Y), alphasbar_fixed(alphasbar_fixed), gdist(gdist) {
          recalculate();
          pdf_object = new c_mstwpdf(pdf_filename);
          ff_object = new DSSpiNLO(ff_filename);
@@ -87,11 +90,19 @@ public:
     double S4(double s2, double t2, IntegrationContext* ictx);
 };
 
+class MVGluonDistribution: public GluonDistribution {
+public:
+    MVGluonDistribution(double LambdaMV) : LambdaMV(LambdaMV) {};
+    double S2(double r2, IntegrationContext* ictx);
+    double S4(double s2, double t2, IntegrationContext* ictx);
+private:
+    double LambdaMV;
+};
+
 // Not even anywhere close to thread-safe!
 class IntegrationContext {
 public:
     Context* ctx;
-    GluonDistribution* gdist;
     // updated
     double z;
     double xi;
@@ -109,8 +120,8 @@ public:
     double gqfactor;
     double S2r, S4st;
     
-    IntegrationContext(Context* ctx, GluonDistribution* gdist) :
-      ctx(ctx), gdist(gdist),
+    IntegrationContext(Context* ctx) :
+      ctx(ctx),
       z(0), xi(0),
       xx(0), xy(0),
       yx(0), yy(0),
@@ -164,8 +175,8 @@ void IntegrationContext::update(double z, double y, double xx, double xy, double
 
     // Calculate the new gluon distribution values
     // this has to be done after kinematics are updated
-    this->S2r = gdist->S2(r2, this);
-    this->S4st = gdist->S4(s2, t2, this);
+    this->S2r = ctx->gdist->S2(r2, this);
+    this->S4st = ctx->gdist->S4(s2, t2, this);
 
     // Calculate the new quark/gluon factors
     pdf_object->update(xp, sqrt(ctx->mu2));
@@ -208,6 +219,13 @@ double GBWGluonDistribution::S2(double r2, IntegrationContext* ictx) {
 }
 double GBWGluonDistribution::S4(double s2, double t2, IntegrationContext* ictx) {
     return exp(-0.25 * ictx->Qs2 * (s2 + t2));
+}
+
+double MVGluonDistribution::S2(double r2, IntegrationContext* ictx) {
+    return pow(M_E + 1.0 / (sqrt(r2) * LambdaMV), -0.25 * r2 * ictx->Qs2);
+}
+double MVGluonDistribution::S4(double s2, double t2, IntegrationContext* ictx) {
+    return S2(s2, ictx) * S2(t2, ictx);
 }
 
 class HardFactor {
@@ -327,7 +345,7 @@ public:
     double real_delta_contribution(IntegrationContext* ictx) {
         double real, imag;
         h14_internal_integral(ictx->kT * (ictx->yx - ictx->bx), &real, &imag);
-        return 1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * (ictx->S4st - ictx->gdist->S4(ictx->s2, 0, ictx)) *
+        return 1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * (ictx->S4st - ictx->ctx->gdist->S4(ictx->s2, 0, ictx)) *
          // real part of the delta contribution
          4*M_PI * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->t2
          * (cos(ictx->kT * (ictx->xx - ictx->bx)) * real + sin(ictx->kT * (ictx->xx - ictx->bx)) * imag);
@@ -335,7 +353,7 @@ public:
     double imag_delta_contribution(IntegrationContext* ictx) {
         double real, imag;
         h14_internal_integral(ictx->kT * (ictx->yx - ictx->bx), &real, &imag);
-        return 1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * (ictx->S4st - ictx->gdist->S4(ictx->s2, 0, ictx)) *
+        return 1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * (ictx->S4st - ictx->ctx->gdist->S4(ictx->s2, 0, ictx)) *
          // imaginary part of the delta contribution
          4*M_PI * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->t2
          * (cos(ictx->kT * (ictx->xx - ictx->bx)) * imag - sin(ictx->kT * (ictx->xx - ictx->bx)) * real);
@@ -348,13 +366,13 @@ public:
         return dipole;
     }
     double real_delta_contribution(IntegrationContext* ictx) {
-        return -1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->gdist->S4(ictx->r2, 0, ictx) *
+        return -1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->ctx->gdist->S4(ictx->r2, 0, ictx) *
          // real part of the delta contribution
          ictx->ctx->Nc * ictx->ctx->Sperp * (2.5 - 2.0*M_PI*M_PI/3.0)
          * cos(ictx->kT * (ictx->xx - ictx->bx));
     }
     double imag_delta_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->gdist->S4(ictx->r2, 0, ictx) *
+        return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->ctx->gdist->S4(ictx->r2, 0, ictx) *
          // imaginary part of the delta contribution
          ictx->ctx->Nc * ictx->ctx->Sperp * (2.5 - 2.0*M_PI*M_PI/3.0)
          * sin(ictx->kT * (ictx->xx - ictx->bx));
@@ -432,9 +450,9 @@ private:
     term_type current_term_type;
     void (*callback)(IntegrationContext*, double, double);
 public:
-    Integrator(Context* ctx, GluonDistribution* gdist, size_t hflen, HardFactor** hflist) : n_dipole_terms(0), n_quadrupole_terms(0), current_term_type(NONE), callback(NULL) {
+    Integrator(Context* ctx, size_t hflen, HardFactor** hflist) : n_dipole_terms(0), n_quadrupole_terms(0), current_term_type(NONE), callback(NULL) {
         size_t i, j;
-        ictx = new IntegrationContext(ctx, gdist);
+        ictx = new IntegrationContext(ctx);
         // separate the hard factors provided into dipole and quadrupole terms
         for (i = 0; i < hflen; i++) {
             assert(hflist[i]->get_type() != NONE);
@@ -737,7 +755,7 @@ void Integrator::integrate(double* real, double* imag) {
 void write_hf_values(Context* ctx) {
     double real, imag;
     GBWGluonDistribution* gdist = new GBWGluonDistribution();
-    IntegrationContext* ictx = new IntegrationContext(ctx, gdist);
+    IntegrationContext* ictx = new IntegrationContext(ctx);
     H02qq* hf02qq = new H02qq();
     H12qq* hf12qq = new H12qq();
     for (double z = ctx->tau; z <= 1; z += (1 - ctx->tau) / 20) {
@@ -801,8 +819,7 @@ void write_data_point(IntegrationContext* ictx, double real, double imag) {
 
 double calculateHardFactor(Context* ctx, size_t hflen, HardFactor** hflist) {
     double real, imag;
-    GBWGluonDistribution* gdist = new GBWGluonDistribution();
-    Integrator* integrator = new Integrator(ctx, gdist, hflen, hflist);
+    Integrator* integrator = new Integrator(ctx, hflen, hflist);
     if (trace) {
         integrator->set_callback(write_data_point);
     }
@@ -812,6 +829,7 @@ double calculateHardFactor(Context* ctx, size_t hflen, HardFactor** hflist) {
 }
 
 int main(int argc, char** argv) {
+    GluonDistribution* gdist = new GBWGluonDistribution();
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--miser")==0) {
             integration_strategy = MC_MISER;
@@ -838,6 +856,7 @@ int main(int argc, char** argv) {
       200,      // sqs
       3.2,      // Y
       0.2 / (2*M_PI), // alphasbar
+      gdist,
       "mstw2008nlo.00.dat", "PINLO.DAT");
 
 //     double pT[] = {0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4};
@@ -872,6 +891,7 @@ int main(int argc, char** argv) {
         }
         cout << endl;
     }
+    delete gdist;
     return 0;
 }
 #endif
