@@ -82,20 +82,20 @@ public:
 class GluonDistribution {
 public:
     virtual double S2(double r2, IntegrationContext* ictx) = 0;
-    virtual double S4(double s2, double t2, IntegrationContext* ictx) = 0;
+    virtual double S4(double r2, double s2, double t2, IntegrationContext* ictx) = 0;
 };
 
 class GBWGluonDistribution: public GluonDistribution {
 public:
     double S2(double r2, IntegrationContext* ictx);
-    double S4(double s2, double t2, IntegrationContext* ictx);
+    double S4(double r2, double s2, double t2, IntegrationContext* ictx);
 };
 
 class MVGluonDistribution: public GluonDistribution {
 public:
     MVGluonDistribution(double LambdaMV) : LambdaMV(LambdaMV) {};
     double S2(double r2, IntegrationContext* ictx);
-    double S4(double s2, double t2, IntegrationContext* ictx);
+    double S4(double r2, double s2, double t2, IntegrationContext* ictx);
 private:
     double LambdaMV;
 };
@@ -120,7 +120,7 @@ public:
     double qqfactor;
     double ggfactor;
     double gqfactor;
-    double S2r, S4st;
+    double S2r, S4rst;
     
     IntegrationContext(Context* ctx) :
       ctx(ctx),
@@ -137,7 +137,7 @@ public:
       qqfactor(0),
       ggfactor(0),
       gqfactor(0),
-      S2r(0), S4st(0) {
+      S2r(0), S4rst(0) {
     };
     void update(double z, double y, double xx, double xy, double yx, double yy, double bx, double by);
 };
@@ -179,7 +179,7 @@ void IntegrationContext::update(double z, double y, double xx, double xy, double
     // Calculate the new gluon distribution values
     // this has to be done after kinematics are updated
     this->S2r = ctx->gdist->S2(r2, this);
-    this->S4st = ctx->gdist->S4(s2, t2, this);
+    this->S4rst = ctx->gdist->S4(r2, s2, t2, this);
 
     // Calculate the new quark/gluon factors
     pdf_object->update(xp, sqrt(ctx->mu2));
@@ -229,14 +229,14 @@ void IntegrationContext::update(double z, double y, double xx, double xy, double
 double GBWGluonDistribution::S2(double r2, IntegrationContext* ictx) {
     return exp(-0.25 * r2 * ictx->Qs2);
 }
-double GBWGluonDistribution::S4(double s2, double t2, IntegrationContext* ictx) {
+double GBWGluonDistribution::S4(double r2, double s2, double t2, IntegrationContext* ictx) {
     return exp(-0.25 * ictx->Qs2 * (s2 + t2));
 }
 
 double MVGluonDistribution::S2(double r2, IntegrationContext* ictx) {
     return pow(M_E + 1.0 / (sqrt(r2) * LambdaMV), -0.25 * r2 * ictx->Qs2);
 }
-double MVGluonDistribution::S4(double s2, double t2, IntegrationContext* ictx) {
+double MVGluonDistribution::S4(double r2, double s2, double t2, IntegrationContext* ictx) {
     return S2(s2, ictx) * S2(t2, ictx);
 }
 
@@ -339,7 +339,7 @@ public:
         return quadrupole;
     }
     double real_singular_contribution(IntegrationContext* ictx) {
-        return -1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->S4st *
+        return -1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->S4rst *
          // real part of the singular contribution
          4*M_PI * ictx->ctx->Nc * (1 + ictx->xi2) / ictx->xi
          * ((ictx->xx - ictx->bx)*(ictx->yx - ictx->bx) + (ictx->xy - ictx->by)*(ictx->yy - ictx->by))
@@ -347,7 +347,7 @@ public:
          * cos(ictx->kT * (ictx->xx / ictx->xi - ictx->yx - (1.0/ictx->xi - 1.0) * ictx->bx));
     }
     double imag_singular_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->S4st *
+        return 1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->S4rst *
          // imaginary part of the singular contribution
          4*M_PI * ictx->ctx->Nc * (1 + ictx->xi2) / ictx->xi
          * ((ictx->xx - ictx->bx)*(ictx->yx - ictx->bx) + (ictx->xy - ictx->by)*(ictx->yy - ictx->by))
@@ -356,19 +356,19 @@ public:
     }
     double real_delta_contribution(IntegrationContext* ictx) {
         double real, imag;
-        h14_internal_integral(ictx->kT * (ictx->yx - ictx->bx), &real, &imag);
-        return 1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * (ictx->S4st - ictx->ctx->gdist->S4(ictx->s2, 0, ictx)) *
+        h14qq_internal_integral(ictx->kT * (ictx->yx - ictx->bx), &real, &imag);
+        return 1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * (ictx->S4rst - ictx->ctx->gdist->S4(ictx->s2, ictx->s2, 0, ictx)) *
          // real part of the delta contribution
          4*M_PI * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->t2
-         * (cos(ictx->kT * (ictx->xx - ictx->bx)) * real + sin(ictx->kT * (ictx->xx - ictx->bx)) * imag);
+         * (cos(ictx->kT * (ictx->xx - ictx->yx)) * real + sin(ictx->kT * (ictx->xx - ictx->yx)) * imag);
     }
     double imag_delta_contribution(IntegrationContext* ictx) {
         double real, imag;
-        h14_internal_integral(ictx->kT * (ictx->yx - ictx->bx), &real, &imag);
-        return 1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * (ictx->S4st - ictx->ctx->gdist->S4(ictx->s2, 0, ictx)) *
+        h14qq_internal_integral(ictx->kT * (ictx->yx - ictx->bx), &real, &imag);
+        return 1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * (ictx->S4rst - ictx->ctx->gdist->S4(ictx->s2, ictx->s2, 0, ictx)) *
          // imaginary part of the delta contribution
          4*M_PI * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->t2
-         * (cos(ictx->kT * (ictx->xx - ictx->bx)) * imag - sin(ictx->kT * (ictx->xx - ictx->bx)) * real);
+         * (cos(ictx->kT * (ictx->xx - ictx->yx)) * imag - sin(ictx->kT * (ictx->xx - ictx->yx)) * real);
     }
 };
 
@@ -378,13 +378,13 @@ public:
         return dipole;
     }
     double real_delta_contribution(IntegrationContext* ictx) {
-        return -1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->ctx->gdist->S4(ictx->r2, 0, ictx) *
+        return -1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->ctx->gdist->S4(ictx->r2, ictx->r2, 0, ictx) *
          // real part of the delta contribution
          ictx->ctx->Nc * ictx->ctx->Sperp * (2.5 - 2.0*M_PI*M_PI/3.0)
          * cos(ictx->kT * (ictx->xx - ictx->bx));
     }
     double imag_delta_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->ctx->gdist->S4(ictx->r2, 0, ictx) *
+        return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->ctx->gdist->S4(ictx->r2, ictx->r2, 0, ictx) *
          // imaginary part of the delta contribution
          ictx->ctx->Nc * ictx->ctx->Sperp * (2.5 - 2.0*M_PI*M_PI/3.0)
          * sin(ictx->kT * (ictx->xx - ictx->bx));
@@ -488,35 +488,36 @@ void h12qqbar_internal_integral(double kr, double* real, double* imag) {
 }
 
 
-class H12qqbar : public HardFactor {
-public:
-    term_type get_type() {
-        return quadrupole;
-    }
-    double real_delta_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->ggfactor / ictx->z2 *
-         8 * M_PI * ictx->ctx->Nf * ictx->ctx->TR
-           * (ictx->gdist->S2(ictx->s2) - ictx->gdist->S2(ictx->t2)) * ictx->gdist->S2(ictx->t2)
-           * cos(ictx->kT * (ictx->yx - ictx->bx));
-    }
-    double imag_delta_contribution(IntegrationContext* ictx) {
-    }
-};
+// class H12qqbar : public HardFactor {
+// public:
+//     term_type get_type() {
+//         return quadrupole;
+//     }
+//     double real_delta_contribution(IntegrationContext* ictx) {
+//         return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->ggfactor / ictx->z2 *
+//          8 * M_PI * ictx->ctx->Nf * ictx->ctx->TR
+//            * (ictx->ctx->gdist->S2(ictx->s2, ictx) * h12qqbar_internal_integral(ictx->kT * sqrt(ictx->r2)) - ictx->ctx->gdist->S2(ictx->t2, ictx) * h12qqbar_internal_integral(0)) * ictx->ctx->gdist->S2(ictx->t2, ictx)
+//            / ictx->r2
+//            * cos(ictx->kT * (ictx->yx - ictx->bx));
+//     }
+//     double imag_delta_contribution(IntegrationContext* ictx) {
+//     }
+// };
 
-class H12qqbarResidual : public HardFactor {
-public:
-    term_type get_type() {
-        return dipole;
-    }
-    double real_delta_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->ggfactor / ictx->z2 * ictx->S2r * ictx->S2r *
-         8 * M_PI * ictx->ctx->Nf * ictx->ctx->TR
-           *// stuff...
-           * cos(ictx->kT * (ictx->yx - ictx->bx));
-    }
-    double imag_delta_contribution(IntegrationContext* ictx) {
-    }
-};
+// class H12qqbarResidual : public HardFactor {
+// public:
+//     term_type get_type() {
+//         return dipole;
+//     }
+//     double real_delta_contribution(IntegrationContext* ictx) {
+//         return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->ggfactor / ictx->z2 * ictx->S2r * ictx->S2r *
+//          8 * M_PI * ictx->ctx->Nf * ictx->ctx->TR
+//            *// stuff...
+//            * cos(ictx->kT * (ictx->yx - ictx->bx));
+//     }
+//     double imag_delta_contribution(IntegrationContext* ictx) {
+//     }
+// };
 
 class H112gq : public HardFactor {
 public:
@@ -562,7 +563,7 @@ public:
         return quadrupole;
     }
     double real_normal_contribution(IntegrationContext* ictx) {
-        return -1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->gqfactor / ictx->z2 * ictx->S4st *
+        return -1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->gqfactor / ictx->z2 * ictx->S4rst *
          // real part of the normal contribution
          4 * M_PI * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / (ictx->xi2)
          * ((ictx->xx - ictx->yx)*(ictx->bx - ictx->yx) + (ictx->xy - ictx->yy)*(ictx->by - ictx->yy))
@@ -570,7 +571,7 @@ public:
          * cos(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi + ictx->kT * (ictx->yx - ictx->bx));
     }
     double imag_normal_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->gqfactor / ictx->z2 * ictx->S4st *
+        return 1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->gqfactor / ictx->z2 * ictx->S4rst *
          // imaginary part of the normal contribution
          4 * M_PI * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / (ictx->xi2)
          * ((ictx->xx - ictx->yx)*(ictx->bx - ictx->yx) + (ictx->xy - ictx->yy)*(ictx->by - ictx->yy))
