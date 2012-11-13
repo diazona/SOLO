@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <cstring>
+#include <gsl/gsl_sf.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_monte.h>
 #include <gsl/gsl_monte_miser.h>
@@ -310,32 +311,16 @@ public:
     }
 };
 
-void h14qq_internal_integrand(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nvalues, double* values) {
-    assert(ncoords == 1);
-    assert(nvalues == 2);
-    double xip = coordinates[0];
-    double xip2 = xip * xip;
-    double kt = *((double*)closure);
-    values[0] = ((1 + xip2) * cos(xip * kt) - 2 * cos(kt)) / (1 - xip);
-    values[1] = ((1 + xip2) * sin(xip * kt) - 2 * sin(kt)) / (1 - xip);
-}
-
-void h14qq_internal_integral(double kt, double* real, double* imag) {
-    double result[2];
-    double error[2];
-    double xmin1D[] = {0.0d};
-    double xmax1D[] = {1.0d};
-    int status = adapt_integrate(2, h14qq_internal_integrand, &kt, 1, xmin1D, xmax1D, 200000, 0, 1e-4, result, error);
-    if (status != SUCCESS) {
-        cerr << "Error in 1D integration (probably memory)" << endl;
-        exit(1);
+void h14qq_internal_integral(double x, double* real, double* imag) {
+    if (x < 0) {
+        // if argument is negative, switch it to positive and flip the sign of the imaginary part of the result
+        x = -x;
+        *imag = -(2 - cos(x) - gsl_sf_sinc(x * M_1_PI)) / x + 2 * gsl_sf_Si(x);
     }
-    if (real) {
-        *real = result[0];
+    else {
+        *imag = (2 - cos(x) - gsl_sf_sinc(x * M_1_PI)) / x - 2 * gsl_sf_Si(x);
     }
-    if (imag) {
-        *imag = result[1];
-    }
+    *real = -2 * EULER_GAMMA - gsl_sf_sinc(x * M_1_PI) + (cos(x) - 1) / (x * x) + 2 * gsl_sf_Ci(x) - 2 * log(x);
 }
 
 class H14qq : public HardFactor {
