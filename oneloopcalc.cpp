@@ -765,7 +765,7 @@ void miser_integrate(double (*func)(double*, size_t, void*), size_t dim, void* c
 
     gsl_rng* rng = gsl_rng_alloc(gsl_rng_default);
     gsl_monte_miser_state* s = gsl_monte_miser_alloc(dim);
-    gsl_monte_miser_integrate(&f, min, max, dim, 1000000, rng, s, p_result, p_abserr);
+    gsl_monte_miser_integrate(&f, min, max, dim, 10000000, rng, s, p_result, p_abserr);
     if (callback) {
         (*callback)(p_result, p_abserr, s);
     }
