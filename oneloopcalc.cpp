@@ -311,7 +311,7 @@ public:
     }
 };
 
-void h14qq_internal_integral(double x, double* real, double* imag) {
+void I1(double x, double* real, double* imag) {
     if (x < 0) {
         // if argument is negative, switch it to positive and flip the sign of the imaginary part of the result
         x = -x;
@@ -346,7 +346,7 @@ public:
     }
     double real_delta_contribution(IntegrationContext* ictx) {
         double real, imag;
-        h14qq_internal_integral(ictx->kT * (ictx->yx - ictx->bx), &real, &imag);
+        I1(ictx->kT * (ictx->yx - ictx->bx), &real, &imag);
         return 1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * (ictx->S4rst - ictx->ctx->gdist->S4(ictx->s2, ictx->s2, 0, ictx)) *
          // real part of the delta contribution
          4*M_PI * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->t2
@@ -354,7 +354,7 @@ public:
     }
     double imag_delta_contribution(IntegrationContext* ictx) {
         double real, imag;
-        h14qq_internal_integral(ictx->kT * (ictx->yx - ictx->bx), &real, &imag);
+        I1(ictx->kT * (ictx->yx - ictx->bx), &real, &imag);
         return 1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * (ictx->S4rst - ictx->ctx->gdist->S4(ictx->s2, ictx->s2, 0, ictx)) *
          // imaginary part of the delta contribution
          4*M_PI * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->t2
