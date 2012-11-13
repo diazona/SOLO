@@ -158,7 +158,12 @@ void IntegrationContext::update(double z, double y, double xx, double xy, double
     assert(by == by);
     this->z = z;
     this->z2 = z*z;
-    this->xi = (y * (z - ctx->tau) - ctx->tau * (z - 1)) / (z * (1 - ctx->tau));
+    if (y == 1.0d) {
+        this->xi = 1.0d; // avoid floating-point roundoff error
+    }
+    else {
+        this->xi = (y * (z - ctx->tau) - ctx->tau * (z - 1)) / (z * (1 - ctx->tau));
+    }
     this->xi2 = xi*xi;
     this->xx = xx;
     this->xy = xy;
