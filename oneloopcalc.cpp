@@ -389,65 +389,105 @@ public:
     }
 };
 
-void h12qqbar_internal_integrand(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nvalues, double* values) {
-    assert(ncoords == 1);
-    assert(nvalues == 2);
-    double xip = coordinates[0];
-    double xip2 = xip * xip;
-    double kr = *((double*)closure);
-    values[0] = (2 * xip2 - 2 * xip + 1) * cos(kr);
-    values[1] = -(2 * xip2 - 2 * xip + 1) * sin(kr);
+void I2(double x, double* real, double* imag) {
+    double sx = sin(x), cx = cos(x);
+    double ix = 1.0 / x;
+    double ix2 = ix * ix;
+    double ix3 = ix2 * ix;
+    *real = -4 * ix3 * sx + 2 * ix2 * (1 + cx) + ix * sx;
+    *imag = 4 * ix3 * (1 - cx) - 2 * ix2 * sx - ix * (1 - cx);
 }
 
-void h12qqbar_internal_integral(double kr, double* real, double* imag) {
-    double result[2];
-    double error[2];
-    double xmin1D[] = {0.0d};
-    double xmax1D[] = {1.0d};
-    int status = adapt_integrate(2, h12qqbar_internal_integrand, &kr, 1, xmin1D, xmax1D, 200000, 0, 1e-4, result, error);
-    if (status != SUCCESS) {
-        cerr << "Error in 1D integration (probably memory)" << endl;
-        exit(1);
+class H12qqbar : public HardFactor {
+public:
+    term_type get_type() {
+        return quadrupole;
     }
-    if (real) {
-        *real = result[0];
+    void Fd(IntegrationContext* ictx, double* real, double* imag) {
+        double realI, imagI;
+        I2(ictx->kT * sqrt(ictx->r2), &realI, &imagI);
+        double amplitude = 1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->ggfactor / ictx->z2 *
+         8 * M_PI * ictx->ctx->Nf * ictx->ctx->TR * ictx->ctx->Sperp
+           * (ictx->ctx->gdist->S2(ictx->s2, ictx) - ictx->ctx->gdist->S2(ictx->t2, ictx)) * ictx->ctx->gdist->S2(ictx->t2, ictx)
+           / ictx->r2;
+        double phase = ictx->kT * (ictx->yx - ictx->bx);
+        *real = amplitude * (cos(phase) * realI + sin(phase) * imagI);
+        *imag = amplitude * (cos(phase) * imagI - sin(phase) * realI);
     }
-    if (imag) {
-        *imag = result[1];
+};
+
+class H12qqbarResidual : public HardFactor {
+public:
+    term_type get_type() {
+        return dipole;
     }
+    void Fd(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->ggfactor / ictx->z2 * ictx->ctx->Sperp * ictx->S2r * ictx->S2r *
+         4 * M_PI * ictx->ctx->Nf * ictx->ctx->TR * (13.0 / 18.0);
+        double phase = -ictx->kT * (ictx->yx - ictx->bx);
+        *real = amplitude * cos(phase);
+        *imag = amplitude * sin(phase);
+    }
+};
+
+void I3(double x, double* real, double* imag) {
+    bool negative = false;
+    if (x == 0) {
+        *real = -11.0 / 12.0;
+        *imag = 0;
+        return;
+    }
+    else if (x < 0) {
+        x = -x;
+        negative = true;
+    }
+    double sx = sin(x), cx = cos(x);
+    double si = gsl_sf_Si(x), ci = gsl_sf_Ci(x);
+    double ix = 1.0 / x;
+    double ix2 = ix * ix;
+    double ix3 = ix2 * ix;
+    *real = -0.5 * (1 + cx) * ix2 + cx * (ci - log(x) - M_EULER) + sx * (si - ix + ix3);
+    *imag = (negative ? -1 : 1) * ( (1 - cx) * (ix - ix3) + cx * si + sx * (log(x) + 0.5 * ix2 + M_EULER - ci) );
 }
 
+class H16gg : public HardFactor {
+public:
+    term_type get_type() {
+        return quadrupole;
+    }
+    void Fs(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = M_1_PI*M_1_PI*M_1_PI * ictx->alphasbar * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->z2
+          * ictx->ggfactor * ictx->S4rst * (1 - ictx->xi + ictx->xi2)*(1 - ictx->xi + ictx->xi2) / ictx->xi2
+          * ((ictx->xx - ictx->yx)*(ictx->yx - ictx->bx) + (ictx->xy - ictx->yy)*(ictx->yy - ictx->by)) / (ictx->r2 * ictx->t2);
+        double phase = ictx->kT * (ictx->xx - ictx->yx + (ictx->yx - ictx->bx) / ictx->xi);
+        *real = amplitude * cos(phase);
+        *imag = amplitude * sin(phase);
+    }
+    void Fd(IntegrationContext* ictx, double* real, double* imag) {
+        double realI, imagI;
+        I3(ictx->kT * (ictx->yx - ictx->bx), &realI, &imagI);
+        double amplitude = M_1_PI*M_1_PI*M_1_PI * ictx->alphasbar * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->z2
+          * ictx->ggfactor * ictx->ctx->gdist->S2(ictx->s2, ictx) * (ictx->ctx->gdist->S2(ictx->t2, ictx) * ictx->ctx->gdist->S2(ictx->r2, ictx) - ictx->ctx->gdist->S2(ictx->s2, ictx) * ictx->ctx->gdist->S2(0, ictx))
+          / ictx->t2;
+        double phase = -ictx->kT * (ictx->xx - ictx->yx);
+        *real = amplitude * (cos(phase) * realI - sin(phase) * imagI);
+        *imag = amplitude * (cos(phase) * imagI + sin(phase) * realI);
+    }
+};
 
-// class H12qqbar : public HardFactor {
-// public:
-//     term_type get_type() {
-//         return quadrupole;
-//     }
-//     double real_delta_contribution(IntegrationContext* ictx) {
-//         return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->ggfactor / ictx->z2 *
-//          8 * M_PI * ictx->ctx->Nf * ictx->ctx->TR
-//            * (ictx->ctx->gdist->S2(ictx->s2, ictx) * h12qqbar_internal_integral(ictx->kT * sqrt(ictx->r2)) - ictx->ctx->gdist->S2(ictx->t2, ictx) * h12qqbar_internal_integral(0)) * ictx->ctx->gdist->S2(ictx->t2, ictx)
-//            / ictx->r2
-//            * cos(ictx->kT * (ictx->yx - ictx->bx));
-//     }
-//     double imag_delta_contribution(IntegrationContext* ictx) {
-//     }
-// };
-
-// class H12qqbarResidual : public HardFactor {
-// public:
-//     term_type get_type() {
-//         return dipole;
-//     }
-//     double real_delta_contribution(IntegrationContext* ictx) {
-//         return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->ggfactor / ictx->z2 * ictx->S2r * ictx->S2r *
-//          8 * M_PI * ictx->ctx->Nf * ictx->ctx->TR
-//            *// stuff...
-//            * cos(ictx->kT * (ictx->yx - ictx->bx));
-//     }
-//     double imag_delta_contribution(IntegrationContext* ictx) {
-//     }
-// };
+class H16ggResidual : public HardFactor {
+public:
+    term_type get_type() {
+        return dipole;
+    }
+    void Fd(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = (-67.0 / 36.0 * M_1_PI*M_1_PI + 1.0 / 3.0) * ictx->alphasbar * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->z2
+          * ictx->ggfactor * ictx->S2r * ictx->S2r * ictx->ctx->gdist->S2(0, ictx);
+        double phase = -ictx->kT * (ictx->xx - ictx->yx);
+        *real = amplitude * cos(phase);
+        *imag = amplitude * cos(phase);
+    }
+};
 
 class H112gq : public HardFactor {
 public:
