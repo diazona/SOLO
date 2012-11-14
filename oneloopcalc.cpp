@@ -965,34 +965,45 @@ int main(int argc, char** argv) {
 //     double pT[] = {0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4};
     double pT[] = {1.01};
     size_t pTlen = sizeof(pT)/sizeof(double);
-    HardFactor* h02qq[] = {new H02qq()};
-    HardFactor* h12qq[] = {new H12qq()};
-    HardFactor* h14qq[] = {new H14qq(), new H14qqResidual()};
-    HardFactor* h112gq[] = {new H112gq()};
-    HardFactor* h122gq[] = {new H122gq()};
-    HardFactor* h14gq[] = {new H14gq()};
-    size_t hflen = 6;
+    HardFactor* hflist[] = {
+        new H02qq(), // 0
+        new H12qq(), // 1
+        new H14qq(), new H14qqResidual(), // 2,3
+        new H02gg(), // 4
+        new H12gg(), // 5
+        new H12qqbar(), new H12qqbarResidual(), // 6,7
+        new H12qqbar(), new H12qqbarResidual(), // 8,9
+        new H112gq(), // 10
+        new H122gq(), // 11
+        new H14gq()}; // 12
+    size_t hflen = 10;
     double yield[hflen*pTlen];
     
     for (size_t i = 0; i < pTlen; i++) {
         gctx.pT2 = pT[i]*pT[i];
         gctx.recalculate();
         cerr << "Beginning calculation at pT = " << pT[i] << endl;
-        yield[hflen*i + 0] = calculateHardFactor(&gctx, 1, h02qq);
-        yield[hflen*i + 1] = calculateHardFactor(&gctx, 1, h12qq);
-        yield[hflen*i + 2] = calculateHardFactor(&gctx, 2, h14qq);
-        yield[hflen*i + 3] = calculateHardFactor(&gctx, 1, h112gq);
-        yield[hflen*i + 4] = calculateHardFactor(&gctx, 1, h122gq);
-        yield[hflen*i + 5] = calculateHardFactor(&gctx, 1, h14gq);
+        yield[hflen*i + 0] = calculateHardFactor(&gctx, 1, hflist + 0);
+        yield[hflen*i + 1] = calculateHardFactor(&gctx, 1, hflist + 1);
+        yield[hflen*i + 2] = calculateHardFactor(&gctx, 2, hflist + 2);
+        yield[hflen*i + 3] = calculateHardFactor(&gctx, 1, hflist + 4);
+        yield[hflen*i + 4] = calculateHardFactor(&gctx, 1, hflist + 5);
+        yield[hflen*i + 5] = calculateHardFactor(&gctx, 2, hflist + 6);
+        yield[hflen*i + 6] = calculateHardFactor(&gctx, 2, hflist + 8);
+        yield[hflen*i + 7] = calculateHardFactor(&gctx, 1, hflist + 10);
+        yield[hflen*i + 8] = calculateHardFactor(&gctx, 1, hflist + 11);
+        yield[hflen*i + 9] = calculateHardFactor(&gctx, 1, hflist + 12);
         cerr << "...done" << endl;
     }
-    cout << "pT\th02qq\th12qq\th14qq\th112gq\th122gq\th14gq" << endl;
+    cout << "pT\th02qq\th12qq\th14qq\th02gg\th12gg\th12qqbar\th16gg\th112gq\th122gq\th14gq\ttotal" << endl;
     for (size_t i = 0; i < pTlen; i++) {
+        double total = 0;
         cout << pT[i] << "\t";
         for (size_t j = 0; j < hflen; j++) {
             cout << yield[hflen*i + j] << "\t";
+            total += yield[hflen*i + j];
         }
-        cout << endl;
+        cout << total << endl;
     }
     delete gdist;
     return 0;
