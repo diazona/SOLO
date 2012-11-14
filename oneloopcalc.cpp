@@ -971,7 +971,7 @@ int main(int argc, char** argv) {
         new H02gg(), // 4
         new H12gg(), // 5
         new H12qqbar(), new H12qqbarResidual(), // 6,7
-        new H12qqbar(), new H12qqbarResidual(), // 8,9
+        new H16gg(), new H16ggResidual(), // 8,9
         new H112gq(), // 10
         new H122gq(), // 11
         new H14gq()}; // 12
