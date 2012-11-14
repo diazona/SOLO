@@ -147,7 +147,7 @@ public:
 };
 
 void IntegrationContext::update(double z, double y, double xx, double xy, double yx, double yy, double bx, double by) {
-    double qqfactor = 0.0d, ggfactor = 0.0d, gqfactor = 0.0d;
+    double qqfactor = 0.0d, ggfactor = 0.0d, gqfactor = 0.0d, qgfactor = 0.0d;
     c_mstwpdf* pdf_object = ctx->pdf_object;
     DSSpiNLO* ff_object = ctx->ff_object;
     assert(z <= 1);
