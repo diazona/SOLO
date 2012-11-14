@@ -119,6 +119,7 @@ public:
     double qqfactor;
     double ggfactor;
     double gqfactor;
+    double qgfactor;
     double S2r, S4rst;
     
     IntegrationContext(Context* ctx) :
@@ -136,6 +137,7 @@ public:
       qqfactor(0),
       ggfactor(0),
       gqfactor(0),
+      qgfactor(0),
       S2r(0), S4rst(0) {
     };
     void update(double z, double y, double xx, double xy, double yx, double yy, double bx, double by);
@@ -228,6 +230,22 @@ void IntegrationContext::update(double z, double y, double xx, double xy, double
     gqfactor *= 2;
     
     this->gqfactor = gqfactor;
+
+    
+    // Proton contributions:
+    qgfactor += pdf_object->cont.glu * (  ff_object->fragmentation(DSSpiNLO::up, DSSpiNLO::pi_minus)
+                                        + ff_object->fragmentation(DSSpiNLO::up_bar, DSSpiNLO::pi_minus)
+                                        + ff_object->fragmentation(DSSpiNLO::down, DSSpiNLO::pi_minus)
+                                        + ff_object->fragmentation(DSSpiNLO::down_bar, DSSpiNLO::pi_minus)
+                                        + ff_object->fragmentation(DSSpiNLO::strange, DSSpiNLO::pi_minus)
+                                        + ff_object->fragmentation(DSSpiNLO::strange_bar, DSSpiNLO::pi_minus));
+    
+    // Neutron contributions (for deuteron collisions), assuming isospin symmetry:
+    qgfactor *= 2;
+    
+    this->qgfactor = qgfactor;
+
+    
 }
 
 double GBWGluonDistribution::S2(double r2, IntegrationContext* ictx) {
@@ -528,6 +546,50 @@ public:
          * ((ictx->xx - ictx->yx)*(ictx->bx - ictx->yx) + (ictx->xy - ictx->yy)*(ictx->by - ictx->yy))
             / ( ictx->r2 * ictx->t2 );
         double phase = -(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi + ictx->kT * (ictx->yx - ictx->bx));
+        *real = amplitude * cos(phase);
+        *imag = amplitude * sin(phase);
+    }
+};
+
+class H112qg : public HardFactor {
+public:
+    term_type get_type() {
+        return dipole;
+    }
+    void Fn(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = 0.125*M_1_PI*M_1_PI * ictx->alphasbar * ictx->ctx->Sperp / ictx->z2 * ictx->qgfactor * ictx->S2r *
+         (1 - 2 * ictx->xi + 2 * ictx->xi2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
+        double phase = -ictx->kT * (ictx->xx - ictx->yx);
+        *real = amplitude * cos(phase);
+        *imag = amplitude * sin(phase);
+    }
+};
+
+class H122qg : public HardFactor {
+public:
+    term_type get_type() {
+        return dipole;
+    }
+    void Fn(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = 0.125*M_1_PI*M_1_PI * ictx->alphasbar * ictx->ctx->Sperp / ictx->z2 * ictx->qgfactor * ictx->S2r *
+         (1 / ictx->xi2 - 2 / ictx->xi + 2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
+        double phase = -ictx->kT * (ictx->xx - ictx->yx) / ictx->xi;
+        *real = amplitude * cos(phase);
+        *imag = amplitude * sin(phase);
+    }
+};
+
+class H14qg : public HardFactor {
+public:
+    term_type get_type() {
+        return quadrupole;
+    }
+    void Fn(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = 0.25*M_1_PI*M_1_PI*M_1_PI * ictx->alphasbar * ictx->ctx->Sperp / ictx->z2 * ictx->qgfactor * ictx->S4rst *
+         (1 / ictx->xi - 2 + 2 * ictx->xi)
+         * ((ictx->xx - ictx->yx)*(ictx->yx - ictx->bx) + (ictx->xy - ictx->yy)*(ictx->yy - ictx->by))
+            / ( ictx->r2 * ictx->t2 );
+        double phase = -(ictx->kT * (ictx->xx - ictx->yx) + ictx->kT * (ictx->yx - ictx->bx) / ictx->xi);
         *real = amplitude * cos(phase);
         *imag = amplitude * sin(phase);
     }
@@ -974,8 +1036,11 @@ int main(int argc, char** argv) {
         new H16gg(), new H16ggResidual(), // 8,9
         new H112gq(), // 10
         new H122gq(), // 11
-        new H14gq()}; // 12
-    size_t hflen = 10;
+        new H14gq(), // 12
+        new H112qg(), // 13
+        new H122qg(), // 14
+        new H14qg()}; // 15
+    size_t hflen = 13;
     double yield[hflen*pTlen];
     
     for (size_t i = 0; i < pTlen; i++) {
@@ -992,9 +1057,12 @@ int main(int argc, char** argv) {
         yield[hflen*i + 7] = calculateHardFactor(&gctx, 1, hflist + 10);
         yield[hflen*i + 8] = calculateHardFactor(&gctx, 1, hflist + 11);
         yield[hflen*i + 9] = calculateHardFactor(&gctx, 1, hflist + 12);
+        yield[hflen*i + 10] = calculateHardFactor(&gctx, 1, hflist + 13);
+        yield[hflen*i + 11] = calculateHardFactor(&gctx, 1, hflist + 14);
+        yield[hflen*i + 12] = calculateHardFactor(&gctx, 1, hflist + 15);
         cerr << "...done" << endl;
     }
-    cout << "pT\th02qq\th12qq\th14qq\th02gg\th12gg\th12qqbar\th16gg\th112gq\th122gq\th14gq\ttotal" << endl;
+    cout << "pT\th02qq\th12qq\th14qq\th02gg\th12gg\th12qqbar\th16gg\th112gq\th122gq\th14gq\th112qg\th122qg\th14qg\ttotal" << endl;
     for (size_t i = 0; i < pTlen; i++) {
         double total = 0;
         cout << pT[i] << "\t";
