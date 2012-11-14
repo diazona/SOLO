@@ -4,6 +4,7 @@
 #include <cstring>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_sf.h>
+#include <gsl/gsl_sys.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_monte.h>
 #include <gsl/gsl_monte_miser.h>
@@ -11,6 +12,8 @@
 #include "cubature.h"
 #include "mstwpdf.h"
 #include "dss_pinlo.h"
+
+#define checkfinite(d) assert(gsl_finite(d))
 
 using namespace std;
 
@@ -151,12 +154,12 @@ void IntegrationContext::update(double z, double y, double xx, double xy, double
     assert(z >= ctx->tau);
     assert(y <= 1);
     assert(y >= ctx->tau);
-    assert(xx == xx);
-    assert(xy == xy);
-    assert(yx == yx);
-    assert(yy == yy);
-    assert(bx == bx);
-    assert(by == by);
+    checkfinite(xx);
+    checkfinite(xy);
+    checkfinite(yx);
+    checkfinite(yy);
+    checkfinite(bx);
+    checkfinite(by);
     this->z = z;
     this->z2 = z*z;
     if (y == 1.0d) {
@@ -516,6 +519,8 @@ public:
         double amplitude = 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->gqfactor / ictx->z2 * ictx->S2r *
          0.5 * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / (ictx->xi * ictx->xi2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
         double phase = -ictx->kT * (ictx->xx - ictx->yx) / ictx->xi;
+        checkfinite(amplitude);
+        checkfinite(phase);
         *real = amplitude * cos(phase);
         *imag = amplitude * sin(phase);
     }
@@ -530,6 +535,8 @@ public:
         double amplitude = 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->gqfactor / ictx->z2 * ictx->S2r * ictx->S2r *
          0.5 * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / ictx->xi * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
         double phase = -ictx->kT * (ictx->xx - ictx->yx);
+        checkfinite(amplitude);
+        checkfinite(phase);
         *real = amplitude * cos(phase);
         *imag = amplitude * sin(phase);
     }
@@ -546,6 +553,8 @@ public:
          * ((ictx->xx - ictx->yx)*(ictx->bx - ictx->yx) + (ictx->xy - ictx->yy)*(ictx->by - ictx->yy))
             / ( ictx->r2 * ictx->t2 );
         double phase = -(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi + ictx->kT * (ictx->yx - ictx->bx));
+        checkfinite(amplitude);
+        checkfinite(phase);
         *real = amplitude * cos(phase);
         *imag = amplitude * sin(phase);
     }
@@ -560,6 +569,8 @@ public:
         double amplitude = 0.125*M_1_PI*M_1_PI * ictx->alphasbar * ictx->ctx->Sperp / ictx->z2 * ictx->qgfactor * ictx->S2r *
          (1 - 2 * ictx->xi + 2 * ictx->xi2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
         double phase = -ictx->kT * (ictx->xx - ictx->yx);
+        checkfinite(amplitude);
+        checkfinite(phase);
         *real = amplitude * cos(phase);
         *imag = amplitude * sin(phase);
     }
@@ -574,6 +585,8 @@ public:
         double amplitude = 0.125*M_1_PI*M_1_PI * ictx->alphasbar * ictx->ctx->Sperp / ictx->z2 * ictx->qgfactor * ictx->S2r *
          (1 / ictx->xi2 - 2 / ictx->xi + 2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
         double phase = -ictx->kT * (ictx->xx - ictx->yx) / ictx->xi;
+        checkfinite(amplitude);
+        checkfinite(phase);
         *real = amplitude * cos(phase);
         *imag = amplitude * sin(phase);
     }
@@ -590,6 +603,8 @@ public:
          * ((ictx->xx - ictx->yx)*(ictx->yx - ictx->bx) + (ictx->xy - ictx->yy)*(ictx->yy - ictx->by))
             / ( ictx->r2 * ictx->t2 );
         double phase = -(ictx->kT * (ictx->xx - ictx->yx) + ictx->kT * (ictx->yx - ictx->bx) / ictx->xi);
+        checkfinite(amplitude);
+        checkfinite(phase);
         *real = amplitude * cos(phase);
         *imag = amplitude * sin(phase);
     }
@@ -670,7 +685,7 @@ void Integrator::evaluate_1D_integrand(double* real, double* imag) {
     double l_real = 0.0, l_imag = 0.0; // l for "local"
     double t_real, t_imag;             // t for temporary
     double log_factor = log(1 - ictx->ctx->tau / ictx->z);
-    assert(log_factor == log_factor);
+    checkfinite(log_factor);
     size_t n_terms;
     HardFactor** terms;
     assert(current_term_type == dipole || current_term_type == quadrupole);
@@ -690,13 +705,13 @@ void Integrator::evaluate_1D_integrand(double* real, double* imag) {
     assert(ictx->xi == 1.0d);
     for (size_t i = 0; i < n_terms; i++) {
         terms[i]->Fs(ictx, &t_real, &t_imag);
-        assert(t_real == t_real);
-        assert(t_imag == t_imag);
+        checkfinite(t_real);
+        checkfinite(t_imag);
         l_real += t_real * log_factor;
         l_imag += t_imag * log_factor;
         terms[i]->Fd(ictx, &t_real, &t_imag);
-        assert(t_real == t_real);
-        assert(t_imag == t_imag);
+        checkfinite(t_real);
+        checkfinite(t_imag);
         l_real += t_real;
         l_imag += t_imag;
     }
@@ -711,9 +726,9 @@ void Integrator::evaluate_2D_integrand(double* real, double* imag) {
     double l_real = 0.0, l_imag = 0.0; // l for "local"
     double t_real, t_imag;             // t for temporary
     double jacobian =  (1 - ictx->ctx->tau / ictx->z) / (1 - ictx->ctx->tau); // Jacobian from y to xi
-    assert(jacobian == jacobian);
+    checkfinite(jacobian);
     double xi_factor = 1.0 / (1 - ictx->xi);
-    assert(xi_factor == xi_factor);
+    checkfinite(xi_factor);
     size_t n_terms;
     HardFactor** terms;
     assert(current_term_type == dipole || current_term_type == quadrupole);
@@ -732,13 +747,13 @@ void Integrator::evaluate_2D_integrand(double* real, double* imag) {
     }
     for (size_t i = 0; i < n_terms; i++) {
         terms[i]->Fs(ictx, &t_real, &t_imag);
-        assert(t_real == t_real);
-        assert(t_imag == t_imag);
+        checkfinite(t_real);
+        checkfinite(t_imag);
         l_real += t_real * xi_factor;
         l_imag += t_imag * xi_factor;
         terms[i]->Fn(ictx, &t_real, &t_imag);
-        assert(t_real == t_real);
-        assert(t_imag == t_imag);
+        checkfinite(t_real);
+        checkfinite(t_imag);
         l_real += t_real;
         l_imag += t_imag;
     }
@@ -748,8 +763,8 @@ void Integrator::evaluate_2D_integrand(double* real, double* imag) {
     ictx->update(ictx->z, 1, ictx->xx, ictx->xy, ictx->yx, ictx->yy, ictx->bx, ictx->by);
     for (size_t i = 0; i < n_terms; i++) {
         terms[i]->Fs(ictx, &t_real, &t_imag);
-        assert(t_real == t_real);
-        assert(t_imag == t_imag);
+        checkfinite(t_real);
+        checkfinite(t_imag);
         l_real -= t_real * xi_factor;
         l_imag -= t_imag * xi_factor;
     }
@@ -772,6 +787,8 @@ double gsl_monte_wrapper_1D(double* coordinates, size_t ncoords, void* closure) 
         integrator->update(coordinates[0], 1, coordinates[1], coordinates[2], coordinates[3], coordinates[4]);
     }
     integrator->evaluate_1D_integrand(&real, &imag);
+    checkfinite(real);
+    checkfinite(imag);
     return real;
 }
 
@@ -787,6 +804,8 @@ double gsl_monte_wrapper_2D(double* coordinates, size_t ncoords, void* closure) 
         integrator->update(coordinates[0], coordinates[1], coordinates[2], coordinates[3], coordinates[4], coordinates[5]);
     }
     integrator->evaluate_2D_integrand(&real, &imag);
+    checkfinite(real);
+    checkfinite(imag);
     return real;
 }
 
@@ -800,6 +819,8 @@ void miser_integrate(double (*func)(double*, size_t, void*), size_t dim, void* c
     gsl_rng* rng = gsl_rng_alloc(gsl_rng_default);
     gsl_monte_miser_state* s = gsl_monte_miser_alloc(dim);
     gsl_monte_miser_integrate(&f, min, max, dim, 10000000, rng, s, p_result, p_abserr);
+    checkfinite(*p_result);
+    checkfinite(*p_abserr);
     if (callback) {
         (*callback)(p_result, p_abserr, s);
     }
@@ -819,11 +840,15 @@ void vegas_integrate(double (*func)(double*, size_t, void*), size_t dim, void* c
     gsl_rng* rng = gsl_rng_alloc(gsl_rng_default);
     gsl_monte_vegas_state* s = gsl_monte_vegas_alloc(dim);
     gsl_monte_vegas_integrate(&f, min, max, dim, 10000, rng, s, p_result, p_abserr);
+    checkfinite(*p_result);
+    checkfinite(*p_abserr);
     if (callback) {
         (*callback)(p_result, p_abserr, s);
     }
     do {
         gsl_monte_vegas_integrate(&f, min, max, dim, 100000, rng, s, p_result, p_abserr);
+        checkfinite(*p_result);
+        checkfinite(*p_abserr);
         if (callback) {
             (*callback)(p_result, p_abserr, s);
         }
