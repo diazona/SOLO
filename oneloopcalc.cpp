@@ -21,6 +21,9 @@
 #include <iostream>
 #include <cstdlib>
 #include <cstring>
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_sf.h>
+#include <gsl/gsl_sys.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_monte.h>
 #include <gsl/gsl_monte_miser.h>
@@ -29,6 +32,8 @@
 #include "mstwpdf.h"
 #include "dss_pinlo.h"
 
+#define checkfinite(d) assert(gsl_finite(d))
+
 using namespace std;
 
 const int SUCCESS = 0;
@@ -36,9 +41,6 @@ const int SUCCESS = 0;
 static enum {MC_PLAIN, MC_MISER, MC_VEGAS} integration_strategy = MC_VEGAS;
 typedef enum {NONE=0, dipole=2, quadrupole=4} term_type;
 static bool trace = false;
-
-/** Euler-Mascheroni constant. Value is copy-pasted from Wikipedia. */
-const double EULER_GAMMA = 0.57721566490153286060651209008240243104215933593992;
 
 void eprint(char* s) { cerr << s << endl; }
 
@@ -101,20 +103,20 @@ public:
 class GluonDistribution {
 public:
     virtual double S2(double r2, IntegrationContext* ictx) = 0;
-    virtual double S4(double s2, double t2, IntegrationContext* ictx) = 0;
+    virtual double S4(double r2, double s2, double t2, IntegrationContext* ictx) = 0;
 };
 
 class GBWGluonDistribution: public GluonDistribution {
 public:
     double S2(double r2, IntegrationContext* ictx);
-    double S4(double s2, double t2, IntegrationContext* ictx);
+    double S4(double r2, double s2, double t2, IntegrationContext* ictx);
 };
 
 class MVGluonDistribution: public GluonDistribution {
 public:
     MVGluonDistribution(double LambdaMV) : LambdaMV(LambdaMV) {};
     double S2(double r2, IntegrationContext* ictx);
-    double S4(double s2, double t2, IntegrationContext* ictx);
+    double S4(double r2, double s2, double t2, IntegrationContext* ictx);
 private:
     double LambdaMV;
 };
@@ -139,7 +141,8 @@ public:
     double qqfactor;
     double ggfactor;
     double gqfactor;
-    double S2r, S4st;
+    double qgfactor;
+    double S2r, S4rst;
     
     IntegrationContext(Context* ctx) :
       ctx(ctx),
@@ -156,28 +159,34 @@ public:
       qqfactor(0),
       ggfactor(0),
       gqfactor(0),
-      S2r(0), S4st(0) {
+      qgfactor(0),
+      S2r(0), S4rst(0) {
     };
     void update(double z, double y, double xx, double xy, double yx, double yy, double bx, double by);
 };
 
 void IntegrationContext::update(double z, double y, double xx, double xy, double yx, double yy, double bx, double by) {
-    double qqfactor = 0.0d, ggfactor = 0.0d, gqfactor = 0.0d;
+    double qqfactor = 0.0d, ggfactor = 0.0d, gqfactor = 0.0d, qgfactor = 0.0d;
     c_mstwpdf* pdf_object = ctx->pdf_object;
     DSSpiNLO* ff_object = ctx->ff_object;
     assert(z <= 1);
     assert(z >= ctx->tau);
     assert(y <= 1);
     assert(y >= ctx->tau);
-    assert(xx == xx);
-    assert(xy == xy);
-    assert(yx == yx);
-    assert(yy == yy);
-    assert(bx == bx);
-    assert(by == by);
+    checkfinite(xx);
+    checkfinite(xy);
+    checkfinite(yx);
+    checkfinite(yy);
+    checkfinite(bx);
+    checkfinite(by);
     this->z = z;
     this->z2 = z*z;
-    this->xi = (y * (z - ctx->tau) - ctx->tau * (z - 1)) / (z * (1 - ctx->tau));
+    if (y == 1.0d) {
+        this->xi = 1.0d; // avoid floating-point roundoff error
+    }
+    else {
+        this->xi = (y * (z - ctx->tau) - ctx->tau * (z - 1)) / (z * (1 - ctx->tau));
+    }
     this->xi2 = xi*xi;
     this->xx = xx;
     this->xy = xy;
@@ -198,7 +207,7 @@ void IntegrationContext::update(double z, double y, double xx, double xy, double
     // Calculate the new gluon distribution values
     // this has to be done after kinematics are updated
     this->S2r = ctx->gdist->S2(r2, this);
-    this->S4st = ctx->gdist->S4(s2, t2, this);
+    this->S4rst = ctx->gdist->S4(r2, s2, t2, this);
 
     // Calculate the new quark/gluon factors
     pdf_object->update(xp, sqrt(ctx->mu2));
@@ -243,31 +252,44 @@ void IntegrationContext::update(double z, double y, double xx, double xy, double
     gqfactor *= 2;
     
     this->gqfactor = gqfactor;
+
+    
+    // Proton contributions:
+    qgfactor += pdf_object->cont.glu * (  ff_object->fragmentation(DSSpiNLO::up, DSSpiNLO::pi_minus)
+                                        + ff_object->fragmentation(DSSpiNLO::up_bar, DSSpiNLO::pi_minus)
+                                        + ff_object->fragmentation(DSSpiNLO::down, DSSpiNLO::pi_minus)
+                                        + ff_object->fragmentation(DSSpiNLO::down_bar, DSSpiNLO::pi_minus)
+                                        + ff_object->fragmentation(DSSpiNLO::strange, DSSpiNLO::pi_minus)
+                                        + ff_object->fragmentation(DSSpiNLO::strange_bar, DSSpiNLO::pi_minus));
+    
+    // Neutron contributions (for deuteron collisions), assuming isospin symmetry:
+    qgfactor *= 2;
+    
+    this->qgfactor = qgfactor;
+
+    
 }
 
 double GBWGluonDistribution::S2(double r2, IntegrationContext* ictx) {
     return exp(-0.25 * r2 * ictx->Qs2);
 }
-double GBWGluonDistribution::S4(double s2, double t2, IntegrationContext* ictx) {
+double GBWGluonDistribution::S4(double r2, double s2, double t2, IntegrationContext* ictx) {
     return exp(-0.25 * ictx->Qs2 * (s2 + t2));
 }
 
 double MVGluonDistribution::S2(double r2, IntegrationContext* ictx) {
     return pow(M_E + 1.0 / (sqrt(r2) * LambdaMV), -0.25 * r2 * ictx->Qs2);
 }
-double MVGluonDistribution::S4(double s2, double t2, IntegrationContext* ictx) {
+double MVGluonDistribution::S4(double r2, double s2, double t2, IntegrationContext* ictx) {
     return S2(s2, ictx) * S2(t2, ictx);
 }
 
 class HardFactor {
 public:
     virtual term_type get_type() = 0;
-    virtual double real_singular_contribution(IntegrationContext* ictx) { return 0; }
-    virtual double imag_singular_contribution(IntegrationContext* ictx) { return 0; }
-    virtual double real_normal_contribution(IntegrationContext* ictx) { return 0; }
-    virtual double imag_normal_contribution(IntegrationContext* ictx) { return 0; }
-    virtual double real_delta_contribution(IntegrationContext* ictx) { return 0; }
-    virtual double imag_delta_contribution(IntegrationContext* ictx) { return 0; }
+    virtual void Fs(IntegrationContext* ictx, double* real, double* imag) { *real = 0; *imag = 0; }
+    virtual void Fn(IntegrationContext* ictx, double* real, double* imag) { *real = 0; *imag = 0; }
+    virtual void Fd(IntegrationContext* ictx, double* real, double* imag) { *real = 0; *imag = 0; }
 };
 
 class H02qq : public HardFactor {
@@ -275,15 +297,11 @@ public:
     term_type get_type() {
         return dipole;
     }
-    double real_delta_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI) * ictx->qqfactor / ictx->z2 * ictx->S2r *
-         // real part of the hard factor
-         cos(ictx->kT * (ictx->xx - ictx->yx)); // take angle of k_perp to be 0
-    }
-    double imag_delta_contribution(IntegrationContext* ictx) {
-        return -1/(4*M_PI*M_PI) * ictx->qqfactor / ictx->z2 * ictx->S2r *
-         // imaginary part of the hard factor
-         sin(ictx->kT * (ictx->xx - ictx->yx)); 
+    void Fd(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = 1/(4*M_PI*M_PI) * ictx->qqfactor / ictx->z2 * ictx->S2r;
+        double phase = -ictx->kT * (ictx->xx - ictx->yx); // take angle of k_perp to be 0
+        *real = amplitude * cos(phase);
+        *imag = amplitude * sin(phase);
     }
 };
 
@@ -292,64 +310,35 @@ public:
     term_type get_type() {
         return dipole;
     }
-    double real_singular_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->S2r *
-         // real part of the singular contribution
-         ictx->ctx->CF * (1 + ictx->xi2) * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
-         * (cos(ictx->kT * (ictx->xx - ictx->yx)) + cos(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi) / ictx->xi2);
+    void Fs(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->S2r *
+          ictx->ctx->CF * (1 + ictx->xi2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
+        double phase1 = -ictx->kT * (ictx->xx - ictx->yx);
+        double phase2 = -ictx->kT * (ictx->xx - ictx->yx) / ictx->xi;
+        *real = amplitude * (cos(phase1) + cos(phase2) / ictx->xi2);
+        *imag = amplitude * (sin(phase1) + sin(phase2) / ictx->xi2);
     }
-    double imag_singular_contribution(IntegrationContext* ictx) {
-        return -1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->S2r *
-         // imaginary part of the singular contribution
-         ictx->ctx->CF * (1 + ictx->xi2) * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
-         * (sin(ictx->kT * (ictx->xx - ictx->yx)) + sin(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi) / ictx->xi2);
-    }
-    double real_delta_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->S2r * (
-         // real part of the delta contribution
-         1.5 * ictx->ctx->CF * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
-         * (cos(ictx->kT * (ictx->xx - ictx->yx)) + cos(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi) / ictx->xi2)
-         - 3.0 * ictx->ctx->CF * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->kT2))
-         * cos(ictx->kT * (ictx->xx - ictx->yx))
-        );
-    }
-    double imag_delta_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->S2r * (
-         // imaginary part of the delta contribution
-         1.5 * ictx->ctx->CF * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
-         * (sin(ictx->kT * (ictx->xx - ictx->yx)) + sin(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi) / ictx->xi2)
-         - 3.0 * ictx->ctx->CF * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->kT2))
-         * sin(ictx->kT * (ictx->xx - ictx->yx))
-        );
+    void Fd(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->S2r;
+        double term1 = 1.5 * ictx->ctx->CF * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
+        double term2 = -3.0 * ictx->ctx->CF * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->kT2));
+        double phase1 = ictx->kT * (ictx->xx - ictx->yx);
+        double phase2 = ictx->kT * (ictx->xx - ictx->yx) / ictx->xi;
+        *real = amplitude * (term1 * (cos(phase1) + cos(phase2) / ictx->xi2) + term2 * cos(phase1));
+        *imag = amplitude * (term1 * (sin(phase1) + sin(phase2) / ictx->xi2) + term2 * sin(phase1));
     }
 };
 
-void h14qq_internal_integrand(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nvalues, double* values) {
-    assert(ncoords == 1);
-    assert(nvalues == 2);
-    double xip = coordinates[0];
-    double xip2 = xip * xip;
-    double kt = *((double*)closure);
-    values[0] = ((1 + xip2) * cos(xip * kt) - 2 * cos(kt)) / (1 - xip);
-    values[1] = ((1 + xip2) * sin(xip * kt) - 2 * sin(kt)) / (1 - xip);
-}
-
-void h14qq_internal_integral(double kt, double* real, double* imag) {
-    double result[2];
-    double error[2];
-    double xmin1D[] = {0.0d};
-    double xmax1D[] = {1.0d};
-    int status = adapt_integrate(2, h14qq_internal_integrand, &kt, 1, xmin1D, xmax1D, 200000, 0, 1e-4, result, error);
-    if (status != SUCCESS) {
-        cerr << "Error in 1D integration (probably memory)" << endl;
-        exit(1);
+void I1(double x, double* real, double* imag) {
+    if (x < 0) {
+        // if argument is negative, switch it to positive and flip the sign of the imaginary part of the result
+        x = -x;
+        *imag = -(2 - cos(x) - gsl_sf_sinc(x * M_1_PI)) / x + 2 * gsl_sf_Si(x);
     }
-    if (real) {
-        *real = result[0];
+    else {
+        *imag = (2 - cos(x) - gsl_sf_sinc(x * M_1_PI)) / x - 2 * gsl_sf_Si(x);
     }
-    if (imag) {
-        *imag = result[1];
-    }
+    *real = -2 * M_EULER - gsl_sf_sinc(x * M_1_PI) + (cos(x) - 1) / (x * x) + 2 * gsl_sf_Ci(x) - 2 * log(x);
 }
 
 class H14qq : public HardFactor {
@@ -357,37 +346,23 @@ public:
     term_type get_type() {
         return quadrupole;
     }
-    double real_singular_contribution(IntegrationContext* ictx) {
-        return -1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->S4st *
-         // real part of the singular contribution
+    void Fs(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = -1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->S4rst *
          4*M_PI * ictx->ctx->Nc * (1 + ictx->xi2) / ictx->xi
          * ((ictx->xx - ictx->bx)*(ictx->yx - ictx->bx) + (ictx->xy - ictx->by)*(ictx->yy - ictx->by))
-            / ( ictx->s2 * ictx->t2 )
-         * cos(ictx->kT * (ictx->xx / ictx->xi - ictx->yx - (1.0/ictx->xi - 1.0) * ictx->bx));
+            / ( ictx->s2 * ictx->t2 );
+        double phase = -ictx->kT * (ictx->xx / ictx->xi - ictx->yx - (1.0/ictx->xi - 1.0) * ictx->bx);
+        *real = amplitude * cos(phase);
+        *imag = amplitude * sin(phase);
     }
-    double imag_singular_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->S4st *
-         // imaginary part of the singular contribution
-         4*M_PI * ictx->ctx->Nc * (1 + ictx->xi2) / ictx->xi
-         * ((ictx->xx - ictx->bx)*(ictx->yx - ictx->bx) + (ictx->xy - ictx->by)*(ictx->yy - ictx->by))
-            / ( ictx->s2 * ictx->t2 )
-         * sin(ictx->kT * (ictx->xx / ictx->xi - ictx->yx - (1.0/ictx->xi - 1.0) * ictx->bx));
-    }
-    double real_delta_contribution(IntegrationContext* ictx) {
-        double real, imag;
-        h14_internal_integral(ictx->kT * (ictx->yx - ictx->bx), &real, &imag);
-        return 1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * (ictx->S4st - ictx->ctx->gdist->S4(ictx->s2, 0, ictx)) *
-         // real part of the delta contribution
-         4*M_PI * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->t2
-         * (cos(ictx->kT * (ictx->xx - ictx->bx)) * real + sin(ictx->kT * (ictx->xx - ictx->bx)) * imag);
-    }
-    double imag_delta_contribution(IntegrationContext* ictx) {
-        double real, imag;
-        h14_internal_integral(ictx->kT * (ictx->yx - ictx->bx), &real, &imag);
-        return 1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * (ictx->S4st - ictx->ctx->gdist->S4(ictx->s2, 0, ictx)) *
-         // imaginary part of the delta contribution
-         4*M_PI * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->t2
-         * (cos(ictx->kT * (ictx->xx - ictx->bx)) * imag - sin(ictx->kT * (ictx->xx - ictx->bx)) * real);
+    void Fd(IntegrationContext* ictx, double* real, double* imag) {
+        double realI, imagI;
+        I1(ictx->kT * (ictx->yx - ictx->bx), &realI, &imagI);
+        double amplitude = 1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * (ictx->S4rst - ictx->ctx->gdist->S4(ictx->s2, ictx->s2, 0, ictx)) *
+         4*M_PI * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->t2;
+        double phase = ictx->kT * (ictx->xx - ictx->yx);
+        *real = amplitude * (cos(phase) * realI + sin(phase) * imagI);
+        *imag = amplitude * (cos(phase) * imagI - sin(phase) * realI);
     }
 };
 
@@ -396,17 +371,12 @@ public:
     term_type get_type() {
         return dipole;
     }
-    double real_delta_contribution(IntegrationContext* ictx) {
-        return -1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->ctx->gdist->S4(ictx->r2, 0, ictx) *
-         // real part of the delta contribution
-         ictx->ctx->Nc * ictx->ctx->Sperp * (2.5 - 2.0*M_PI*M_PI/3.0)
-         * cos(ictx->kT * (ictx->xx - ictx->bx));
-    }
-    double imag_delta_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->ctx->gdist->S4(ictx->r2, 0, ictx) *
-         // imaginary part of the delta contribution
-         ictx->ctx->Nc * ictx->ctx->Sperp * (2.5 - 2.0*M_PI*M_PI/3.0)
-         * sin(ictx->kT * (ictx->xx - ictx->bx));
+    void Fd(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = -1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->qqfactor / ictx->z2 * ictx->ctx->gdist->S4(ictx->r2, ictx->r2, 0, ictx) *
+         ictx->ctx->Nc * ictx->ctx->Sperp * (2.5 - 2.0*M_PI*M_PI/3.0);
+        double phase = ictx->kT * (ictx->xx - ictx->bx);
+        *real = amplitude * cos(phase);
+        *imag = amplitude * sin(phase);
     }
 };
 
@@ -415,15 +385,11 @@ public:
     term_type get_type() {
         return dipole;
     }
-    double real_delta_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI) * ictx->ggfactor / ictx->z2 * ictx->S2r * ictx->S2r *
-         // real part of the hard factor
-         cos(ictx->kT * (ictx->xx - ictx->yx)); // take angle of k_perp to be 0
-    }
-    double imag_delta_contribution(IntegrationContext* ictx) {
-        return -1/(4*M_PI*M_PI) * ictx->ggfactor / ictx->z2 * ictx->S2r * ictx->S2r *
-         // imaginary part of the hard factor
-         sin(ictx->kT * (ictx->xx - ictx->yx)); 
+    void Fd(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = 1/(4*M_PI*M_PI) * ictx->ggfactor / ictx->z2 * ictx->S2r * ictx->S2r;
+        double phase = -ictx->kT * (ictx->xx - ictx->yx);
+        *real = amplitude * cos(phase);
+        *imag = amplitude * sin(phase);
     }
 };
 
@@ -432,93 +398,61 @@ public:
     term_type get_type() {
         return dipole;
     }
-    double real_singular_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->ggfactor / ictx->z2 * ictx->S2r * ictx->S2r *
+    void Fs(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->ggfactor / ictx->z2 * ictx->S2r * ictx->S2r *
          ictx->ctx->Nc * 2 * ictx->xi
-           * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
-           * (cos(ictx->kT * (ictx->xx - ictx->yx)) + cos(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi) / ictx->xi2);
+           * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
+        double phase1 = -ictx->kT * (ictx->xx - ictx->yx);
+        double phase2 = -ictx->kT * (ictx->xx - ictx->yx) / ictx->xi;
+        *real = amplitude * (cos(phase1) + cos(phase2) / ictx->xi2);
+        *imag = amplitude * (sin(phase1) + sin(phase2) / ictx->xi2);
     }
-    double imag_singular_contribution(IntegrationContext* ictx) {
-        return -1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->ggfactor / ictx->z2 * ictx->S2r * ictx->S2r *
-         ictx->ctx->Nc * 2 * ictx->xi
-           * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
-           * (sin(ictx->kT * (ictx->xx - ictx->yx)) + sin(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi) / ictx->xi2);
-    }
-    double real_normal_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->ggfactor / ictx->z2 * ictx->S2r * ictx->S2r *
+    void Fn(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->ggfactor / ictx->z2 * ictx->S2r * ictx->S2r *
          ictx->ctx->Nc * 2 * (1.0 / ictx->xi - 1.0 + ictx->xi - ictx->xi2)
-           * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
-           * (cos(ictx->kT * (ictx->xx - ictx->yx)) + cos(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi) / ictx->xi2);
+           * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
+        double phase1 = ictx->kT * (ictx->xx - ictx->yx);
+        double phase2 = ictx->kT * (ictx->xx - ictx->yx) / ictx->xi;
+        *real = amplitude * (cos(phase1) + cos(phase2) / ictx->xi2);
+        *imag = amplitude * (sin(phase1) + sin(phase2) / ictx->xi2);
     }
-    double imag_normal_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->ggfactor / ictx->z2 * ictx->S2r * ictx->S2r *
-         ictx->ctx->Nc * 2 * (1.0 / ictx->xi - 1.0 + ictx->xi - ictx->xi2)
-           * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
-           * (sin(ictx->kT * (ictx->xx - ictx->yx)) + sin(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi) / ictx->xi2);
-    }
-    double real_delta_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->ggfactor / ictx->z2 * ictx->S2r * ictx->S2r * (
-         ictx->ctx->Nc * (11.0/6.0 - 2 * ictx->ctx->Nf * ictx->ctx->TR / (3 * ictx->ctx->Nc))       // P_gg term
-           * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
-           * (cos(ictx->kT * (ictx->xx - ictx->yx)) + cos(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi) / ictx->xi2)
-         - ictx->ctx->Nc * 2 * (11.0/6.0 - 2 * ictx->ctx->Nf * ictx->ctx->TR / (3 * ictx->ctx->Nc)) // independent term
-           * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->kT2))
-           * cos(ictx->kT * (ictx->xx - ictx->yx))
-        );
-    }
-    double imag_delta_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->ggfactor / ictx->z2 * ictx->S2r * ictx->S2r * (
-         ictx->ctx->Nc * (11.0/6.0 - 2 * ictx->ctx->Nf * ictx->ctx->TR / (3 * ictx->ctx->Nc))       // P_gg term
-           * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
-           * (sin(ictx->kT * (ictx->xx - ictx->yx)) + sin(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi) / ictx->xi2)
-         - ictx->ctx->Nc * 2 * (11.0/6.0 - 2 * ictx->ctx->Nf * ictx->ctx->TR / (3 * ictx->ctx->Nc)) // independent term
-           * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->kT2))
-           * sin(ictx->kT * (ictx->xx - ictx->yx))
-        );
+    void Fd(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->ggfactor / ictx->z2 * ictx->S2r * ictx->S2r;
+        double term1 = ictx->ctx->Nc * (11.0/6.0 - 2 * ictx->ctx->Nf * ictx->ctx->TR / (3 * ictx->ctx->Nc))       // P_gg term
+           * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
+        double term2 = -ictx->ctx->Nc * 2 * (11.0/6.0 - 2 * ictx->ctx->Nf * ictx->ctx->TR / (3 * ictx->ctx->Nc)) // independent term
+           * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->kT2));
+        double phase1 = ictx->kT * (ictx->xx - ictx->yx);
+        double phase2 = ictx->kT * (ictx->xx - ictx->yx) / ictx->xi;
+        *real = amplitude * (term1 * (cos(phase1) + cos(phase2) / ictx->xi2) + term2 * cos(phase1));
+        *imag = amplitude * (term1 * (sin(phase1) + sin(phase2) / ictx->xi2) + term2 * cos(phase1));
     }
 };
 
-void h12qqbar_internal_integrand(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nvalues, double* values) {
-    assert(ncoords == 1);
-    assert(nvalues == 2);
-    double xip = coordinates[0];
-    double xip2 = xip * xip;
-    double kr = *((double*)closure);
-    values[0] = (2 * xip2 - 2 * xip + 1) * cos(kr);
-    values[1] = -(2 * xip2 - 2 * xip + 1) * sin(kr);
+void I2(double x, double* real, double* imag) {
+    double sx = sin(x), cx = cos(x);
+    double ix = 1.0 / x;
+    double ix2 = ix * ix;
+    double ix3 = ix2 * ix;
+    *real = -4 * ix3 * sx + 2 * ix2 * (1 + cx) + ix * sx;
+    *imag = 4 * ix3 * (1 - cx) - 2 * ix2 * sx - ix * (1 - cx);
 }
-
-void h12qqbar_internal_integral(double kr, double* real, double* imag) {
-    double result[2];
-    double error[2];
-    double xmin1D[] = {0.0d};
-    double xmax1D[] = {1.0d};
-    int status = adapt_integrate(2, h12qqbar_internal_integrand, &kr, 1, xmin1D, xmax1D, 200000, 0, 1e-4, result, error);
-    if (status != SUCCESS) {
-        cerr << "Error in 1D integration (probably memory)" << endl;
-        exit(1);
-    }
-    if (real) {
-        *real = result[0];
-    }
-    if (imag) {
-        *imag = result[1];
-    }
-}
-
 
 class H12qqbar : public HardFactor {
 public:
     term_type get_type() {
         return quadrupole;
     }
-    double real_delta_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->ggfactor / ictx->z2 *
-         8 * M_PI * ictx->ctx->Nf * ictx->ctx->TR
-           * (ictx->gdist->S2(ictx->s2) - ictx->gdist->S2(ictx->t2)) * ictx->gdist->S2(ictx->t2)
-           * cos(ictx->kT * (ictx->yx - ictx->bx));
-    }
-    double imag_delta_contribution(IntegrationContext* ictx) {
+    void Fd(IntegrationContext* ictx, double* real, double* imag) {
+        double realI, imagI;
+        I2(ictx->kT * sqrt(ictx->r2), &realI, &imagI);
+        double amplitude = 1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->ggfactor / ictx->z2 *
+         8 * M_PI * ictx->ctx->Nf * ictx->ctx->TR * ictx->ctx->Sperp
+           * (ictx->ctx->gdist->S2(ictx->s2, ictx) - ictx->ctx->gdist->S2(ictx->t2, ictx)) * ictx->ctx->gdist->S2(ictx->t2, ictx)
+           / ictx->r2;
+        double phase = ictx->kT * (ictx->yx - ictx->bx);
+        *real = amplitude * (cos(phase) * realI + sin(phase) * imagI);
+        *imag = amplitude * (cos(phase) * imagI - sin(phase) * realI);
     }
 };
 
@@ -527,13 +461,71 @@ public:
     term_type get_type() {
         return dipole;
     }
-    double real_delta_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->ggfactor / ictx->z2 * ictx->S2r * ictx->S2r *
-         8 * M_PI * ictx->ctx->Nf * ictx->ctx->TR
-           *// stuff...
-           * cos(ictx->kT * (ictx->yx - ictx->bx));
+    void Fd(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->ggfactor / ictx->z2 * ictx->ctx->Sperp * ictx->S2r * ictx->S2r *
+         4 * M_PI * ictx->ctx->Nf * ictx->ctx->TR * (13.0 / 18.0);
+        double phase = -ictx->kT * (ictx->yx - ictx->bx);
+        *real = amplitude * cos(phase);
+        *imag = amplitude * sin(phase);
     }
-    double imag_delta_contribution(IntegrationContext* ictx) {
+};
+
+void I3(double x, double* real, double* imag) {
+    bool negative = false;
+    if (x == 0) {
+        *real = -11.0 / 12.0;
+        *imag = 0;
+        return;
+    }
+    else if (x < 0) {
+        x = -x;
+        negative = true;
+    }
+    double sx = sin(x), cx = cos(x);
+    double si = gsl_sf_Si(x), ci = gsl_sf_Ci(x);
+    double ix = 1.0 / x;
+    double ix2 = ix * ix;
+    double ix3 = ix2 * ix;
+    *real = -0.5 * (1 + cx) * ix2 + cx * (ci - log(x) - M_EULER) + sx * (si - ix + ix3);
+    *imag = (negative ? -1 : 1) * ( (1 - cx) * (ix - ix3) + cx * si + sx * (log(x) + 0.5 * ix2 + M_EULER - ci) );
+}
+
+class H16gg : public HardFactor {
+public:
+    term_type get_type() {
+        return quadrupole;
+    }
+    void Fs(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = M_1_PI*M_1_PI*M_1_PI * ictx->alphasbar * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->z2
+          * ictx->ggfactor * ictx->S4rst * (1 - ictx->xi + ictx->xi2)*(1 - ictx->xi + ictx->xi2) / ictx->xi2
+          * ((ictx->xx - ictx->yx)*(ictx->yx - ictx->bx) + (ictx->xy - ictx->yy)*(ictx->yy - ictx->by)) / (ictx->r2 * ictx->t2);
+        double phase = ictx->kT * (ictx->xx - ictx->yx + (ictx->yx - ictx->bx) / ictx->xi);
+        *real = amplitude * cos(phase);
+        *imag = amplitude * sin(phase);
+    }
+    void Fd(IntegrationContext* ictx, double* real, double* imag) {
+        double realI, imagI;
+        I3(ictx->kT * (ictx->yx - ictx->bx), &realI, &imagI);
+        double amplitude = M_1_PI*M_1_PI*M_1_PI * ictx->alphasbar * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->z2
+          * ictx->ggfactor * ictx->ctx->gdist->S2(ictx->s2, ictx) * (ictx->ctx->gdist->S2(ictx->t2, ictx) * ictx->ctx->gdist->S2(ictx->r2, ictx) - ictx->ctx->gdist->S2(ictx->s2, ictx) * ictx->ctx->gdist->S2(0, ictx))
+          / ictx->t2;
+        double phase = -ictx->kT * (ictx->xx - ictx->yx);
+        *real = amplitude * (cos(phase) * realI - sin(phase) * imagI);
+        *imag = amplitude * (cos(phase) * imagI + sin(phase) * realI);
+    }
+};
+
+class H16ggResidual : public HardFactor {
+public:
+    term_type get_type() {
+        return dipole;
+    }
+    void Fd(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = (-67.0 / 36.0 * M_1_PI*M_1_PI + 1.0 / 3.0) * ictx->alphasbar * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->z2
+          * ictx->ggfactor * ictx->S2r * ictx->S2r * ictx->ctx->gdist->S2(0, ictx);
+        double phase = -ictx->kT * (ictx->xx - ictx->yx);
+        *real = amplitude * cos(phase);
+        *imag = amplitude * cos(phase);
     }
 };
 
@@ -542,17 +534,14 @@ public:
     term_type get_type() {
         return dipole;
     }
-    double real_normal_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->gqfactor / ictx->z2 * ictx->S2r *
-         // real part of the normal contribution
-         0.5 * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / (ictx->xi * ictx->xi2) * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
-         * cos(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi);
-    }
-    double imag_normal_contribution(IntegrationContext* ictx) {
-        return -1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->gqfactor / ictx->z2 * ictx->S2r *
-         // imaginary part of the normal contribution
-         0.5 * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / (ictx->xi * ictx->xi2) * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
-         * sin(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi);
+    void Fn(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->gqfactor / ictx->z2 * ictx->S2r *
+         0.5 * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / (ictx->xi * ictx->xi2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
+        double phase = -ictx->kT * (ictx->xx - ictx->yx) / ictx->xi;
+        checkfinite(amplitude);
+        checkfinite(phase);
+        *real = amplitude * cos(phase);
+        *imag = amplitude * sin(phase);
     }
 };
 
@@ -561,17 +550,14 @@ public:
     term_type get_type() {
         return dipole;
     }
-    double real_normal_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->gqfactor / ictx->z2 * ictx->S2r * ictx->S2r *
-         // real part of the normal contribution
-         0.5 * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / ictx->xi * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
-         * cos(ictx->kT * (ictx->xx - ictx->yx));
-    }
-    double imag_normal_contribution(IntegrationContext* ictx) {
-        return -1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->gqfactor / ictx->z2 * ictx->S2r * ictx->S2r * // assumes S2 depends only on the magnitude of x - y
-         // imaginary part of the normal contribution
-         0.5 * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / ictx->xi * (-2*EULER_GAMMA + log(4) - log(ictx->r2 * ictx->ctx->mu2))
-         * sin(ictx->kT * (ictx->xx - ictx->yx));
+    void Fn(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = 1/(4*M_PI*M_PI) * ictx->alphasbar * ictx->gqfactor / ictx->z2 * ictx->S2r * ictx->S2r *
+         0.5 * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / ictx->xi * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
+        double phase = -ictx->kT * (ictx->xx - ictx->yx);
+        checkfinite(amplitude);
+        checkfinite(phase);
+        *real = amplitude * cos(phase);
+        *imag = amplitude * sin(phase);
     }
 };
 
@@ -580,21 +566,66 @@ public:
     term_type get_type() {
         return quadrupole;
     }
-    double real_normal_contribution(IntegrationContext* ictx) {
-        return -1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->gqfactor / ictx->z2 * ictx->S4st *
-         // real part of the normal contribution
+    void Fn(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = -1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->gqfactor / ictx->z2 * ictx->S4rst *
          4 * M_PI * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / (ictx->xi2)
          * ((ictx->xx - ictx->yx)*(ictx->bx - ictx->yx) + (ictx->xy - ictx->yy)*(ictx->by - ictx->yy))
-            / ( ictx->r2 * ictx->t2 )
-         * cos(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi + ictx->kT * (ictx->yx - ictx->bx));
+            / ( ictx->r2 * ictx->t2 );
+        double phase = -(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi + ictx->kT * (ictx->yx - ictx->bx));
+        checkfinite(amplitude);
+        checkfinite(phase);
+        *real = amplitude * cos(phase);
+        *imag = amplitude * sin(phase);
     }
-    double imag_normal_contribution(IntegrationContext* ictx) {
-        return 1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphasbar * ictx->gqfactor / ictx->z2 * ictx->S4st *
-         // imaginary part of the normal contribution
-         4 * M_PI * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / (ictx->xi2)
-         * ((ictx->xx - ictx->yx)*(ictx->bx - ictx->yx) + (ictx->xy - ictx->yy)*(ictx->by - ictx->yy))
-            / ( ictx->r2 * ictx->t2 )
-         * sin(ictx->kT * (ictx->xx - ictx->yx) / ictx->xi + ictx->kT * (ictx->yx - ictx->bx));
+};
+
+class H112qg : public HardFactor {
+public:
+    term_type get_type() {
+        return dipole;
+    }
+    void Fn(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = 0.125*M_1_PI*M_1_PI * ictx->alphasbar * ictx->ctx->Sperp / ictx->z2 * ictx->qgfactor * ictx->S2r *
+         (1 - 2 * ictx->xi + 2 * ictx->xi2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
+        double phase = -ictx->kT * (ictx->xx - ictx->yx);
+        checkfinite(amplitude);
+        checkfinite(phase);
+        *real = amplitude * cos(phase);
+        *imag = amplitude * sin(phase);
+    }
+};
+
+class H122qg : public HardFactor {
+public:
+    term_type get_type() {
+        return dipole;
+    }
+    void Fn(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = 0.125*M_1_PI*M_1_PI * ictx->alphasbar * ictx->ctx->Sperp / ictx->z2 * ictx->qgfactor * ictx->S2r *
+         (1 / ictx->xi2 - 2 / ictx->xi + 2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
+        double phase = -ictx->kT * (ictx->xx - ictx->yx) / ictx->xi;
+        checkfinite(amplitude);
+        checkfinite(phase);
+        *real = amplitude * cos(phase);
+        *imag = amplitude * sin(phase);
+    }
+};
+
+class H14qg : public HardFactor {
+public:
+    term_type get_type() {
+        return quadrupole;
+    }
+    void Fn(IntegrationContext* ictx, double* real, double* imag) {
+        double amplitude = 0.25*M_1_PI*M_1_PI*M_1_PI * ictx->alphasbar * ictx->ctx->Sperp / ictx->z2 * ictx->qgfactor * ictx->S4rst *
+         (1 / ictx->xi - 2 + 2 * ictx->xi)
+         * ((ictx->xx - ictx->yx)*(ictx->yx - ictx->bx) + (ictx->xy - ictx->yy)*(ictx->yy - ictx->by))
+            / ( ictx->r2 * ictx->t2 );
+        double phase = -(ictx->kT * (ictx->xx - ictx->yx) + ictx->kT * (ictx->yx - ictx->bx) / ictx->xi);
+        checkfinite(amplitude);
+        checkfinite(phase);
+        *real = amplitude * cos(phase);
+        *imag = amplitude * sin(phase);
     }
 };
 
@@ -671,8 +702,9 @@ public:
 
 void Integrator::evaluate_1D_integrand(double* real, double* imag) {
     double l_real = 0.0, l_imag = 0.0; // l for "local"
+    double t_real, t_imag;             // t for temporary
     double log_factor = log(1 - ictx->ctx->tau / ictx->z);
-    assert(log_factor == log_factor);
+    checkfinite(log_factor);
     size_t n_terms;
     HardFactor** terms;
     assert(current_term_type == dipole || current_term_type == quadrupole);
@@ -691,14 +723,16 @@ void Integrator::evaluate_1D_integrand(double* real, double* imag) {
     }
     assert(ictx->xi == 1.0d);
     for (size_t i = 0; i < n_terms; i++) {
-        l_real += terms[i]->real_singular_contribution(ictx) * log_factor;
-        assert(l_real == l_real);
-        l_imag += terms[i]->imag_singular_contribution(ictx) * log_factor;
-        assert(l_imag == l_imag);
-        l_real += terms[i]->real_delta_contribution(ictx);
-        assert(l_real == l_real);
-        l_imag += terms[i]->imag_delta_contribution(ictx);
-        assert(l_imag == l_imag);
+        terms[i]->Fs(ictx, &t_real, &t_imag);
+        checkfinite(t_real);
+        checkfinite(t_imag);
+        l_real += t_real * log_factor;
+        l_imag += t_imag * log_factor;
+        terms[i]->Fd(ictx, &t_real, &t_imag);
+        checkfinite(t_real);
+        checkfinite(t_imag);
+        l_real += t_real;
+        l_imag += t_imag;
     }
     if (callback) {
         callback(ictx, l_real, l_imag);
@@ -709,10 +743,11 @@ void Integrator::evaluate_1D_integrand(double* real, double* imag) {
 
 void Integrator::evaluate_2D_integrand(double* real, double* imag) {
     double l_real = 0.0, l_imag = 0.0; // l for "local"
+    double t_real, t_imag;             // t for temporary
     double jacobian =  (1 - ictx->ctx->tau / ictx->z) / (1 - ictx->ctx->tau); // Jacobian from y to xi
-    assert(jacobian == jacobian);
+    checkfinite(jacobian);
     double xi_factor = 1.0 / (1 - ictx->xi);
-    assert(xi_factor == xi_factor);
+    checkfinite(xi_factor);
     size_t n_terms;
     HardFactor** terms;
     assert(current_term_type == dipole || current_term_type == quadrupole);
@@ -730,24 +765,27 @@ void Integrator::evaluate_2D_integrand(double* real, double* imag) {
         return;
     }
     for (size_t i = 0; i < n_terms; i++) {
-        l_real += terms[i]->real_singular_contribution(ictx) * xi_factor;
-        assert(l_real == l_real);
-        l_imag += terms[i]->imag_singular_contribution(ictx) * xi_factor;
-        assert(l_imag == l_imag);
-        l_real += terms[i]->real_normal_contribution(ictx);
-        assert(l_real == l_real);
-        l_imag += terms[i]->imag_normal_contribution(ictx);
-        assert(l_imag == l_imag);
+        terms[i]->Fs(ictx, &t_real, &t_imag);
+        checkfinite(t_real);
+        checkfinite(t_imag);
+        l_real += t_real * xi_factor;
+        l_imag += t_imag * xi_factor;
+        terms[i]->Fn(ictx, &t_real, &t_imag);
+        checkfinite(t_real);
+        checkfinite(t_imag);
+        l_real += t_real;
+        l_imag += t_imag;
     }
     if (callback) {
         callback(ictx, jacobian * l_real, jacobian * l_imag);
     }
     ictx->update(ictx->z, 1, ictx->xx, ictx->xy, ictx->yx, ictx->yy, ictx->bx, ictx->by);
     for (size_t i = 0; i < n_terms; i++) {
-        l_real -= terms[i]->real_singular_contribution(ictx) * xi_factor;
-        assert(l_real == l_real);
-        l_imag -= terms[i]->imag_singular_contribution(ictx) * xi_factor;
-        assert(l_imag == l_imag);
+        terms[i]->Fs(ictx, &t_real, &t_imag);
+        checkfinite(t_real);
+        checkfinite(t_imag);
+        l_real -= t_real * xi_factor;
+        l_imag -= t_imag * xi_factor;
     }
     if (callback) {
         callback(ictx, jacobian * l_real, jacobian * l_imag);
@@ -768,6 +806,8 @@ double gsl_monte_wrapper_1D(double* coordinates, size_t ncoords, void* closure) 
         integrator->update(coordinates[0], 1, coordinates[1], coordinates[2], coordinates[3], coordinates[4]);
     }
     integrator->evaluate_1D_integrand(&real, &imag);
+    checkfinite(real);
+    checkfinite(imag);
     return real;
 }
 
@@ -783,6 +823,8 @@ double gsl_monte_wrapper_2D(double* coordinates, size_t ncoords, void* closure) 
         integrator->update(coordinates[0], coordinates[1], coordinates[2], coordinates[3], coordinates[4], coordinates[5]);
     }
     integrator->evaluate_2D_integrand(&real, &imag);
+    checkfinite(real);
+    checkfinite(imag);
     return real;
 }
 
@@ -795,7 +837,9 @@ void miser_integrate(double (*func)(double*, size_t, void*), size_t dim, void* c
 
     gsl_rng* rng = gsl_rng_alloc(gsl_rng_default);
     gsl_monte_miser_state* s = gsl_monte_miser_alloc(dim);
-    gsl_monte_miser_integrate(&f, min, max, dim, 1000000, rng, s, p_result, p_abserr);
+    gsl_monte_miser_integrate(&f, min, max, dim, 10000000, rng, s, p_result, p_abserr);
+    checkfinite(*p_result);
+    checkfinite(*p_abserr);
     if (callback) {
         (*callback)(p_result, p_abserr, s);
     }
@@ -815,11 +859,15 @@ void vegas_integrate(double (*func)(double*, size_t, void*), size_t dim, void* c
     gsl_rng* rng = gsl_rng_alloc(gsl_rng_default);
     gsl_monte_vegas_state* s = gsl_monte_vegas_alloc(dim);
     gsl_monte_vegas_integrate(&f, min, max, dim, 10000, rng, s, p_result, p_abserr);
+    checkfinite(*p_result);
+    checkfinite(*p_abserr);
     if (callback) {
         (*callback)(p_result, p_abserr, s);
     }
     do {
         gsl_monte_vegas_integrate(&f, min, max, dim, 100000, rng, s, p_result, p_abserr);
+        checkfinite(*p_result);
+        checkfinite(*p_abserr);
         if (callback) {
             (*callback)(p_result, p_abserr, s);
         }
@@ -837,13 +885,15 @@ void miser_eprint_callback(double* p_result, double* p_abserr, gsl_monte_miser_s
     cerr << "MISER output: " << *p_result << " err: " << *p_abserr << endl;
 }
 
+static double inf = 10;
+
 void Integrator::integrate(double* real, double* imag) {
     double tmp_result;
     double tmp_error;
-    double min1D[] = {ictx->ctx->tau, -10, -10, -10, -10};
-    double max1D[] = {1.0, 10, 10, 10, 10};
-    double min2D[] = {ictx->ctx->tau, ictx->ctx->tau, -10, -10, -10, -10};
-    double max2D[] = {1.0, 1.0, 10, 10, 10, 10};
+    double min1D[] = {ictx->ctx->tau, -inf, -inf, -inf, -inf};
+    double max1D[] = {1.0, inf, inf, inf, inf};
+    double min2D[] = {ictx->ctx->tau, ictx->ctx->tau, -inf, -inf, -inf, -inf};
+    double max2D[] = {1.0, 1.0, inf, inf, inf, inf};
     double result = 0.0;
     double abserr = 0.0;
     // cubature doesn't work because of the endpoint singularity at xi = 1
@@ -987,6 +1037,7 @@ double calculateHardFactor(Context* ctx, size_t hflen, HardFactor** hflist) {
 }
 
 int main(int argc, char** argv) {
+    bool separate = false;
     GluonDistribution* gdist = new GBWGluonDistribution();
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--miser")==0) {
@@ -997,6 +1048,9 @@ int main(int argc, char** argv) {
         }
         else if (strcmp(argv[i], "--trace")==0) {
             trace = true;
+        }
+        else if (strcmp(argv[i], "--separate")==0) {
+            separate = true;
         }
     }
     gsl_rng_env_setup();
@@ -1018,37 +1072,75 @@ int main(int argc, char** argv) {
       gdist,
       "mstw2008nlo.00.dat", "PINLO.DAT");
 
-//     double pT[] = {0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4};
-    double pT[] = {1.01};
+    double pT[] = {0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4};
     size_t pTlen = sizeof(pT)/sizeof(double);
-    HardFactor* h02qq[] = {new H02qq()};
-    HardFactor* h12qq[] = {new H12qq()};
-    HardFactor* h14qq[] = {new H14qq(), new H14qqResidual()};
-    HardFactor* h112gq[] = {new H112gq()};
-    HardFactor* h122gq[] = {new H122gq()};
-    HardFactor* h14gq[] = {new H14gq()};
-    size_t hflen = 6;
+    HardFactor* hflist[] = {
+        new H02qq(), // 0
+        new H02gg(), // 1
+        new H12qq(), // 2
+        new H14qq(), new H14qqResidual(), // 3,4
+        new H12gg(), // 5
+        new H12qqbar(), new H12qqbarResidual(), // 6,7
+        new H16gg(), new H16ggResidual(), // 8,9
+        new H112gq(), // 10
+        new H122gq(), // 11
+        new H14gq(), // 12
+        new H112qg(), // 13
+        new H122qg(), // 14
+        new H14qg()}; // 15
+    size_t hflen = 13;
     double yield[hflen*pTlen];
     
     for (size_t i = 0; i < pTlen; i++) {
         gctx.pT2 = pT[i]*pT[i];
         gctx.recalculate();
         cerr << "Beginning calculation at pT = " << pT[i] << endl;
-        yield[hflen*i + 0] = calculateHardFactor(&gctx, 1, h02qq);
-        yield[hflen*i + 1] = calculateHardFactor(&gctx, 1, h12qq);
-        yield[hflen*i + 2] = calculateHardFactor(&gctx, 2, h14qq);
-        yield[hflen*i + 3] = calculateHardFactor(&gctx, 1, h112gq);
-        yield[hflen*i + 4] = calculateHardFactor(&gctx, 1, h122gq);
-        yield[hflen*i + 5] = calculateHardFactor(&gctx, 1, h14gq);
+        if (separate) {
+            yield[hflen*i + 0] = calculateHardFactor(&gctx, 1, hflist + 0);
+            yield[hflen*i + 1] = calculateHardFactor(&gctx, 1, hflist + 1);
+            yield[hflen*i + 2] = calculateHardFactor(&gctx, 1, hflist + 2);
+            yield[hflen*i + 3] = calculateHardFactor(&gctx, 2, hflist + 3);
+            yield[hflen*i + 4] = calculateHardFactor(&gctx, 1, hflist + 5);
+            yield[hflen*i + 5] = calculateHardFactor(&gctx, 2, hflist + 6);
+            yield[hflen*i + 6] = calculateHardFactor(&gctx, 2, hflist + 8);
+            yield[hflen*i + 7] = calculateHardFactor(&gctx, 1, hflist + 10);
+            yield[hflen*i + 8] = calculateHardFactor(&gctx, 1, hflist + 11);
+            yield[hflen*i + 9] = calculateHardFactor(&gctx, 1, hflist + 12);
+            yield[hflen*i + 10] = calculateHardFactor(&gctx, 1, hflist + 13);
+            yield[hflen*i + 11] = calculateHardFactor(&gctx, 1, hflist + 14);
+            yield[hflen*i + 12] = calculateHardFactor(&gctx, 1, hflist + 15);
+        }
+        else {
+            yield[2*i + 0] = calculateHardFactor(&gctx, 2, hflist); // leading order
+            yield[2*i + 1] = calculateHardFactor(&gctx, 14, hflist+2); // next-to-leading order
+        }
         cerr << "...done" << endl;
     }
-    cout << "pT\th02qq\th12qq\th14qq\th112gq\th122gq\th14gq" << endl;
+    if (separate) {
+        cout << "pT\th02qq\th02gg\th12qq\th14qq\th12gg\th12qqbar\th16gg\th112gq\th122gq\th14gq\th112qg\th122qg\th14qg\tlo\tnlo\tlo+nlo" << endl;
+    }
+    else {
+        cout << "pT\tlo\tnlo\tlo+nlo" << endl;
+    }
     for (size_t i = 0; i < pTlen; i++) {
-        cout << pT[i] << "\t";
-        for (size_t j = 0; j < hflen; j++) {
-            cout << yield[hflen*i + j] << "\t";
+        if (separate) {
+            cout << pT[i] << "\t";
+
+            double lo = 0, nlo = 0;
+            size_t j;
+            for (j = 0; j < 2; j++) {
+                cout << yield[hflen*i + j] << "\t";
+                lo += yield[hflen*i + j];
+            }
+            for (; j < hflen; j++) {
+                cout << yield[hflen*i + j] << "\t";
+                nlo += yield[hflen*i + j];
+            }
+            cout << lo << "\t" << nlo << "\t" << lo+nlo << endl;
         }
-        cout << endl;
+        else {
+            cout << pT[i] << "\t" << yield[2*i+0] << "\t" << yield[2*i+1] << "\t" << yield[2*i+0]+yield[2*i+1] << endl;
+        }
     }
     delete gdist;
     return 0;
