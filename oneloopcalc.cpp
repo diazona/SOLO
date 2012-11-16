@@ -480,7 +480,7 @@ public:
         double amplitude = M_1_PI*M_1_PI*M_1_PI * ictx->alphasbar * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->z2
           * ictx->ggfactor * ictx->S4rst * (1 - ictx->xi + ictx->xi2)*(1 - ictx->xi + ictx->xi2) / ictx->xi2
           * ((ictx->xx - ictx->yx)*(ictx->yx - ictx->bx) + (ictx->xy - ictx->yy)*(ictx->yy - ictx->by)) / (ictx->r2 * ictx->t2);
-        double phase = ictx->kT * (ictx->xx - ictx->yx + (ictx->yx - ictx->bx) / ictx->xi);
+        double phase = -ictx->kT * (ictx->xx - ictx->yx + (ictx->yx - ictx->bx) / ictx->xi);
         *real = amplitude * cos(phase);
         *imag = amplitude * sin(phase);
     }
