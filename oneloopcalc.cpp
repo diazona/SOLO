@@ -159,7 +159,9 @@ public:
     double z2, xi2;
     double kT2, kT;
     double xp, xg;
-    double r2, s2, t2;
+    double rx, ry, r2;
+    double sx, sy, s2;
+    double tx, ty, t2;
     double Qs2;
     double alphasbar;
     double qqfactor;
@@ -177,7 +179,9 @@ public:
       z2(0), xi2(0),
       kT2(0), kT(0),
       xp(0), xg(0),
-      r2(0), s2(0), t2(0),
+      rx(0), ry(0), r2(0),
+      sx(0), sy(0), s2(0),
+      tx(0), ty(0), t2(0),
       Qs2(0),
       alphasbar(0),
       qqfactor(0),
@@ -218,9 +222,15 @@ void IntegrationContext::update(double z, double y, double xx, double xy, double
     this->yy = yy;
     this->bx = bx;
     this->by = by;
-    this->r2 = (xx - yx) * (xx- yx) + (xy - yy) * (xy - yy);
-    this->s2 = (xx - bx) * (xx- bx) + (xy - by) * (xy - by);
-    this->t2 = (yx - bx) * (yx- bx) + (yy - by) * (yy - by);
+    this->rx = this->xx - this->yx;
+    this->ry = this->xy - this->yy;
+    this->r2 = rx*rx + ry*ry;
+    this->sx = this->xx - this->bx;
+    this->sy = this->xy - this->by;
+    this->s2 = sx*sx + sy*sy;
+    this->tx = this->yx - this->bx;
+    this->ty = this->yy - this->by;
+    this->t2 = tx*tx + ty*ty;
     this->xp = ctx->tau / (z * xi);
     this->kT2 = ctx->pT2 / this->z2;
     this->kT = sqrt(this->kT2);
