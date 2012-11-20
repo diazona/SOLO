@@ -208,7 +208,7 @@ void IntegrationContext::update(double z, double y, double xx, double xy, double
     checkfinite(bx);
     checkfinite(by);
     this->z = z;
-    this->z2 = z*z;
+    this->z2 = this->z*this->z;
     if (y == 1.0d) {
         this->xi = 1.0d; // avoid floating-point roundoff error
     }
@@ -231,7 +231,7 @@ void IntegrationContext::update(double z, double y, double xx, double xy, double
     this->tx = this->yx - this->bx;
     this->ty = this->yy - this->by;
     this->t2 = tx*tx + ty*ty;
-    this->xp = ctx->tau / (z * xi);
+    this->xp = ctx->tau / (this->z * xi);
     this->kT2 = ctx->pT2 / this->z2;
     this->kT = sqrt(this->kT2);
     this->xg = kT / ctx->sqs * exp(-ctx->Y);
