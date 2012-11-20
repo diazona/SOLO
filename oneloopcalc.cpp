@@ -531,7 +531,7 @@ public:
     }
     void Fs(IntegrationContext* ictx, double* real, double* imag) {
         double amplitude = M_1_PI*M_1_PI*M_1_PI * ictx->alphasbar * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->z2
-          * ictx->ggfactor * ictx->S4rst * (1 - ictx->xi + ictx->xi2)*(1 - ictx->xi + ictx->xi2) / ictx->xi2
+          * ictx->ggfactor * ictx->ctx->gdist->S2(ictx->s2, ictx) * ictx->ctx->gdist->S2(ictx->t2, ictx) * ictx->S2r * (1 - ictx->xi + ictx->xi2)*(1 - ictx->xi + ictx->xi2) / ictx->xi2
           * (ictx->rx*ictx->tx + ictx->ry*ictx->ty) / (ictx->r2 * ictx->t2);
         double phase = -ictx->kT * (ictx->rx + ictx->tx / ictx->xi);
         *real = amplitude * cos(phase);
