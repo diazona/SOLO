@@ -524,7 +524,7 @@ void I3(double x, double* real, double* imag) {
     *imag = (negative ? -1 : 1) * ( (1 - cx) * (ix - ix3) + cx * si + sx * (log(x) + 0.5 * ix2 + M_EULER - ci) );
 }
 
-class H16gg : public HardFactor {
+class H16ggS : public HardFactor {
 public:
     term_type get_type() {
         return quadrupole;
@@ -537,6 +537,13 @@ public:
         *real = amplitude * cos(phase);
         *imag = amplitude * sin(phase);
     }
+};
+
+class H16ggD : public HardFactor {
+public:
+    term_type get_type() {
+        return quadrupole;
+    }
     void Fd(IntegrationContext* ictx, double* real, double* imag) {
         double realI, imagI;
         I3(ictx->kT * ictx->tx, &realI, &imagI);
@@ -548,6 +555,8 @@ public:
         *imag = amplitude * (cos(phase) * imagI + sin(phase) * realI);
     }
 };
+
+class H16gg : public H16ggS, public H16ggD {};
 
 class H16ggResidual : public HardFactor {
 public:
