@@ -1187,6 +1187,7 @@ int main(int argc, char** argv) {
         }
     }
     delete gdist;
+    delete cpl;
     return 0;
 }
 #endif
