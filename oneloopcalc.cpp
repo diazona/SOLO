@@ -524,7 +524,7 @@ void I3(double x, double* real, double* imag) {
     *imag = (negative ? -1 : 1) * ( (1 - cx) * (ix - ix3) + cx * si + sx * (log(x) + 0.5 * ix2 + M_EULER - ci) );
 }
 
-class H16ggS : public HardFactor {
+class H16gg : public HardFactor {
 public:
     term_type get_type() {
         return quadrupole;
@@ -537,26 +537,17 @@ public:
         *real = amplitude * cos(phase);
         *imag = amplitude * sin(phase);
     }
-};
-
-class H16ggD : public HardFactor {
-public:
-    term_type get_type() {
-        return quadrupole;
-    }
     void Fd(IntegrationContext* ictx, double* real, double* imag) {
         double realI, imagI;
         I3(ictx->kT * ictx->tx, &realI, &imagI);
         double amplitude = M_1_PI*M_1_PI*M_1_PI * ictx->alphasbar * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->z2
-          * ictx->ggfactor * ictx->ctx->gdist->S2(ictx->s2, ictx) * (ictx->ctx->gdist->S2(ictx->t2, ictx) * ictx->ctx->gdist->S2(ictx->r2, ictx) - ictx->ctx->gdist->S2(ictx->s2, ictx) * ictx->ctx->gdist->S2(0, ictx))
+          * ictx->ggfactor * ictx->ctx->gdist->S2(ictx->s2, ictx) * (ictx->ctx->gdist->S2(ictx->t2, ictx) * ictx->ctx->gdist->S2((ictx->sx + ictx->tx)*(ictx->sx + ictx->tx) + (ictx->sy + ictx->ty)*(ictx->sy + ictx->ty), ictx) - ictx->ctx->gdist->S2(ictx->s2, ictx) * ictx->ctx->gdist->S2(0, ictx))
           / ictx->t2;
         double phase = -ictx->kT * ictx->rx;
         *real = amplitude * (cos(phase) * realI - sin(phase) * imagI);
         *imag = amplitude * (cos(phase) * imagI + sin(phase) * realI);
     }
 };
-
-class H16gg : public H16ggS, public H16ggD {};
 
 class H16ggResidual : public HardFactor {
 public:
