@@ -620,7 +620,7 @@ public:
     }
     void Fn(IntegrationContext* ictx, double* real, double* imag) {
         double amplitude = 0.125*M_1_PI*M_1_PI * ictx->alphasbar * ictx->ctx->Sperp / ictx->z2 * ictx->qgfactor * ictx->S2r *
-         (1 - 2 * ictx->xi + 2 * ictx->xi2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
+         (1 - 2 * ictx->xi + 2 * ictx->xi2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2) - 1);
         double phase = -ictx->kT * ictx->rx;
         checkfinite(amplitude);
         checkfinite(phase);
@@ -635,8 +635,8 @@ public:
         return dipole;
     }
     void Fn(IntegrationContext* ictx, double* real, double* imag) {
-        double amplitude = 0.125*M_1_PI*M_1_PI * ictx->alphasbar * ictx->ctx->Sperp / ictx->z2 * ictx->qgfactor * ictx->S2r *
-         (1 / ictx->xi2 - 2 / ictx->xi + 2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
+        double amplitude = 0.125*M_1_PI*M_1_PI * ictx->alphasbar * ictx->ctx->Sperp / ictx->z2 * ictx->qgfactor * ictx->S2r * ictx->S2r *
+         (1 / ictx->xi2 - 2 / ictx->xi + 2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2) - 1);
         double phase = -ictx->kT * ictx->rx / ictx->xi;
         checkfinite(amplitude);
         checkfinite(phase);
