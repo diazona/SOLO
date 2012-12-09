@@ -725,7 +725,7 @@ public:
     }
     void evaluate_1D_integrand(double* real, double* imag);
     void evaluate_2D_integrand(double* real, double* imag);
-    void integrate(double* real, double* imag);
+    void integrate(double* real, double* imag, double* error);
     void set_current_term_type(term_type new_term_type) {
         current_term_type = new_term_type;
     }
@@ -921,7 +921,7 @@ void miser_eprint_callback(double* p_result, double* p_abserr, gsl_monte_miser_s
 
 static double inf = 10;
 
-void Integrator::integrate(double* real, double* imag) {
+void Integrator::integrate(double* real, double* imag, double* error) {
     double tmp_result;
     double tmp_error;
     double min1D[] = {ictx->ctx->tau, -inf, -inf, -inf, -inf};
@@ -929,7 +929,7 @@ void Integrator::integrate(double* real, double* imag) {
     double min2D[] = {ictx->ctx->tau, ictx->ctx->tau, -inf, -inf, -inf, -inf};
     double max2D[] = {1.0, 1.0, inf, inf, inf, inf};
     double result = 0.0;
-    double abserr = 0.0;
+    double absvar = 0.0;
     // cubature doesn't work because of the endpoint singularity at xi = 1
     
     // dipole
@@ -946,7 +946,7 @@ void Integrator::integrate(double* real, double* imag) {
             callback(NULL, 0, 0);
         }
         result += tmp_result;
-        abserr += tmp_error;
+        absvar += tmp_error * tmp_error;
         // 1D integral
         if (integration_strategy == MC_VEGAS) {
             vegas_integrate(gsl_monte_wrapper_1D, 3, this, min1D, max1D, &tmp_result, &tmp_error, vegas_eprint_callback);
@@ -958,7 +958,7 @@ void Integrator::integrate(double* real, double* imag) {
             callback(NULL, 0, 0);
         }
         result += tmp_result;
-        abserr += tmp_error;
+        absvar += tmp_error * tmp_error;
     }
     if (n_quadrupole_terms > 0) {
         // quadrupole
@@ -974,7 +974,7 @@ void Integrator::integrate(double* real, double* imag) {
             callback(NULL, 0, 0);
         }
         result += tmp_result;
-        abserr += tmp_error;
+        absvar += tmp_error * tmp_error;
         // 1D integral
         if (integration_strategy == MC_VEGAS) {
             vegas_integrate(gsl_monte_wrapper_1D, 5, this, min1D, max1D, &tmp_result, &tmp_error, vegas_eprint_callback);
@@ -986,11 +986,12 @@ void Integrator::integrate(double* real, double* imag) {
             callback(NULL, 0, 0);
         }
         result += tmp_result;
-        abserr += tmp_error;
+        absvar += tmp_error * tmp_error;
     }
 
     *real = result;
     *imag = 0;
+    *error = sqrt(absvar);
 }
 
 #ifdef DATAGRID
@@ -1059,15 +1060,64 @@ void write_data_point(IntegrationContext* ictx, double real, double imag) {
     }
 }
 
-double calculateHardFactor(Context* ctx, size_t hflen, HardFactor** hflist) {
-    double real, imag;
-    Integrator* integrator = new Integrator(ctx, hflen, hflist);
-    if (trace) {
-        integrator->set_callback(write_data_point);
+class HardFactorGroup {
+public:
+    size_t hflen;
+    HardFactor** hflist;
+    HardFactorGroup(size_t hflen, HardFactor** hflist) : hflen(hflen), hflist(hflist) {};
+};
+
+class ResultsCalculator {
+private:
+    Context* ctx;
+    size_t pTlen;
+    double* pTlist;
+    size_t hfglen;
+    HardFactorGroup** hfgroups;
+    double* real;
+    double* imag;
+    double* error;
+public:
+    ResultsCalculator(Context* ctx, size_t pTlen, double* pTlist, size_t hfglen, HardFactorGroup** hfgroups) : ctx(ctx), pTlen(pTlen), pTlist(pTlist), hfglen(hfglen), hfgroups(hfgroups) {
+        real = new double[hfglen * pTlen];
+        imag = new double[hfglen * pTlen];
+        error = new double[hfglen * pTlen];
+    };
+    ~ResultsCalculator() {
+        delete[] real;
+        delete[] imag;
+        delete[] error;
+    };
+    size_t index_from(size_t pTindex, size_t hfgindex) {
+        return pTindex * hfglen + hfgindex;
+    };
+    void result(size_t pTindex, size_t hfgindex, double* real, double* imag, double* error);
+    void calculate();
+};
+
+void ResultsCalculator::result(size_t pTindex, size_t hfgindex, double* real, double* imag, double* error) {
+    size_t index = index_from(pTindex, hfgindex);
+    (*real) = this->real[index];
+    (*imag) = this->imag[index];
+    (*error) = this->error[index];
+}
+
+void ResultsCalculator::calculate() {
+    for (size_t pTindex = 0; pTindex < pTlen; pTindex++) {
+        ctx->pT2 = pTlist[pTindex] * pTlist[pTindex];
+        ctx->recalculate();
+        cerr << "Beginning calculation at pT = " << pTlist[pTindex] << endl;
+        for (size_t hfgindex = 0; hfgindex < hfglen; hfgindex++) {
+            size_t index = index_from(pTindex, hfgindex);
+            Integrator* integrator = new Integrator(ctx, hfgroups[hfgindex]->hflen, hfgroups[hfgindex]->hflist);
+            if (trace) {
+                integrator->set_callback(write_data_point);
+            }
+            integrator->integrate(real + index, imag + index, error + index);
+            delete integrator;
+        }
+        cerr << "...done" << endl;
     }
-    integrator->integrate(&real, &imag);
-    delete integrator;
-    return real;
 }
 
 int main(int argc, char** argv) {
@@ -1123,58 +1173,73 @@ int main(int argc, char** argv) {
         new H112qg(), // 13
         new H122qg(), // 14
         new H14qg()}; // 15
-    size_t hflen = 13;
-    double yield[hflen*pTlen];
-    
-    for (size_t i = 0; i < pTlen; i++) {
-        gctx.pT2 = pT[i]*pT[i];
-        gctx.recalculate();
-        cerr << "Beginning calculation at pT = " << pT[i] << endl;
-        if (separate) {
-            yield[hflen*i + 0] = calculateHardFactor(&gctx, 1, hflist + 0);
-            yield[hflen*i + 1] = calculateHardFactor(&gctx, 1, hflist + 1);
-            yield[hflen*i + 2] = calculateHardFactor(&gctx, 1, hflist + 2);
-            yield[hflen*i + 3] = calculateHardFactor(&gctx, 2, hflist + 3);
-            yield[hflen*i + 4] = calculateHardFactor(&gctx, 1, hflist + 5);
-            yield[hflen*i + 5] = calculateHardFactor(&gctx, 2, hflist + 6);
-            yield[hflen*i + 6] = calculateHardFactor(&gctx, 2, hflist + 8);
-            yield[hflen*i + 7] = calculateHardFactor(&gctx, 1, hflist + 10);
-            yield[hflen*i + 8] = calculateHardFactor(&gctx, 1, hflist + 11);
-            yield[hflen*i + 9] = calculateHardFactor(&gctx, 1, hflist + 12);
-            yield[hflen*i + 10] = calculateHardFactor(&gctx, 1, hflist + 13);
-            yield[hflen*i + 11] = calculateHardFactor(&gctx, 1, hflist + 14);
-            yield[hflen*i + 12] = calculateHardFactor(&gctx, 1, hflist + 15);
-        }
-        else {
-            yield[2*i + 0] = calculateHardFactor(&gctx, 2, hflist); // leading order
-            yield[2*i + 1] = calculateHardFactor(&gctx, 14, hflist+2); // next-to-leading order
-        }
-        cerr << "...done" << endl;
+    HardFactorGroup* hfglist_separate[] = {
+        new HardFactorGroup(1, hflist + 0),
+        new HardFactorGroup(1, hflist + 1),
+        new HardFactorGroup(1, hflist + 2),
+        new HardFactorGroup(2, hflist + 3),
+        new HardFactorGroup(1, hflist + 5),
+        new HardFactorGroup(2, hflist + 6),
+        new HardFactorGroup(2, hflist + 8),
+        new HardFactorGroup(1, hflist + 10),
+        new HardFactorGroup(1, hflist + 11),
+        new HardFactorGroup(1, hflist + 12),
+        new HardFactorGroup(1, hflist + 13),
+        new HardFactorGroup(1, hflist + 14),
+        new HardFactorGroup(1, hflist + 15)
+    };
+    HardFactorGroup* hfglist_total[] = {
+        new HardFactorGroup(2, hflist + 0), // LO
+        new HardFactorGroup(14, hflist + 2) // NLO
+    };
+    HardFactorGroup** hfglist = NULL;
+    size_t hfglen;
+    if (separate) {
+        hfglist = hfglist_separate;
+        hfglen = 13;
     }
+    else {
+        hfglist = hfglist_total;
+        hfglen = 2;
+    }
+    
+    ResultsCalculator* rc = new ResultsCalculator(&gctx, pTlen, pT, hfglen, hfglist);
+    rc->calculate();
     if (separate) {
         cout << "pT\th02qq\th02gg\th12qq\th14qq\th12gg\th12qqbar\th16gg\th112gq\th122gq\th14gq\th112qg\th122qg\th14qg\tlo\tnlo\tlo+nlo" << endl;
     }
     else {
         cout << "pT\tlo\tnlo\tlo+nlo" << endl;
     }
-    for (size_t i = 0; i < pTlen; i++) {
+    double l_real, l_imag, l_error;
+    for (size_t pTindex = 0; pTindex < pTlen; pTindex++) {
         if (separate) {
-            cout << pT[i] << "\t";
+            cout << pT[pTindex] << "\t";
 
             double lo = 0, nlo = 0;
-            size_t j;
-            for (j = 0; j < 2; j++) {
-                cout << yield[hflen*i + j] << "\t";
-                lo += yield[hflen*i + j];
+            size_t hfgindex;
+            for (hfgindex = 0; hfgindex < 2; hfgindex++) {
+                rc->result(pTindex, hfgindex, &l_real, &l_imag, &l_error);
+                cout << l_real << "±" << l_error << "\t";
+                lo += l_real;
             }
-            for (; j < hflen; j++) {
-                cout << yield[hflen*i + j] << "\t";
-                nlo += yield[hflen*i + j];
+            for (; hfgindex < hfglen; hfgindex++) {
+                rc->result(pTindex, hfgindex, &l_real, &l_imag, &l_error);
+                cout << l_real << "±" << l_error << "\t";
+                nlo += l_real;
             }
             cout << lo << "\t" << nlo << "\t" << lo+nlo << endl;
         }
         else {
-            cout << pT[i] << "\t" << yield[2*i+0] << "\t" << yield[2*i+1] << "\t" << yield[2*i+0]+yield[2*i+1] << endl;
+            double total = 0;
+            cout << pT[pTindex] << "\t";
+            rc->result(pTindex, 0, &l_real, &l_imag, &l_error);
+            cout << l_real << "±" << l_error << "\t";
+            total += l_real;
+            rc->result(pTindex, 1, &l_real, &l_imag, &l_error);
+            cout << l_real << "±" << l_error << "\t";
+            total += l_real;
+            cout << total << endl;
         }
     }
     delete gdist;
