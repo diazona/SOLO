@@ -14,23 +14,22 @@ private:
     size_t n_dipole_terms;
     HardFactor** quadrupole_terms;
     size_t n_quadrupole_terms;
+    HardFactor** momentum1_terms;
+    size_t n_momentum1_terms;
+    HardFactor** momentum2_terms;
+    size_t n_momentum2_terms;
+    HardFactor** momentum3_terms;
+    size_t n_momentum3_terms;
     term_type current_term_type;
     void (*callback)(IntegrationContext*, double, double);
 public:
     Integrator(Context* ctx, size_t hflen, HardFactor** hflist);
     ~Integrator();
-    void update(double z, double y, double rx, double ry) {
-        // I need (z = z, y = y, xx = sx + bx, xy = sy + by, yx = tx + bx, yy = ty + by)
-        // we assume no impact parameter dependence, so I can arbitrarily set bx, by, tx, ty to 0
-        assert(current_term_type == dipole);
-        ictx->update(z, y, rx, ry, 0, 0, 0, 0);
-    }
-    void update(double z, double y, double sx, double sy, double tx, double ty) {
-        // I need (z = z, y = y, xx = sx + bx, xy = sy + by, yx = tx + bx, yy = ty + by)
-        // we assume no impact parameter dependence, so I can arbitrarily set bx, by to 0
-        assert(current_term_type == quadrupole);
-        ictx->update(z, y, sx, sy, tx, ty, 0, 0);
-    }
+    void update_position(double z, double y, double rx, double ry);
+    void update_position(double z, double y, double sx, double sy, double tx, double ty);
+    void update_momentum(double z, double y, double q1x, double q1y);
+    void update_momentum(double z, double y, double q1x, double q1y, double q2x, double q2y);
+    void update_momentum(double z, double y, double q1x, double q1y, double q2x, double q2y, double q3x, double q3y);
     void evaluate_1D_integrand(double* real, double* imag);
     void evaluate_2D_integrand(double* real, double* imag);
     void integrate(double* real, double* imag, double* error);
@@ -40,6 +39,8 @@ public:
     void set_callback(void (*callback)(IntegrationContext*, double, double)) {
         this->callback = callback;
     }
+private:
+    void integrate_impl(double (*monte_wrapper)(double*, size_t, void*), size_t dimensions, double* min, double* max, double* result, double* error);
 };
 
 #endif // _INTEGRATOR_H_

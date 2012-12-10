@@ -3,7 +3,7 @@
 
 #include "integrationcontext.h"
 
-typedef enum {NONE=0, dipole=2, quadrupole=4} term_type;
+typedef enum {NONE=0, momentum1=1, dipole=2, momentum2=3, quadrupole=4, momentum3=5, COUNT=6} term_type;
 
 class HardFactor {
 public:
