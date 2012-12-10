@@ -38,45 +38,6 @@ const int SUCCESS = 0;
 
 static bool trace = false;
 
-#ifdef DATAGRID
-void write_hf_values(Context* ctx) {
-    double real, imag;
-    GBWGluonDistribution* gdist = new GBWGluonDistribution();
-    IntegrationContext* ictx = new IntegrationContext(ctx);
-    H02qq* hf02qq = new H02qq();
-    H12qq* hf12qq = new H12qq();
-    for (double z = ctx->tau; z <= 1; z += (1 - ctx->tau) / 20) {
-        for (double rx = -5; rx <= 5; rx += 20./270.) {
-            for (double ry = -5; ry <= 5; ry += 20./120.) {
-                ictx->update(z, 1, rx, ry, 0, 0, 0, 0);
-                cout << z << "\t" << rx << "\t" << ry << "\t"
-                     << hf02qq->real_delta_contribution(ictx) << "\t" << hf02qq->imag_delta_contribution(ictx) << "\t"
-                     << hf12qq->real_delta_contribution(ictx) << "\t" << hf12qq->imag_delta_contribution(ictx) << endl;
-            }
-        }
-    }
-}
-
-int main(int argc, char** argv) {
-    Context gctx(
-      0.000304, // x0
-      197,      // A
-      0.56,     // c
-      0.288,    // lambda
-      10,       // mu2
-      3,        // Nc
-      3,        // Nf
-      1.5,      // CF
-      1.0,      // Sperp
-      0.4,      // pT2
-      200,      // sqs
-      3.2,      // Y
-      0.2 / (2*M_PI), // alphasbar
-      "mstw2008nlo.00.dat", "PINLO.DAT");
-    write_hf_values(&gctx);
-    return 0;
-}
-#else
 void write_data_point(IntegrationContext* ictx, double real, double imag) {
     if (ictx) {
 //         if ((++count) % 500 == 0) {
@@ -283,4 +244,3 @@ int main(int argc, char** argv) {
     delete cpl;
     return 0;
 }
-#endif
