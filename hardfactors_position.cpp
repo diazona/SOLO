@@ -9,6 +9,8 @@
 
 #define checkfinite(d) assert(gsl_finite(d))
 
+using namespace position;
+
 void H02qq::Fd(IntegrationContext* ictx, double* real, double* imag) {
     double amplitude = 0.25*M_1_PI*M_1_PI * ictx->ctx->Sperp / ictx->z2 * ictx->qqfactor * ictx->S2r;
     double phase = -ictx->kT * ictx->rx; // take angle of k_perp to be 0

@@ -2,6 +2,8 @@
 
 #include "hardfactor.h"
 
+namespace position {
+
 class H02qq : public HardFactor {
 public:
     const char* get_name() {
@@ -183,3 +185,4 @@ public:
     void Fn(IntegrationContext* ictx, double* real, double* imag);
 };
 
+}

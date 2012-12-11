@@ -165,19 +165,19 @@ int main(int argc, char** argv) {
     double pT[] = {0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4};
     size_t pTlen = sizeof(pT)/sizeof(double);
     HardFactor* hflist[] = {
-        new H02qq(), // 0
-        new H02gg(), // 1
-        new H12qq(), // 2
-        new H14qq(), new H14qqResidual(), // 3,4
-        new H12gg(), // 5
-        new H12qqbar(), new H12qqbarResidual(), // 6,7
-        new H16gg(), new H16ggResidual(), // 8,9
-        new H112gq(), // 10
-        new H122gq(), // 11
-        new H14gq(), // 12
-        new H112qg(), // 13
-        new H122qg(), // 14
-        new H14qg()}; // 15
+        new position::H02qq(), // 0
+        new position::H02gg(), // 1
+        new position::H12qq(), // 2
+        new position::H14qq(), new position::H14qqResidual(), // 3,4
+        new position::H12gg(), // 5
+        new position::H12qqbar(), new position::H12qqbarResidual(), // 6,7
+        new position::H16gg(), new position::H16ggResidual(), // 8,9
+        new position::H112gq(), // 10
+        new position::H122gq(), // 11
+        new position::H14gq(), // 12
+        new position::H112qg(), // 13
+        new position::H122qg(), // 14
+        new position::H14qg()}; // 15
     HardFactorGroup* hfglist_separate[] = {
         new HardFactorGroup(1, hflist + 0),
         new HardFactorGroup(1, hflist + 1),
