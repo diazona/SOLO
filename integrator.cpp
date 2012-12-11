@@ -1,4 +1,5 @@
 #include <cassert>
+#include <typeinfo>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_sys.h>
 #include <gsl/gsl_monte.h>
@@ -9,6 +10,7 @@
 #define checkfinite(d) assert(gsl_finite(d))
 
 Integrator::Integrator(Context* ctx, size_t hflen, HardFactor** hflist) : n_dipole_terms(0), n_quadrupole_terms(0), n_momentum1_terms(0), n_momentum2_terms(0), n_momentum3_terms(0), current_term_type(NONE), callback(NULL) {
+    assert(hflen > 0);
     ictx = new IntegrationContext(ctx);
     // separate the hard factors provided into dipole and quadrupole terms
     for (size_t i = 0; i < hflen; i++) {
@@ -30,6 +32,7 @@ Integrator::Integrator(Context* ctx, size_t hflen, HardFactor** hflist) : n_dipo
             n_momentum3_terms++;
         }
     }
+    assert(n_dipole_terms + n_quadrupole_terms + n_momentum1_terms + n_momentum2_terms + n_momentum3_terms == hflen);
     dipole_terms = (HardFactor**)calloc(n_dipole_terms, sizeof(HardFactor*));
     quadrupole_terms = (HardFactor**)calloc(n_quadrupole_terms, sizeof(HardFactor*));
     momentum1_terms = (HardFactor**)calloc(n_momentum1_terms, sizeof(HardFactor*));
@@ -141,11 +144,7 @@ void Integrator::evaluate_1D_integrand(double* real, double* imag) {
             assert(false);
             break;
     }
-    if (n_terms == 0) {
-        *real = 0;
-        *imag = 0;
-        return;
-    }
+    assert(n_terms > 0);
     assert(ictx->xi == 1.0d);
     for (size_t i = 0; i < n_terms; i++) {
         terms[i]->Fs(ictx, &t_real, &t_imag);
@@ -202,11 +201,7 @@ void Integrator::evaluate_2D_integrand(double* real, double* imag) {
             assert(false);
             break;
     }
-    if (n_terms == 0) {
-        *real = 0;
-        *imag = 0;
-        return;
-    }
+    assert(n_terms > 0);
     for (size_t i = 0; i < n_terms; i++) {
         terms[i]->Fs(ictx, &t_real, &t_imag);
         checkfinite(t_real);

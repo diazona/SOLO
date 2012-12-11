@@ -38,10 +38,11 @@ const int SUCCESS = 0;
 
 static bool trace = false;
 
+// callbacks
 void write_data_point(IntegrationContext* ictx, double real, double imag) {
     if (ictx) {
 //         if ((++count) % 500 == 0) {
-            cout
+            cerr
             << ictx->z << "\t"
             << ictx->xi << "\t"
             << ictx->xx << "\t"
@@ -61,7 +62,13 @@ void write_data_point(IntegrationContext* ictx, double real, double imag) {
 //         }
     }
     else {
-        cout << endl;
+        cerr << endl;
+    }
+}
+
+void write_nonzero(IntegrationContext* ictx, double real, double imag) {
+    if (real != 0 || imag != 0) {
+        cerr << real << "\t" << imag << endl;
     }
 }
 
