@@ -38,6 +38,8 @@ const int SUCCESS = 0;
 
 static bool trace = false;
 
+static integration_strategy strategy = MC_VEGAS;
+
 // callbacks
 void write_data_point(IntegrationContext* ictx, double real, double imag) {
     if (ictx) {
@@ -114,7 +116,7 @@ void ResultsCalculator::calculate() {
         cerr << "Beginning calculation at pT = " << pTlist[pTindex] << endl;
         for (size_t hfgindex = 0; hfgindex < hfglen; hfgindex++) {
             size_t index = index_from(pTindex, hfgindex);
-            Integrator* integrator = new Integrator(ctx, hfgroups[hfgindex]->hflen, hfgroups[hfgindex]->hflist);
+            Integrator* integrator = new Integrator(ctx, strategy, hfgroups[hfgindex]->hflen, hfgroups[hfgindex]->hflist);
             if (trace) {
                 integrator->set_callback(write_data_point);
             }
@@ -131,10 +133,10 @@ int main(int argc, char** argv) {
     Coupling* cpl = new FixedCoupling(0.2 / (2*M_PI));
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--miser")==0) {
-            integration_strategy = MC_MISER;
+            strategy = MC_MISER;
         }
         else if (strcmp(argv[i], "--vegas")==0) {
-            integration_strategy = MC_VEGAS;
+            strategy = MC_VEGAS;
         }
         else if (strcmp(argv[i], "--trace")==0) {
             trace = true;

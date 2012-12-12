@@ -91,8 +91,7 @@ void IntegrationContext::update_parton_factors(double z, double y) {
     this->qgfactor = qgfactor;
 }
 
-void IntegrationContext::update_position(double z, double y, double xx, double xy, double yx, double yy, double bx, double by) {
-    update_parton_factors(z, y);
+void IntegrationContext::update_positions(double xx, double xy, double yx, double yy, double bx, double by) {
     checkfinite(xx);
     checkfinite(xy);
     checkfinite(yx);
@@ -121,8 +120,7 @@ void IntegrationContext::update_position(double z, double y, double xx, double x
     this->S4rst = ctx->gdist->S4(r2, s2, t2, this->Qs2);
 }
 
-void IntegrationContext::update_momentum(double z, double y, double q1x, double q1y, double q2x, double q2y, double q3x, double q3y) {
-    update_parton_factors(z, y);
+void IntegrationContext::update_momenta(double q1x, double q1y, double q2x, double q2y, double q3x, double q3y) {
     checkfinite(xx);
     checkfinite(xy);
     checkfinite(yx);
@@ -139,3 +137,10 @@ void IntegrationContext::update_momentum(double z, double y, double q1x, double 
     this->q22 = q2x*q2x + q2y*q2y;
     this->q32 = q3x*q3x + q3y*q3y;
 }
+
+void IntegrationContext::update_auxiliary(double xiprime) {
+    checkfinite(xiprime);
+    assert(xiprime >= 0 && xiprime <= 1);
+    this->xiprime = xiprime;
+}
+
