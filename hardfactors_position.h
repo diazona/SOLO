@@ -1,3 +1,6 @@
+#ifndef _HARDFACTORS_POSITION_H_
+#define _HARDFACTORS_POSITION_H_
+
 // Hard factors in position space
 
 #include "hardfactor.h"
@@ -187,3 +190,5 @@ public:
 };
 
 }
+
+#endif // _HARDFACTORS_POSITION_H_
