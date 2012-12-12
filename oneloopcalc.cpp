@@ -30,6 +30,7 @@
 #include "context.h"
 #include "integrationcontext.h"
 #include "hardfactors_position.h"
+#include "hardfactors_momentum.h"
 #include "integrator.h"
 
 using namespace std;
@@ -172,21 +173,21 @@ int main(int argc, char** argv) {
         new position::H12qq(), // 2
         new position::H14qq(), new position::H14qqResidual(), // 3,4
         new position::H12gg(), // 5
-        new position::H12qqbar(), new position::H12qqbarResidual(), // 6,7
-        new position::H16gg(), new position::H16ggResidual(), // 8,9
+        new momentum::H12qqbar(), NULL, // 6,7
+        new momentum::H16ggSingular(), new momentum::H16ggDelta(), // 8,9
         new position::H112gq(), // 10
         new position::H122gq(), // 11
-        new position::H14gq(), // 12
+        new momentum::H14gq(), // 12
         new position::H112qg(), // 13
         new position::H122qg(), // 14
-        new position::H14qg()}; // 15
+        new momentum::H14qg()}; // 15
     HardFactorGroup* hfglist_separate[] = {
         new HardFactorGroup(1, hflist + 0),
         new HardFactorGroup(1, hflist + 1),
         new HardFactorGroup(1, hflist + 2),
         new HardFactorGroup(2, hflist + 3),
         new HardFactorGroup(1, hflist + 5),
-        new HardFactorGroup(2, hflist + 6),
+        new HardFactorGroup(1, hflist + 6),
         new HardFactorGroup(2, hflist + 8),
         new HardFactorGroup(1, hflist + 10),
         new HardFactorGroup(1, hflist + 11),

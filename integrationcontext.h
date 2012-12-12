@@ -32,6 +32,8 @@ public:
     double gqfactor;
     double qgfactor;
     double S2r, S4rst;
+    double Fq1, Fq2, Fq3;
+    double Fkq1, Fkq2, Fkq3;
     
     IntegrationContext(Context* ctx) :
       ctx(ctx),
@@ -56,7 +58,9 @@ public:
       ggfactor(0),
       gqfactor(0),
       qgfactor(0),
-      S2r(0), S4rst(0) {
+      S2r(0), S4rst(0),
+      Fq1(0), Fq2(0), Fq3(0),
+      Fkq1(0), Fkq2(0), Fkq3(0) {
     };
     void update_positions(double xx, double xy, double yx, double yy, double bx, double by);
     void update_momenta(double q1x, double q1y, double q2x, double q2y, double q3x, double q3y);

@@ -5,12 +5,14 @@ class GluonDistribution {
 public:
     virtual double S2(double r2, double Qs2) = 0;
     virtual double S4(double r2, double s2, double t2, double Qs2) = 0;
+    virtual double F(double q2, double Qs2) = 0;
 };
 
 class GBWGluonDistribution: public GluonDistribution {
 public:
     double S2(double r2, double Qs2);
     double S4(double r2, double s2, double t2, double Qs2);
+    double F(double q2, double Qs2);
 };
 
 class MVGluonDistribution: public GluonDistribution {
@@ -18,6 +20,7 @@ public:
     MVGluonDistribution(double LambdaMV) : LambdaMV(LambdaMV) {};
     double S2(double r2, double Qs2);
     double S4(double r2, double s2, double t2, double Qs2);
+    double F(double q2, double Qs2);
 private:
     double LambdaMV;
 };

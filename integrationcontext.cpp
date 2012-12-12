@@ -136,6 +136,13 @@ void IntegrationContext::update_momenta(double q1x, double q1y, double q2x, doub
     this->q12 = q1x*q1x + q1y*q1y;
     this->q22 = q2x*q2x + q2y*q2y;
     this->q32 = q3x*q3x + q3y*q3y;
+    
+    this->Fq1 = ctx->gdist->F(q12, this->Qs2);
+    this->Fq2 = ctx->gdist->F(q22, this->Qs2);
+    this->Fq3 = ctx->gdist->F(q32, this->Qs2);
+    this->Fkq1 = ctx->gdist->F((kT - q1x)*(kT - q1x) + q1y*q1y, this->Qs2);
+    this->Fkq2 = ctx->gdist->F((kT - q2x)*(kT - q2x) + q2y*q2y, this->Qs2);
+    this->Fkq3 = ctx->gdist->F((kT - q3x)*(kT - q3x) + q3y*q3y, this->Qs2);
 }
 
 void IntegrationContext::update_auxiliary(double xiprime) {
