@@ -10,17 +10,18 @@
 
 typedef enum {MC_PLAIN, MC_MISER, MC_VEGAS} integration_strategy;
 
-typedef std::map<IntegrationType*, std::vector<HardFactor*> > HardFactorCollection;
+typedef std::vector<HardFactor*> HardFactorList;
+typedef std::map<IntegrationType*, HardFactorList> HardFactorTypeMap;
 
 class Integrator {
 private:
     IntegrationType* current_type;
     IntegrationContext ictx;
-    HardFactorCollection terms;
+    HardFactorTypeMap terms;
     integration_strategy strategy;
     void (*callback)(IntegrationContext*, double, double);
 public:
-    Integrator(Context* ctx, integration_strategy strategy, size_t hflen, HardFactor** hflist);
+    Integrator(Context* ctx, integration_strategy strategy, HardFactorList hflist);
     ~Integrator();
     void update1D(double* values);
     void update2D(double* values);

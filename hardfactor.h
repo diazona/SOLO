@@ -13,11 +13,4 @@ public:
     virtual void Fd(IntegrationContext* ictx, double* real, double* imag) { *real = 0; *imag = 0; }
 };
 
-class HardFactorGroup {
-public:
-    size_t hflen;
-    HardFactor** hflist;
-    HardFactorGroup(size_t hflen, HardFactor** hflist) : hflen(hflen), hflist(hflist) {};
-};
-
 #endif // _HARD_FACTOR_H_

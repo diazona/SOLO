@@ -9,19 +9,20 @@
 
 #define checkfinite(d) assert(gsl_finite(d))
 
-Integrator::Integrator(Context* ctx, integration_strategy strategy, size_t hflen, HardFactor** hflist) : ictx(ctx), strategy(strategy), current_type(DipoleIntegrationType::get_instance()), callback(NULL) {
-    assert(hflen > 0);
+Integrator::Integrator(Context* ctx, integration_strategy strategy, HardFactorList hflist) : ictx(ctx), strategy(strategy), current_type(DipoleIntegrationType::get_instance()), callback(NULL) {
+    assert(hflist.size() > 0);
     // separate the hard factors provided into dipole and quadrupole terms
-    for (size_t i = 0; i < hflen; i++) {
-        IntegrationType* type = hflist[i]->get_type();
-        terms[type].push_back(hflist[i]);
+    for (HardFactorList::iterator it = hflist.begin(); it != hflist.end(); it++) {
+        HardFactor* h = *it;
+        IntegrationType* type = h->get_type();
+        terms[type].push_back(h);
     }
 #ifndef NDEBUG
     size_t total = 0;
-    for (HardFactorCollection::iterator it = terms.begin(); it != terms.end(); it++) {
+    for (HardFactorTypeMap::iterator it = terms.begin(); it != terms.end(); it++) {
         total += (*it).second.size();
     }
-    assert(total == hflen);
+    assert(total == hflist.size());
 #endif
 }
 
@@ -41,10 +42,10 @@ void Integrator::evaluate_1D_integrand(double* real, double* imag) {
     double t_real, t_imag;             // t for temporary
     double log_factor = log(1 - ictx.ctx->tau / ictx.z);
     checkfinite(log_factor);
-    std::vector<HardFactor*>& current_terms = terms[current_type];
+    HardFactorList& current_terms = terms[current_type];
     assert(current_terms.size() > 0);
     assert(ictx.xi == 1.0d);
-    for (std::vector<HardFactor*>::iterator it = current_terms.begin(); it != current_terms.end(); it++) {
+    for (HardFactorList::iterator it = current_terms.begin(); it != current_terms.end(); it++) {
         HardFactor* h = (*it);
         h->Fs(&ictx, &t_real, &t_imag);
         checkfinite(t_real);
@@ -71,9 +72,9 @@ void Integrator::evaluate_2D_integrand(double* real, double* imag) {
     checkfinite(jacobian);
     double xi_factor = 1.0 / (1 - ictx.xi);
     checkfinite(xi_factor);
-    std::vector<HardFactor*>& current_terms = terms[current_type];
+    HardFactorList& current_terms = terms[current_type];
     assert(current_terms.size() > 0);
-    for (std::vector<HardFactor*>::iterator it = current_terms.begin(); it != current_terms.end(); it++) {
+    for (HardFactorList::iterator it = current_terms.begin(); it != current_terms.end(); it++) {
         HardFactor* h = (*it);
         h->Fs(&ictx, &t_real, &t_imag);
         checkfinite(t_real);
@@ -90,7 +91,7 @@ void Integrator::evaluate_2D_integrand(double* real, double* imag) {
         callback(&ictx, jacobian * l_real, jacobian * l_imag);
     }
     ictx.set_xi_to_1();
-    for (std::vector<HardFactor*>::iterator it = current_terms.begin(); it != current_terms.end(); it++) {
+    for (HardFactorList::iterator it = current_terms.begin(); it != current_terms.end(); it++) {
         HardFactor* h = (*it);
         h->Fs(&ictx, &t_real, &t_imag);
         checkfinite(t_real);
@@ -219,7 +220,7 @@ void Integrator::integrate(double* real, double* imag, double* error) {
     // cubature doesn't work because of the endpoint singularity at xi = 1
     
     // dipole
-    for (HardFactorCollection::iterator it = terms.begin(); it != terms.end(); it++) {
+    for (HardFactorTypeMap::iterator it = terms.begin(); it != terms.end(); it++) {
         assert(it->second.size() > 0);
         set_current_integration_type(it->first);
         integrate_impl(2, &tmp_result, &tmp_error);

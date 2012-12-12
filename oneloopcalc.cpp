@@ -78,50 +78,53 @@ void write_nonzero(IntegrationContext* ictx, double real, double imag) {
 class ResultsCalculator {
 private:
     Context* ctx;
-    size_t pTlen;
-    double* pTlist;
-    size_t hfglen;
-    HardFactorGroup** hfgroups;
+    vector<double> pTlist;
+    vector<HardFactorList*> hfgroups;
     double* real;
     double* imag;
     double* error;
 public:
-    ResultsCalculator(Context* ctx, size_t pTlen, double* pTlist, size_t hfglen, HardFactorGroup** hfgroups) : ctx(ctx), pTlen(pTlen), pTlist(pTlist), hfglen(hfglen), hfgroups(hfgroups) {
-        real = new double[hfglen * pTlen];
-        imag = new double[hfglen * pTlen];
-        error = new double[hfglen * pTlen];
+    ResultsCalculator(Context* ctx, vector<double> pTlist, vector<HardFactorList*> hfgroups) : ctx(ctx), pTlist(pTlist), hfgroups(hfgroups) {
+        size_t hflen = hfgroups.size();
+        size_t pTlen = pTlist.size();
+        real = new double[hflen * pTlen];
+        imag = new double[hflen * pTlen];
+        error = new double[hflen * pTlen];
     };
     ~ResultsCalculator() {
         delete[] real;
         delete[] imag;
         delete[] error;
     };
-    size_t index_from(size_t pTindex, size_t hfgindex) {
-        return pTindex * hfglen + hfgindex;
+    size_t index_from(size_t pTindex, size_t hfindex) {
+        return pTindex * hfgroups.size() + hfindex;
     };
-    void result(size_t pTindex, size_t hfgindex, double* real, double* imag, double* error);
+    void result(size_t pTindex, size_t hfindex, double* real, double* imag, double* error);
     void calculate();
 };
 
-void ResultsCalculator::result(size_t pTindex, size_t hfgindex, double* real, double* imag, double* error) {
-    size_t index = index_from(pTindex, hfgindex);
+void ResultsCalculator::result(size_t pTindex, size_t hfindex, double* real, double* imag, double* error) {
+    size_t index = index_from(pTindex, hfindex);
     (*real) = this->real[index];
     (*imag) = this->imag[index];
     (*error) = this->error[index];
 }
 
 void ResultsCalculator::calculate() {
-    for (size_t pTindex = 0; pTindex < pTlen; pTindex++) {
-        ctx->pT2 = pTlist[pTindex] * pTlist[pTindex];
+    double* l_real = real;
+    double* l_imag = imag;
+    double* l_error = error;
+    for (vector<double>::iterator it = pTlist.begin(); it != pTlist.end(); it++) {
+        double pT = *it;
+        ctx->pT2 = pT*pT;
         ctx->recalculate();
-        cerr << "Beginning calculation at pT = " << pTlist[pTindex] << endl;
-        for (size_t hfgindex = 0; hfgindex < hfglen; hfgindex++) {
-            size_t index = index_from(pTindex, hfgindex);
-            Integrator* integrator = new Integrator(ctx, strategy, hfgroups[hfgindex]->hflen, hfgroups[hfgindex]->hflist);
+        cerr << "Beginning calculation at pT = " << pT << endl;
+        for (vector<HardFactorList*>::iterator hit = hfgroups.begin(); hit != hfgroups.end(); hit++) {
+            Integrator* integrator = new Integrator(ctx, strategy, **hit);
             if (trace) {
                 integrator->set_callback(write_data_point);
             }
-            integrator->integrate(real + index, imag + index, error + index);
+            integrator->integrate(l_real++, l_imag++, l_error++);
             delete integrator;
         }
         cerr << "...done" << endl;
@@ -166,52 +169,79 @@ int main(int argc, char** argv) {
       "mstw2008nlo.00.dat", "PINLO.DAT");
 
     double pT[] = {0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4};
+    vector<double> pTlist(pT, pT + sizeof(pT)/sizeof(double));
     size_t pTlen = sizeof(pT)/sizeof(double);
-    HardFactor* hflist[] = {
-        new position::H02qq(), // 0
-        new position::H02gg(), // 1
-        new position::H12qq(), // 2
-        new position::H14qq(), new position::H14qqResidual(), // 3,4
-        new position::H12gg(), // 5
-        new momentum::H12qqbar(), NULL, // 6,7
-        new momentum::H16ggSingular(), new momentum::H16ggDelta(), // 8,9
-        new position::H112gq(), // 10
-        new position::H122gq(), // 11
-        new momentum::H14gq(), // 12
-        new position::H112qg(), // 13
-        new position::H122qg(), // 14
-        new momentum::H14qg()}; // 15
-    HardFactorGroup* hfglist_separate[] = {
-        new HardFactorGroup(1, hflist + 0),
-        new HardFactorGroup(1, hflist + 1),
-        new HardFactorGroup(1, hflist + 2),
-        new HardFactorGroup(2, hflist + 3),
-        new HardFactorGroup(1, hflist + 5),
-        new HardFactorGroup(1, hflist + 6),
-        new HardFactorGroup(2, hflist + 8),
-        new HardFactorGroup(1, hflist + 10),
-        new HardFactorGroup(1, hflist + 11),
-        new HardFactorGroup(1, hflist + 12),
-        new HardFactorGroup(1, hflist + 13),
-        new HardFactorGroup(1, hflist + 14),
-        new HardFactorGroup(1, hflist + 15)
-    };
-    HardFactorGroup* hfglist_total[] = {
-        new HardFactorGroup(2, hflist + 0), // LO
-        new HardFactorGroup(14, hflist + 2) // NLO
-    };
-    HardFactorGroup** hfglist = NULL;
-    size_t hfglen;
+    position::H02qq         _h02qq;
+    position::H02gg         _h02gg;
+    position::H12qq         _h12qq;
+    position::H14qq         _h14qq;
+    position::H14qqResidual _h14qqR;
+    position::H12gg         _h12gg;
+//     momentum::H12qqbar      _h12qqbar;
+    position::H12qqbar      _h12qqbar;
+    position::H12qqbarResidual  _h12qqbarR;
+//     momentum::H16ggSingular _h16ggS;
+//     momentum::H16ggDelta    _h16ggD;
+    position::H16gg         _h16gg;
+    position::H16ggResidual _h16ggR;
+    position::H112gq        _h112gq;
+    position::H122gq        _h122gq;
+//     momentum::H14gq         _h14gq;
+    position::H14gq         _h14gq;
+    position::H112qg        _h112qg;
+    position::H122qg        _h122qg;
+//     momentum::H14qg         _h14qg;
+    position::H14qg         _h14qg;
+    
+    vector<HardFactorList*> hfgroups;
     if (separate) {
-        hfglist = hfglist_separate;
-        hfglen = 13;
+        hfgroups.push_back(new HardFactorList(1, &_h02qq));
+        hfgroups.push_back(new HardFactorList(1, &_h02gg));
+        hfgroups.push_back(new HardFactorList(1, &_h12qq));
+        HardFactorList* h14qq = new HardFactorList();
+            h14qq->push_back(&_h14qq);
+            h14qq->push_back(&_h14qqR);
+        hfgroups.push_back(h14qq);
+        hfgroups.push_back(new HardFactorList(1, &_h12gg));
+        HardFactorList* h12qqbar = new HardFactorList();
+            h12qqbar->push_back(&_h12qqbar);
+            h12qqbar->push_back(&_h12qqbarR);
+        hfgroups.push_back(h12qqbar);
+        HardFactorList* h16gg = new HardFactorList();
+            h16gg->push_back(&_h16gg);
+            h16gg->push_back(&_h16ggR);
+        hfgroups.push_back(h16gg);
+        hfgroups.push_back(new HardFactorList(1, &_h112gq));
+        hfgroups.push_back(new HardFactorList(1, &_h122gq));
+        hfgroups.push_back(new HardFactorList(1, &_h14gq));
+        hfgroups.push_back(new HardFactorList(1, &_h112qg));
+        hfgroups.push_back(new HardFactorList(1, &_h122qg));
+        hfgroups.push_back(new HardFactorList(1, &_h14qg));
     }
     else {
-        hfglist = hfglist_total;
-        hfglen = 2;
+        HardFactorList* lo = new HardFactorList();
+            lo->push_back(&_h02qq);
+            lo->push_back(&_h02gg);
+        hfgroups.push_back(lo);
+        HardFactorList* nlo = new HardFactorList();
+            nlo->push_back(&_h12qq);
+            nlo->push_back(&_h14qq);
+            nlo->push_back(&_h14qqR);
+            nlo->push_back(&_h12gg);
+            nlo->push_back(&_h12qqbar);
+            nlo->push_back(&_h12qqbarR);
+            nlo->push_back(&_h16gg);
+            nlo->push_back(&_h16ggR);
+            nlo->push_back(&_h112gq);
+            nlo->push_back(&_h122gq);
+            nlo->push_back(&_h14gq);
+            nlo->push_back(&_h112qg);
+            nlo->push_back(&_h122qg);
+            nlo->push_back(&_h14qg);
+        hfgroups.push_back(nlo);
     }
     
-    ResultsCalculator* rc = new ResultsCalculator(&gctx, pTlen, pT, hfglen, hfglist);
+    ResultsCalculator* rc = new ResultsCalculator(&gctx, pTlist, hfgroups);
     rc->calculate();
     if (separate) {
         cout << "pT\th02qq\th02gg\th12qq\th14qq\th12gg\th12qqbar\th16gg\th112gq\th122gq\th14gq\th112qg\th122qg\th14qg\tlo\tnlo\tlo+nlo" << endl;
@@ -220,7 +250,7 @@ int main(int argc, char** argv) {
         cout << "pT\tlo\tnlo\tlo+nlo" << endl;
     }
     double l_real, l_imag, l_error;
-    for (size_t pTindex = 0; pTindex < pTlen; pTindex++) {
+    for (size_t pTindex = 0; pTindex < pTlist.size(); pTindex++) {
         if (separate) {
             cout << pT[pTindex] << "\t";
 
@@ -231,7 +261,7 @@ int main(int argc, char** argv) {
                 cout << l_real << "±" << l_error << "\t";
                 lo += l_real;
             }
-            for (; hfgindex < hfglen; hfgindex++) {
+            for (; hfgindex < hfgroups.size(); hfgindex++) {
                 rc->result(pTindex, hfgindex, &l_real, &l_imag, &l_error);
                 cout << l_real << "±" << l_error << "\t";
                 nlo += l_real;
@@ -249,6 +279,10 @@ int main(int argc, char** argv) {
             total += l_real;
             cout << total << endl;
         }
+    }
+    
+    for (vector<HardFactorList*>::iterator it = hfgroups.begin(); it != hfgroups.end(); it++) {
+        delete *it;
     }
     delete gdist;
     delete cpl;
