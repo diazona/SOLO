@@ -9,7 +9,7 @@ double GBWGluonDistribution::S4(double r2, double s2, double t2, double Qs2) {
     return exp(-0.25 * Qs2 * (s2 + t2));
 }
 double GBWGluonDistribution::F(double q2, double Qs2) {
-    return exp(-q2/Qs2);
+    return M_1_PI * exp(-q2/Qs2) / Qs2;
 }
 
 double MVGluonDistribution::S2(double r2, double Qs2) {
