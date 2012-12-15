@@ -158,14 +158,14 @@ void vegas_integrate(double (*func)(double*, size_t, void*), size_t dim, void* c
 
     gsl_rng* rng = gsl_rng_alloc(gsl_rng_default);
     gsl_monte_vegas_state* s = gsl_monte_vegas_alloc(dim);
-    gsl_monte_vegas_integrate(&f, min, max, dim, 10000, rng, s, p_result, p_abserr);
+    gsl_monte_vegas_integrate(&f, min, max, dim, 40000, rng, s, p_result, p_abserr);
     checkfinite(*p_result);
     checkfinite(*p_abserr);
     if (callback) {
         (*callback)(p_result, p_abserr, s);
     }
     do {
-        gsl_monte_vegas_integrate(&f, min, max, dim, 100000, rng, s, p_result, p_abserr);
+        gsl_monte_vegas_integrate(&f, min, max, dim, 1000000, rng, s, p_result, p_abserr);
         checkfinite(*p_result);
         checkfinite(*p_abserr);
         if (callback) {
