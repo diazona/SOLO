@@ -12,8 +12,14 @@
 using namespace momentum;
 
 void H12qqbar::Fd(IntegrationContext* ictx, double* real, double* imag) {
-    double value = 2 * ictx->ctx->Nf * ictx->ctx->TR * ictx->ctx->Sperp * ictx->alphasbar * ictx->ggfactor *
-        (1 + 2 * ictx->xiprime + 2 * ictx->xiprime2) * ictx->Fq1 * ictx->Fkq1 * log(((ictx->q1x - ictx->xiprime * ictx->kT)*(ictx->q1x - ictx->xiprime * ictx->kT) + ictx->q1y*ictx->q1y)/ictx->kT2);
+    double Pfac = 1 - 2 * ictx->xiprime + 2 * ictx->xiprime2;
+    double kA2 = gsl_pow_2(ictx->q1x - ictx->xiprime * ictx->kT) + gsl_pow_2(ictx->q1y); // (q - xi' k)^2
+    double kB2 = gsl_pow_2(ictx->q1x - ictx->kT) + gsl_pow_2(ictx->q1y); // (q - k)^2
+    double Fg1 = ictx->ctx->gdist->F(ictx->q12, ictx->Qs2);
+    double Fg2 = ictx->ctx->gdist->F(kB2, ictx->Qs2);
+    double logfac = log(kA2 / ictx->kT2);
+    double value = -2 * ictx->ctx->Nf * ictx->ctx->TR * ictx->ctx->Sperp * ictx->alphasbar * ictx->ggfactor / ictx->z2
+        * Pfac * Fg1 * Fg2 * logfac;
     checkfinite(value);
     *real = value;
     *imag = 0;
@@ -53,20 +59,26 @@ void H16ggDelta::Fd(IntegrationContext* ictx, double* real, double* imag) {
 }
 
 void H14gq::Fn(IntegrationContext* ictx, double* real, double* imag) {
-    double value = -ictx->alphasbar * ictx->ctx->Nc * M_1_PI * (2 - 2 * ictx->xi + ictx->xi2) / ictx->xi2 *
-        ictx->ctx->gdist->F((ictx->kT / ictx->xi + ictx->q1x)*(ictx->kT / ictx->xi + ictx->q1x) + ictx->q1y*ictx->q1y, ictx->Qs2) *
-        ictx->ctx->gdist->F((ictx->kT * (1 - 1. / ictx->xi) - ictx->q1x + ictx->q2x)*(ictx->kT * (1 - 1. / ictx->xi) - ictx->q1x + ictx->q2x) + (-ictx->q1y + ictx->q2y)*(-ictx->q1y + ictx->q2y), ictx->Qs2) *
-        (ictx->q1x * ictx->q2x + ictx->q1y * ictx->q2y) / (ictx->q12 * ictx->q22);
+    double Pfac = (2 - 2 * ictx->xi + ictx->xi2) / ictx->xi2; // Pgq(xi) / xi
+    double dotfac = (ictx->q1x * ictx->q2x + ictx->q1y * ictx->q2y) / (ictx->q12 * ictx->q22);
+    double kA2 = gsl_pow_2(ictx->kT / ictx->xi + ictx->q1x) + gsl_pow_2(ictx->q1y);
+    double kB2 = gsl_pow_2(ictx->kT * (ictx->xi - 1) / ictx->xi - ictx->q1x + ictx->q2x) + gsl_pow_2(-ictx->q1y + ictx->q2y);
+    double Fg1 = ictx->ctx->gdist->F(kA2, ictx->Qs2);
+    double Fg2 = ictx->ctx->gdist->F(kB2, ictx->Qs2);
+    double value = -ictx->alphasbar * ictx->ctx->Nc * M_1_PI * ictx->gqfactor / ictx->z2 * Pfac * Fg1 * Fg2 * dotfac;
     checkfinite(value);
     *real = value;
     *imag = 0;
 }
 
 void H14qg::Fn(IntegrationContext* ictx, double* real, double* imag) {
-    double value = -ictx->alphasbar * M_1_PI * (1 - 2 * ictx->xi + 2 * ictx->xi2) / ictx->xi *
-        ictx->ctx->gdist->F((ictx->kT - ictx->q1x)*(ictx->kT - ictx->q1x) + ictx->q1y*ictx->q1y, ictx->Qs2) *
-        ictx->ctx->gdist->F((ictx->kT * (1 - 1. / ictx->xi) - ictx->q1x + ictx->q2x)*(ictx->kT * (1 - 1. / ictx->xi) - ictx->q1x + ictx->q2x) + (-ictx->q1y + ictx->q2y)*(-ictx->q1y + ictx->q2y), ictx->Qs2) *
-        (ictx->q1x * ictx->q2x + ictx->q1y * ictx->q2y) / (ictx->q12 * ictx->q22);
+    double Pfac = (1 - 2 * ictx->xi + 2 * ictx->xi2) / ictx->xi; // Pqg(xi) / xi
+    double dotfac = (ictx->q1x * ictx->q2x + ictx->q1y * ictx->q2y) / (ictx->q12 * ictx->q22);
+    double kA2 = gsl_pow_2(ictx->kT - ictx->q1x) + gsl_pow_2(ictx->q1y);
+    double kB2 = gsl_pow_2(ictx->kT * (ictx->xi - 1) / ictx->xi - ictx->q1x + ictx->q2x) + gsl_pow_2(-ictx->q1y + ictx->q2y);
+    double Fg1 = ictx->ctx->gdist->F(kA2, ictx->Qs2);
+    double Fg2 = ictx->ctx->gdist->F(kB2, ictx->Qs2);
+    double value = -ictx->alphasbar * M_1_PI * ictx->qgfactor / ictx->z2 * Pfac * Fg1 * Fg2 * dotfac;
     checkfinite(value);
     *real = value;
     *imag = 0;
