@@ -149,5 +149,6 @@ void IntegrationContext::update_auxiliary(double xiprime) {
     checkfinite(xiprime);
     assert(xiprime >= 0 && xiprime <= 1);
     this->xiprime = xiprime;
+    this->xiprime2 = xiprime * xiprime;
 }
 
