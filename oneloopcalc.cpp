@@ -38,6 +38,7 @@ using namespace std;
 const int SUCCESS = 0;
 
 static bool trace = false;
+static bool minmax = false;
 
 static integration_strategy strategy = MC_VEGAS;
 
@@ -67,6 +68,34 @@ void write_data_point(IntegrationContext* ictx, double real, double imag) {
     else {
         cerr << endl;
     }
+}
+
+static IntegrationContext min_ictx(NULL);
+static IntegrationContext max_ictx(NULL);
+
+#define store(property) \
+  min_ictx.property = min_ictx.property == 0 ? ictx->property : min(min_ictx.property, ictx->property); \
+  max_ictx.property = max_ictx.property == 0 ? ictx->property : max(max_ictx.property, ictx->property);
+
+void store_minmax(IntegrationContext* ictx, double real, double imag) {
+    if (ictx == NULL) {
+        return;
+    }
+    store(xx);
+    store(xy);
+    store(yx);
+    store(yy);
+    store(bx);
+    store(by);
+    store(q1x);
+    store(q1y);
+    store(q2x);
+    store(q2y);
+    store(q3x);
+    store(q3y);
+    store(xi);
+    store(z);
+    store(xiprime);
 }
 
 void write_nonzero(IntegrationContext* ictx, double real, double imag) {
@@ -124,6 +153,9 @@ void ResultsCalculator::calculate() {
             if (trace) {
                 integrator->set_callback(write_data_point);
             }
+            else if (minmax) {
+                integrator->set_callback(store_minmax);
+            }
             integrator->integrate(l_real++, l_imag++, l_error++);
             delete integrator;
         }
@@ -144,6 +176,9 @@ int main(int argc, char** argv) {
         }
         else if (strcmp(argv[i], "--trace")==0) {
             trace = true;
+        }
+        else if (strcmp(argv[i], "--minmax")==0) {
+            minmax = true;
         }
         else if (strcmp(argv[i], "--separate")==0) {
             separate = true;
@@ -279,6 +314,24 @@ int main(int argc, char** argv) {
             total += l_real;
             cout << total << endl;
         }
+    }
+    
+    if (minmax) {
+        cerr << "xx\t" << min_ictx.xx << "\t" << max_ictx.xx << "\t" << endl;
+        cerr << "xy\t" << min_ictx.xy << "\t" << max_ictx.xy << "\t" << endl;
+        cerr << "yx\t" << min_ictx.yx << "\t" << max_ictx.yx << "\t" << endl;
+        cerr << "yy\t" << min_ictx.yy << "\t" << max_ictx.yy << "\t" << endl;
+        cerr << "bx\t" << min_ictx.bx << "\t" << max_ictx.bx << "\t" << endl;
+        cerr << "by\t" << min_ictx.by << "\t" << max_ictx.by << "\t" << endl;
+        cerr << "q1x\t" << min_ictx.q1x << "\t" << max_ictx.q1x << "\t" << endl;
+        cerr << "q1y\t" << min_ictx.q1y << "\t" << max_ictx.q1y << "\t" << endl;
+        cerr << "q2x\t" << min_ictx.q2x << "\t" << max_ictx.q2x << "\t" << endl;
+        cerr << "q2y\t" << min_ictx.q2y << "\t" << max_ictx.q2y << "\t" << endl;
+        cerr << "q3x\t" << min_ictx.q3x << "\t" << max_ictx.q3x << "\t" << endl;
+        cerr << "q3y\t" << min_ictx.q3y << "\t" << max_ictx.q3y << "\t" << endl;
+        cerr << "z\t" << min_ictx.z << "\t" << max_ictx.z << "\t" << endl;
+        cerr << "xi\t" << min_ictx.xi << "\t" << max_ictx.xi << "\t" << endl;
+        cerr << "xip\t" << min_ictx.xiprime << "\t" << max_ictx.xiprime << "\t" << endl;
     }
     
     for (vector<HardFactorList*>::iterator it = hfgroups.begin(); it != hfgroups.end(); it++) {
