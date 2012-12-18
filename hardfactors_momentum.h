@@ -201,6 +201,30 @@ public:
     void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
 };
 
+class registry : public HardFactorRegistry {
+public:
+    static const registry* get_instance() {
+        static registry instance;
+        return &instance;
+    }
+private:
+    registry() {
+//         add_hard_factor(new H02qq(), true);
+//         add_hard_factor(new H12qq(), true);
+//         add_hard_factor(new H14qq(), true);
+//         add_hard_factor(new H02gg(), true);
+//         add_hard_factor(new H12gg(), true);
+        add_hard_factor(new H12qqbar(), true);
+        add_hard_factor(new H16gg(), true);
+//         add_hard_factor(new H112gq(), true);
+//         add_hard_factor(new H122gq(), true);
+        add_hard_factor(new H14gq(), true);
+//         add_hard_factor(new H112qg(), true);
+//         add_hard_factor(new H122qg(), true);
+        add_hard_factor(new H14qg(), true);
+    }
+};
+
 }
 
 #endif // _HARDFACTORS_MOMENTUM_H_
