@@ -43,7 +43,7 @@ static bool minmax = false;
 static integration_strategy strategy = MC_VEGAS;
 
 // callbacks
-void write_data_point(IntegrationContext* ictx, double real, double imag) {
+void write_data_point(const IntegrationContext* ictx, const double real, const double imag) {
     if (ictx) {
 //         if ((++count) % 500 == 0) {
             cerr
@@ -77,7 +77,7 @@ static IntegrationContext max_ictx(NULL);
   min_ictx.property = min_ictx.property == 0 ? ictx->property : min(min_ictx.property, ictx->property); \
   max_ictx.property = max_ictx.property == 0 ? ictx->property : max(max_ictx.property, ictx->property);
 
-void store_minmax(IntegrationContext* ictx, double real, double imag) {
+void store_minmax(const IntegrationContext* ictx, const double real, const double imag) {
     if (ictx == NULL) {
         return;
     }
@@ -98,7 +98,7 @@ void store_minmax(IntegrationContext* ictx, double real, double imag) {
     store(xiprime);
 }
 
-void write_nonzero(IntegrationContext* ictx, double real, double imag) {
+void write_nonzero(const IntegrationContext* ictx, const double real, const double imag) {
     if (real != 0 || imag != 0) {
         cerr << real << "\t" << imag << endl;
     }
@@ -210,42 +210,29 @@ int main(int argc, char** argv) {
     position::H02gg         _h02gg;
     position::H12qq         _h12qq;
     position::H14qq         _h14qq;
-    position::H14qqResidual _h14qqR;
     position::H12gg         _h12gg;
-//     momentum::H12qqbar      _h12qqbar;
-    position::H12qqbar      _h12qqbar;
-    position::H12qqbarResidual  _h12qqbarR;
-//     momentum::H16ggSingular _h16ggS;
-//     momentum::H16ggDelta    _h16ggD;
-    position::H16gg         _h16gg;
-    position::H16ggResidual _h16ggR;
+    momentum::H12qqbar      _h12qqbar;
+//     position::H12qqbar      _h12qqbar;
+    momentum::H16gg         _h16gg;
+//     position::H16gg         _h16gg;
     position::H112gq        _h112gq;
     position::H122gq        _h122gq;
-//     momentum::H14gq         _h14gq;
-    position::H14gq         _h14gq;
+    momentum::H14gq         _h14gq;
+//     position::H14gq         _h14gq;
     position::H112qg        _h112qg;
     position::H122qg        _h122qg;
-//     momentum::H14qg         _h14qg;
-    position::H14qg         _h14qg;
+    momentum::H14qg         _h14qg;
+//     position::H14qg         _h14qg;
     
     vector<HardFactorList*> hfgroups;
     if (separate) {
         hfgroups.push_back(new HardFactorList(1, &_h02qq));
         hfgroups.push_back(new HardFactorList(1, &_h02gg));
         hfgroups.push_back(new HardFactorList(1, &_h12qq));
-        HardFactorList* h14qq = new HardFactorList();
-            h14qq->push_back(&_h14qq);
-            h14qq->push_back(&_h14qqR);
-        hfgroups.push_back(h14qq);
+        hfgroups.push_back(new HardFactorList(1, &_h14qq));
         hfgroups.push_back(new HardFactorList(1, &_h12gg));
-        HardFactorList* h12qqbar = new HardFactorList();
-            h12qqbar->push_back(&_h12qqbar);
-            h12qqbar->push_back(&_h12qqbarR);
-        hfgroups.push_back(h12qqbar);
-        HardFactorList* h16gg = new HardFactorList();
-            h16gg->push_back(&_h16gg);
-            h16gg->push_back(&_h16ggR);
-        hfgroups.push_back(h16gg);
+        hfgroups.push_back(new HardFactorList(1, &_h12qqbar));
+        hfgroups.push_back(new HardFactorList(1, &_h16gg));
         hfgroups.push_back(new HardFactorList(1, &_h112gq));
         hfgroups.push_back(new HardFactorList(1, &_h122gq));
         hfgroups.push_back(new HardFactorList(1, &_h14gq));
@@ -261,12 +248,9 @@ int main(int argc, char** argv) {
         HardFactorList* nlo = new HardFactorList();
             nlo->push_back(&_h12qq);
             nlo->push_back(&_h14qq);
-            nlo->push_back(&_h14qqR);
             nlo->push_back(&_h12gg);
             nlo->push_back(&_h12qqbar);
-            nlo->push_back(&_h12qqbarR);
             nlo->push_back(&_h16gg);
-            nlo->push_back(&_h16ggR);
             nlo->push_back(&_h112gq);
             nlo->push_back(&_h122gq);
             nlo->push_back(&_h14gq);

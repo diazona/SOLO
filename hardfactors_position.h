@@ -8,185 +8,260 @@
 
 namespace position {
 
-class H02qq : public HardFactor {
+class H02qq : public HardFactorTerm {
 public:
-    const char* get_name() {
+    const char* get_name() const {
         return "H02qq";
     }
-    IntegrationType* get_type() {
+    const IntegrationType* get_type() const {
         return DipoleIntegrationType::get_instance();
     }
-    void Fd(IntegrationContext* ictx, double* real, double* imag);
+    void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
 
-class H12qq : public HardFactor {
+class H12qq : public HardFactorTerm {
 public:
-    const char* get_name() {
+    const char* get_name() const {
         return "H12qq";
     }
-    IntegrationType* get_type() {
+    const IntegrationType* get_type() const {
         return DipoleIntegrationType::get_instance();
     }
-    void Fs(IntegrationContext* ictx, double* real, double* imag);
-    void Fd(IntegrationContext* ictx, double* real, double* imag);
+    void Fs(const IntegrationContext* ictx, double* real, double* imag) const;
+    void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
+};
+
+class H14qqPrimary : public HardFactorTerm {
+public:
+    const char* get_name() const {
+        return "H14qq";
+    }
+    const IntegrationType* get_type() const {
+        return QuadrupoleIntegrationType::get_instance();
+    }
+    void Fs(const IntegrationContext* ictx, double* real, double* imag) const;
+    void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
+};
+
+class H14qqResidual : public HardFactorTerm {
+public:
+    const char* get_name() const {
+        return "H14qqResidual";
+    }
+    const IntegrationType* get_type() const {
+        return DipoleIntegrationType::get_instance();
+    }
+    void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
 
 class H14qq : public HardFactor {
 public:
-    const char* get_name() {
+    H14qq() {
+        terms[0] = new H14qqPrimary();
+        terms[1] = new H14qqResidual();
+    }
+    ~H14qq() {
+        delete terms[0];
+        terms[0] = NULL;
+        delete terms[1];
+        terms[1] = NULL;
+    }
+    const char* get_name() const {
         return "H14qq";
     }
-    IntegrationType* get_type() {
-        return QuadrupoleIntegrationType::get_instance();
+    const size_t get_term_count() const {
+        return 2;
     }
-    void Fs(IntegrationContext* ictx, double* real, double* imag);
-    void Fd(IntegrationContext* ictx, double* real, double* imag);
+    const HardFactorTerm* const* get_terms() const {
+        return terms;
+    }
+private:
+    const HardFactorTerm* terms[2];
 };
 
-class H14qqResidual : public HardFactor {
+class H02gg : public HardFactorTerm {
 public:
-    const char* get_name() {
-        return "H14qqResidual";
-    }
-    IntegrationType* get_type() {
-        return DipoleIntegrationType::get_instance();
-    }
-    void Fd(IntegrationContext* ictx, double* real, double* imag);
-};
-
-class H02gg : public HardFactor {
-public:
-    const char* get_name() {
+    const char* get_name() const {
         return "H02gg";
     }
-    IntegrationType* get_type() {
+    const IntegrationType* get_type() const {
         return DipoleIntegrationType::get_instance();
     }
-    void Fd(IntegrationContext* ictx, double* real, double* imag);
+    void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
 
-class H12gg : public HardFactor {
+class H12gg : public HardFactorTerm {
 public:
-    const char* get_name() {
+    const char* get_name() const {
         return "H12gg";
     }
-    IntegrationType* get_type() {
+    const IntegrationType* get_type() const {
         return DipoleIntegrationType::get_instance();
     }
-    void Fs(IntegrationContext* ictx, double* real, double* imag);
-    void Fn(IntegrationContext* ictx, double* real, double* imag);
-    void Fd(IntegrationContext* ictx, double* real, double* imag);
+    void Fs(const IntegrationContext* ictx, double* real, double* imag) const;
+    void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
+    void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
+};
+
+class H12qqbarPrimary : public HardFactorTerm {
+public:
+    const char* get_name() const {
+        return "H12qqbarPrimary";
+    }
+    const IntegrationType* get_type() const {
+        return QuadrupoleIntegrationType::get_instance();
+    }
+    void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
+};
+
+class H12qqbarResidual : public HardFactorTerm {
+public:
+    const char* get_name() const {
+        return "H12qqbarResidual";
+    }
+    const IntegrationType* get_type() const {
+        return DipoleIntegrationType::get_instance();
+    }
+    void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
 
 class H12qqbar : public HardFactor {
 public:
-    const char* get_name() {
+    H12qqbar() {
+        terms[0] = new H12qqbarPrimary();
+        terms[1] = new H12qqbarResidual();
+    }
+    ~H12qqbar() {
+        delete terms[0];
+        terms[0] = NULL;
+        delete terms[1];
+        terms[1] = NULL;
+    }
+    const char* get_name() const {
         return "H12qqbar";
     }
-    IntegrationType* get_type() {
-        return QuadrupoleIntegrationType::get_instance();
+    const size_t get_term_count() const {
+        return 2;
     }
-    void Fd(IntegrationContext* ictx, double* real, double* imag);
+    const HardFactorTerm* const* get_terms() const {
+        return terms;
+    }
+private:
+    const HardFactorTerm* terms[2];
 };
 
-class H12qqbarResidual : public HardFactor {
+class H16ggPrimary : public HardFactorTerm {
 public:
-    const char* get_name() {
-        return "H12qqbarResidual";
+    const char* get_name() const {
+        return "H16ggPrimary";
     }
-    IntegrationType* get_type() {
+    const IntegrationType* get_type() const {
+        return QuadrupoleIntegrationType::get_instance();
+    }
+    void Fs(const IntegrationContext* ictx, double* real, double* imag) const;
+    void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
+};
+
+class H16ggResidual : public HardFactorTerm {
+public:
+    const char* get_name() const {
+        return "H16ggResidual";
+    }
+    const IntegrationType* get_type() const {
         return DipoleIntegrationType::get_instance();
     }
-    void Fd(IntegrationContext* ictx, double* real, double* imag);
+    void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
 
 class H16gg : public HardFactor {
 public:
-    const char* get_name() {
+    H16gg() {
+        terms[0] = new H16ggPrimary();
+        terms[1] = new H16ggResidual();
+    }
+    ~H16gg() {
+        delete terms[0];
+        terms[0] = NULL;
+        delete terms[1];
+        terms[1] = NULL;
+    }
+    const char* get_name() const {
         return "H16gg";
     }
-    IntegrationType* get_type() {
-        return QuadrupoleIntegrationType::get_instance();
+    const size_t get_term_count() const {
+        return 2;
     }
-    void Fs(IntegrationContext* ictx, double* real, double* imag);
-    void Fd(IntegrationContext* ictx, double* real, double* imag);
+    const HardFactorTerm* const* get_terms() const {
+        return terms;
+    }
+private:
+    const HardFactorTerm* terms[2];
 };
 
-class H16ggResidual : public HardFactor {
+class H112gq : public HardFactorTerm {
 public:
-    const char* get_name() {
-        return "H16ggResidual";
-    }
-    IntegrationType* get_type() {
-        return DipoleIntegrationType::get_instance();
-    }
-    void Fd(IntegrationContext* ictx, double* real, double* imag);
-};
-
-class H112gq : public HardFactor {
-public:
-    const char* get_name() {
+    const char* get_name() const {
         return "H112gq";
     }
-    IntegrationType* get_type() {
+    const IntegrationType* get_type() const {
         return DipoleIntegrationType::get_instance();
     }
-    void Fn(IntegrationContext* ictx, double* real, double* imag);
+    void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
 };
 
-class H122gq : public HardFactor {
+class H122gq : public HardFactorTerm {
 public:
-    const char* get_name() {
+    const char* get_name() const {
         return "H122gq";
     }
-    IntegrationType* get_type() {
+    const IntegrationType* get_type() const {
         return DipoleIntegrationType::get_instance();
     }
-    void Fn(IntegrationContext* ictx, double* real, double* imag);
+    void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
 };
 
-class H14gq : public HardFactor {
+class H14gq : public HardFactorTerm {
 public:
-    const char* get_name() {
+    const char* get_name() const {
         return "H14gq";
     }
-    IntegrationType* get_type() {
+    const IntegrationType* get_type() const {
         return QuadrupoleIntegrationType::get_instance();
     }
-    void Fn(IntegrationContext* ictx, double* real, double* imag);
+    void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
 };
 
-class H112qg : public HardFactor {
+class H112qg : public HardFactorTerm {
 public:
-    const char* get_name() {
+    const char* get_name() const {
         return "H112qg";
     }
-    IntegrationType* get_type() {
+    const IntegrationType* get_type() const {
         return DipoleIntegrationType::get_instance();
     }
-    void Fn(IntegrationContext* ictx, double* real, double* imag);
+    void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
 };
 
-class H122qg : public HardFactor {
+class H122qg : public HardFactorTerm {
 public:
-    const char* get_name() {
+    const char* get_name() const {
         return "H122qg";
     }
-    IntegrationType* get_type() {
+    const IntegrationType* get_type() const {
         return DipoleIntegrationType::get_instance();
     }
-    void Fn(IntegrationContext* ictx, double* real, double* imag);
+    void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
 };
 
-class H14qg : public HardFactor {
+class H14qg : public HardFactorTerm {
 public:
-    const char* get_name() {
+    const char* get_name() const {
         return "H14qg";
     }
-    IntegrationType* get_type() {
+    const IntegrationType* get_type() const {
         return QuadrupoleIntegrationType::get_instance();
     }
-    void Fn(IntegrationContext* ictx, double* real, double* imag);
+    void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
 };
 
 }

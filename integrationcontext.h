@@ -5,7 +5,7 @@
 
 class IntegrationContext {
 public:
-    Context* ctx;
+    const Context* ctx;
     // updated
     double z;
     double xi;
@@ -35,7 +35,7 @@ public:
     double Fq1, Fq2, Fq3;
     double Fkq1, Fkq2, Fkq3;
     
-    IntegrationContext(Context* ctx) :
+    IntegrationContext(const Context* ctx) :
       ctx(ctx),
       z(0), xi(0),
       xx(0), xy(0),

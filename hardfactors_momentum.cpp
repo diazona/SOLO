@@ -11,7 +11,7 @@
 
 using namespace momentum;
 
-void H12qqbar::Fd(IntegrationContext* ictx, double* real, double* imag) {
+void H12qqbar::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
     double Pfac = 1 - 2 * ictx->xiprime + 2 * ictx->xiprime2;
     double kA2 = gsl_pow_2(ictx->q1x - ictx->xiprime * ictx->kT) + gsl_pow_2(ictx->q1y); // (q - xi' k)^2
     double kB2 = gsl_pow_2(ictx->q1x - ictx->kT) + gsl_pow_2(ictx->q1y); // (q - k)^2
@@ -25,7 +25,7 @@ void H12qqbar::Fd(IntegrationContext* ictx, double* real, double* imag) {
     *imag = 0;
 }
 
-void H16ggSingular::Fs(IntegrationContext* ictx, double* real, double* imag) {
+void H16ggSingular::Fs(const IntegrationContext* ictx, double* real, double* imag) const {
     double Pfac = gsl_pow_2(1 - ictx->xi + ictx->xi2) / ictx->xi2;
     double dotfac = (ictx->q1x * ictx->q2x + ictx->q1y * ictx->q2y) / (ictx->q12 * ictx->q22);
     double kA2 = gsl_pow_2(ictx->kT + ictx->q1x + ictx->q3x) + gsl_pow_2(ictx->q1y + ictx->q3y); // (k + q1 + q3)^2
@@ -40,7 +40,7 @@ void H16ggSingular::Fs(IntegrationContext* ictx, double* real, double* imag) {
     *imag = 0;
 }
 
-void H16ggDelta::Fd(IntegrationContext* ictx, double* real, double* imag) {
+void H16ggDelta::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
     double kA02 = gsl_pow_2(ictx->q2x - ictx->xiprime * ictx->kT) + gsl_pow_2(ictx->q2y); // (q2 - xi' k)^2
     double kA12 = gsl_pow_2(ictx->q2x - ictx->kT) + gsl_pow_2(ictx->q2y); // (q2 - k)^2
     double kB2 = gsl_pow_2(ictx->q1x + ictx->kT) + gsl_pow_2(ictx->q1y); // (q1 + k)^2
@@ -58,7 +58,7 @@ void H16ggDelta::Fd(IntegrationContext* ictx, double* real, double* imag) {
     *imag = 0;
 }
 
-void H14gq::Fn(IntegrationContext* ictx, double* real, double* imag) {
+void H14gq::Fn(const IntegrationContext* ictx, double* real, double* imag) const {
     double Pfac = (2 - 2 * ictx->xi + ictx->xi2) / ictx->xi2; // Pgq(xi) / xi
     double dotfac = (ictx->q1x * ictx->q2x + ictx->q1y * ictx->q2y) / (ictx->q12 * ictx->q22);
     double kA2 = gsl_pow_2(ictx->kT / ictx->xi + ictx->q1x) + gsl_pow_2(ictx->q1y);
@@ -71,7 +71,7 @@ void H14gq::Fn(IntegrationContext* ictx, double* real, double* imag) {
     *imag = 0;
 }
 
-void H14qg::Fn(IntegrationContext* ictx, double* real, double* imag) {
+void H14qg::Fn(const IntegrationContext* ictx, double* real, double* imag) const {
     double Pfac = (1 - 2 * ictx->xi + 2 * ictx->xi2) / ictx->xi; // Pqg(xi) / xi
     double dotfac = (ictx->q1x * ictx->q2x + ictx->q1y * ictx->q2y) / (ictx->q12 * ictx->q22);
     double kA2 = gsl_pow_2(ictx->kT - ictx->q1x) + gsl_pow_2(ictx->q1y);
