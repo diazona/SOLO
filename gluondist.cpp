@@ -63,7 +63,7 @@ MVGluonDistribution::MVGluonDistribution(double LambdaMV, double q2min, double q
         }
     }
     
-    interp = interp2d_alloc(interp2d_bicubic, q_dimension, Qs2_dimension);
+    interp = interp2d_alloc(interp2d_bilinear, q_dimension, Qs2_dimension);
     interp2d_init(interp, log_q_values, log_Qs2_values, F_dist, q_dimension, Qs2_dimension);
     
     q_accel = gsl_interp_accel_alloc();
