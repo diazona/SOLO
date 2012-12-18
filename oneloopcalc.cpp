@@ -18,9 +18,11 @@
  */
 
 #include <cassert>
-#include <iostream>
+#include <cctype>
 #include <cstdlib>
 #include <cstring>
+#include <iostream>
+#include <sstream>
 #include <gsl/gsl_rng.h>
 #include "cubature.h"
 #include "mstwpdf.h"
@@ -163,10 +165,57 @@ void ResultsCalculator::calculate() {
     }
 }
 
+// from http://stackoverflow.com/a/236803/56541
+vector<string> &split(const string &s, char delim, vector<string> &elems) {
+    stringstream ss(s);
+    string item;
+    while(getline(ss, item, delim)) {
+        elems.push_back(item);
+    }
+    return elems;
+}
+
+HardFactorList* parse_hf_spec(const string& spec) {
+    vector<string> hfnames;
+    split(spec, ',', hfnames);
+    HardFactorList* hfobjs = new HardFactorList();
+    for (vector<string>::iterator it = hfnames.begin(); it != hfnames.end(); it++) {
+        string s = *it;
+        const HardFactorRegistry* registry = position::registry::get_instance(); // default
+        if (s[1] == ':') {
+            switch (s[0]) {
+                case 'm':
+                    registry = momentum::registry::get_instance();
+                    break;
+                case 'p':
+                    registry = position::registry::get_instance();
+                    break;
+            }
+            s = s.substr(2);
+        }
+        const HardFactor* hf = registry->get_hard_factor(s);
+        if (hf == NULL) {
+            cerr << "No such hard factor " << *it << endl;
+            exit(1);
+        }
+        hfobjs->push_back(hf);
+    }
+    assert(hfobjs != NULL);
+    return hfobjs;
+}
+
+static const char* default_lo_spec = "p:h02qq,p:h02gg";
+static const char* default_nlo_spec = "p:h12qq,p:h14qq,p:h12gg,m:h12qqbar,m:h16gg,p:h112gq,p:h122gq,m:h14gq,p:h112qg,p:h122qg,m:h14qg";
+
 int main(int argc, char** argv) {
     bool separate = false;
     GluonDistribution* gdist = new GBWGluonDistribution();
     Coupling* cpl = new FixedCoupling(0.2 / (2*M_PI));
+    vector<HardFactorList*> hfgroups;
+    vector<string> hfgnames;
+    vector<double> pT;
+
+    // process options
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--miser")==0) {
             strategy = MC_MISER;
@@ -183,7 +232,46 @@ int main(int argc, char** argv) {
         else if (strcmp(argv[i], "--separate")==0) {
             separate = true;
         }
+        else if (argv[i][0] == 'h') {
+            hfgroups.push_back(parse_hf_spec(argv[i]));
+            hfgnames.push_back(argv[i]);
+        }
+        else if (strcmp(argv[i], "lo") == 0) {
+            hfgroups.push_back(parse_hf_spec(default_lo_spec));
+            hfgnames.push_back(argv[i]);
+        }
+        else if (strcmp(argv[i], "nlo") == 0) {
+            hfgroups.push_back(parse_hf_spec(default_nlo_spec));
+            hfgnames.push_back(argv[i]);
+        }
+        else if (::isdigit(argv[i][0])) {
+            vector<string> pTnums;
+            split(argv[i], ',', pTnums);
+            for (vector<string>::iterator it = pTnums.begin(); it != pTnums.end(); it++) {
+                double d = strtod(it->c_str(), NULL);
+                if (errno != 0) {
+                    cerr << "Error " << errno << " parsing " << argv[i] << " as floating-point" << endl;
+                    cerr << ERANGE << ": range error" << endl;
+                    exit(1);
+                }
+                pT.push_back(d);
+            }
+        }
     }
+    
+    if (pT.size() == 0) {
+        cerr << "No momenta specified!" << endl;
+        exit(1);
+    }
+    if (hfgroups.size() == 0) {
+        hfgroups.push_back(parse_hf_spec(default_lo_spec));
+        hfgnames.push_back("lo");
+        hfgroups.push_back(parse_hf_spec(default_nlo_spec));
+        hfgnames.push_back("nlo");
+    }
+    assert(hfgroups.size() > 0);
+    assert(hfgroups.size() == hfgnames.size());
+    
     gsl_rng_env_setup();
     Context gctx(
       0.000304, // x0
@@ -203,101 +291,24 @@ int main(int argc, char** argv) {
       cpl,
       "mstw2008nlo.00.dat", "PINLO.DAT");
 
-    double pT[] = {0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4};
-    vector<double> pTlist(pT, pT + sizeof(pT)/sizeof(double));
-    size_t pTlen = sizeof(pT)/sizeof(double);
-    position::H02qq         _h02qq;
-    position::H02gg         _h02gg;
-    position::H12qq         _h12qq;
-    position::H14qq         _h14qq;
-    position::H12gg         _h12gg;
-    momentum::H12qqbar      _h12qqbar;
-//     position::H12qqbar      _h12qqbar;
-    momentum::H16gg         _h16gg;
-//     position::H16gg         _h16gg;
-    position::H112gq        _h112gq;
-    position::H122gq        _h122gq;
-    momentum::H14gq         _h14gq;
-//     position::H14gq         _h14gq;
-    position::H112qg        _h112qg;
-    position::H122qg        _h122qg;
-    momentum::H14qg         _h14qg;
-//     position::H14qg         _h14qg;
-    
-    vector<HardFactorList*> hfgroups;
-    if (separate) {
-        hfgroups.push_back(new HardFactorList(1, &_h02qq));
-        hfgroups.push_back(new HardFactorList(1, &_h02gg));
-        hfgroups.push_back(new HardFactorList(1, &_h12qq));
-        hfgroups.push_back(new HardFactorList(1, &_h14qq));
-        hfgroups.push_back(new HardFactorList(1, &_h12gg));
-        hfgroups.push_back(new HardFactorList(1, &_h12qqbar));
-        hfgroups.push_back(new HardFactorList(1, &_h16gg));
-        hfgroups.push_back(new HardFactorList(1, &_h112gq));
-        hfgroups.push_back(new HardFactorList(1, &_h122gq));
-        hfgroups.push_back(new HardFactorList(1, &_h14gq));
-        hfgroups.push_back(new HardFactorList(1, &_h112qg));
-        hfgroups.push_back(new HardFactorList(1, &_h122qg));
-        hfgroups.push_back(new HardFactorList(1, &_h14qg));
-    }
-    else {
-        HardFactorList* lo = new HardFactorList();
-            lo->push_back(&_h02qq);
-            lo->push_back(&_h02gg);
-        hfgroups.push_back(lo);
-        HardFactorList* nlo = new HardFactorList();
-            nlo->push_back(&_h12qq);
-            nlo->push_back(&_h14qq);
-            nlo->push_back(&_h12gg);
-            nlo->push_back(&_h12qqbar);
-            nlo->push_back(&_h16gg);
-            nlo->push_back(&_h112gq);
-            nlo->push_back(&_h122gq);
-            nlo->push_back(&_h14gq);
-            nlo->push_back(&_h112qg);
-            nlo->push_back(&_h122qg);
-            nlo->push_back(&_h14qg);
-        hfgroups.push_back(nlo);
-    }
-    
-    ResultsCalculator* rc = new ResultsCalculator(&gctx, pTlist, hfgroups);
+    ResultsCalculator* rc = new ResultsCalculator(&gctx, pT, hfgroups);
     rc->calculate();
-    if (separate) {
-        cout << "pT\th02qq\th02gg\th12qq\th14qq\th12gg\th12qqbar\th16gg\th112gq\th122gq\th14gq\th112qg\th122qg\th14qg\tlo\tnlo\tlo+nlo" << endl;
+    cout << "pT\t";
+    for (vector<string>::iterator it = hfgnames.begin(); it != hfgnames.end(); it++) {
+        cout << *it << "\t";
     }
-    else {
-        cout << "pT\tlo\tnlo\tlo+nlo" << endl;
-    }
+    cout << "total" << endl;
     double l_real, l_imag, l_error;
-    for (size_t pTindex = 0; pTindex < pTlist.size(); pTindex++) {
-        if (separate) {
-            cout << pT[pTindex] << "\t";
+    for (size_t pTindex = 0; pTindex < pT.size(); pTindex++) {
+        cout << pT[pTindex] << "\t";
 
-            double lo = 0, nlo = 0;
-            size_t hfgindex;
-            for (hfgindex = 0; hfgindex < 2; hfgindex++) {
-                rc->result(pTindex, hfgindex, &l_real, &l_imag, &l_error);
-                cout << l_real << "±" << l_error << "\t";
-                lo += l_real;
-            }
-            for (; hfgindex < hfgroups.size(); hfgindex++) {
-                rc->result(pTindex, hfgindex, &l_real, &l_imag, &l_error);
-                cout << l_real << "±" << l_error << "\t";
-                nlo += l_real;
-            }
-            cout << lo << "\t" << nlo << "\t" << lo+nlo << endl;
-        }
-        else {
-            double total = 0;
-            cout << pT[pTindex] << "\t";
-            rc->result(pTindex, 0, &l_real, &l_imag, &l_error);
+        double total = 0;
+        for (size_t hfgindex = 0; hfgindex < hfgroups.size(); hfgindex++) {
+            rc->result(pTindex, hfgindex, &l_real, &l_imag, &l_error);
             cout << l_real << "±" << l_error << "\t";
             total += l_real;
-            rc->result(pTindex, 1, &l_real, &l_imag, &l_error);
-            cout << l_real << "±" << l_error << "\t";
-            total += l_real;
-            cout << total << endl;
         }
+        cout << total << endl;
     }
     
     if (minmax) {
