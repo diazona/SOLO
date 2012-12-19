@@ -23,6 +23,7 @@
 #include <cstring>
 #include <iostream>
 #include <sstream>
+#include <gsl/gsl_math.h>
 #include <gsl/gsl_rng.h>
 #include "cubature.h"
 #include "mstwpdf.h"
@@ -201,6 +202,7 @@ HardFactorList* parse_hf_spec(const string& spec) {
         hfobjs->push_back(hf);
     }
     assert(hfobjs != NULL);
+    assert(hfobjs->size() > 0);
     return hfobjs;
 }
 
@@ -209,7 +211,7 @@ static const char* default_nlo_spec = "p:h12qq,p:h14qq,p:h12gg,m:h12qqbar,m:h16g
 
 int main(int argc, char** argv) {
     bool separate = false;
-    GluonDistribution* gdist = new GBWGluonDistribution();
+    enum {GBW, MV} gdist_type = GBW; 
     Coupling* cpl = new FixedCoupling(0.2 / (2*M_PI));
     vector<HardFactorList*> hfgroups;
     vector<string> hfgnames;
@@ -231,6 +233,12 @@ int main(int argc, char** argv) {
         }
         else if (strcmp(argv[i], "--separate")==0) {
             separate = true;
+        }
+        else if (strcmp(argv[i], "MV") == 0) {
+            gdist_type = MV;
+        }
+        else if (strcmp(argv[i], "GBW") == 0) {
+            gdist_type = GBW;
         }
         else if (argv[i][0] == 'h') {
             hfgroups.push_back(parse_hf_spec(argv[i]));
@@ -257,8 +265,11 @@ int main(int argc, char** argv) {
                 pT.push_back(d);
             }
         }
+        else {
+            cerr << "Unrecognized argument " << argv[i] << endl;
+        }
     }
-    
+
     if (pT.size() == 0) {
         cerr << "No momenta specified!" << endl;
         exit(1);
@@ -287,9 +298,31 @@ int main(int argc, char** argv) {
       1.0,      // pT2 (dummy value)
       200,      // sqs
       3.2,      // Y
-      gdist,
+      NULL,     // to be inserted later
       cpl,
       "mstw2008nlo.00.dat", "PINLO.DAT");
+    double k2min, k2max, Qs2min, Qs2max;
+    switch (gdist_type) {
+        case MV:
+            k2min = 1e-12;
+            k2max = gsl_pow_2(inf + gctx.sqs / exp(gctx.Y)); // qmax + sqrt(smax) / exp(Ymin)
+            Qs2min = gctx.Q02x0lambda; // c A^1/3 Q02 x0^λ
+            Qs2max = gctx.Q02x0lambda / exp(-2 * gctx.lambda * gctx.Y); // c A^1/3 Q02 (x0 / exp(-2Y))^λ
+            assert(k2min < k2max);
+            assert(Qs2min < Qs2max);
+            gctx.gdist = new MVGluonDistribution(
+                0.24,  // TODO: replace with LambdaMV parameter
+                k2min, // k2min
+                k2max, // k2max
+                Qs2min,// Qs2min
+                Qs2max // Qs2max
+            );
+            break;
+        case GBW:
+        default:
+            gctx.gdist = new GBWGluonDistribution();
+            break;
+    }
 
     ResultsCalculator* rc = new ResultsCalculator(&gctx, pT, hfgroups);
     rc->calculate();
@@ -332,7 +365,7 @@ int main(int argc, char** argv) {
     for (vector<HardFactorList*>::iterator it = hfgroups.begin(); it != hfgroups.end(); it++) {
         delete *it;
     }
-    delete gdist;
+    delete gctx.gdist;
     delete cpl;
     return 0;
 }
