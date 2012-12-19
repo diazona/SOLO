@@ -31,7 +31,9 @@ private:
     double* log_q_values;
     double* log_Qs2_values;
     double* F_dist;
-    interp2d* interp;
+    double* F_error;
+    interp2d* interp_dist;
+    interp2d* interp_error;
     gsl_interp_accel* q_accel;
     gsl_interp_accel* Qs2_accel;
 };
