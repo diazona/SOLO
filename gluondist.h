@@ -36,6 +36,10 @@ private:
     interp2d* interp_error;
     gsl_interp_accel* q_accel;
     gsl_interp_accel* Qs2_accel;
+#ifdef GLUON_DIST_DRIVER
+public:
+    void write_grid();
+#endif
 };
 
 #endif // _GLUONDIST_H_

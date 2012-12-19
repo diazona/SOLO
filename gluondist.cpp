@@ -98,3 +98,46 @@ double MVGluonDistribution::S4(double r2, double s2, double t2, double Qs2) {
 double MVGluonDistribution::F(double q2, double Qs2) {
     return interp2d_eval(interp_dist, log_q_values, log_Qs2_values, F_dist, log(q2)/2, log(Qs2), q_accel, Qs2_accel);
 }
+
+#ifdef GLUON_DIST_DRIVER
+#include <cstdlib>
+#include <iostream>
+
+void MVGluonDistribution::write_grid() {
+    size_t q2_dimension = interp_dist->xsize; // shouldn't really access these properties directly
+    size_t Qs2_dimension = interp_dist->ysize;
+    std::cout << "q2\tQs2\tF" << std::endl;
+    for (size_t i_q2 = 0; i_q2 < q2_dimension; i_q2++) {
+        for (size_t i_Qs2 = 0; i_Qs2 < Qs2_dimension; i_Qs2++) {
+            std::cout << exp(2 * log_q_values[i_q2]) << "\t"
+                      << exp(log_Qs2_values[i_Qs2]) << "\t"
+                      << F_dist[INDEX_2D(i_q2, i_Qs2, q2_dimension, Qs2_dimension)] << std::endl;
+        }
+    }
+}
+
+int main(int argc, char** argv) {
+    if (argc < 6) {
+        std::cerr << "Needs 5 arguments: LambdaMV, q2min, q2max, Qs2min, Qs2max" << std::endl;
+        exit(1);
+    }
+    double LambdaMV = strtod(argv[1], NULL);
+    double q2min = strtod(argv[2], NULL);
+    double q2max = strtod(argv[3], NULL);
+    double Qs2min = strtod(argv[4], NULL);
+    double Qs2max = strtod(argv[5], NULL);
+    MVGluonDistribution gdist(LambdaMV, q2min, q2max, Qs2min, Qs2max);
+    std::cin.peek();
+    if (std::cin.eof()) {
+        // write out the grid
+        gdist.write_grid();
+    }
+    else {
+        double q2, Qs2;
+        while (!std::cin.eof()) {
+            std::cin >> q2 >> Qs2;
+            std::cout << q2 << "\t"<< Qs2 << "\t" << gdist.F(q2, Qs2) << std::endl;
+        }
+    }
+}
+#endif
