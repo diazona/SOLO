@@ -111,4 +111,6 @@ private:
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };
 
+static const double inf = 10;
+
 #endif
