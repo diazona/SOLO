@@ -18,10 +18,11 @@ double GBWGluonDistribution::F(double q2, double Qs2) {
 
 class MVIntegrationParameters {
 public:
-    double q; // use q instead of q^2 because that's what we need for the integration
+    double q; // use q instead of q^2 because that's what we need for the integrand
     double Qs2;
+    size_t n; // for integrating a term of the series: this is the order of the term being integrated
     MVGluonDistribution* gdist;
-    MVIntegrationParameters(MVGluonDistribution* gdist) : gdist(gdist), q(0), Qs2(0) {}
+    MVIntegrationParameters(MVGluonDistribution* gdist) : gdist(gdist), q(0), Qs2(0), n(0) {}
 };
 
 static double mv_gdist_integrand(double r, void* closure) {
@@ -29,47 +30,81 @@ static double mv_gdist_integrand(double r, void* closure) {
     return 0.5 * M_1_PI * r * params->gdist->S2(r*r, params->Qs2) * gsl_sf_bessel_J0(params->q * r);
 }
 
-static const size_t step = 2;
+static double mv_gdist_series_term_integrand(double r, void* closure) {
+    MVIntegrationParameters* params = (MVIntegrationParameters*)closure;
+    switch (params->n) {
+        case 0:
+            return 0.5 * M_1_PI * r * params->gdist->S2(r*r, params->Qs2);
+        case 2:
+            return -0.125 * M_1_PI * gsl_pow_3(r) * params->gdist->S2(r*r, params->Qs2);
+        default: // a term not in the series
+            return 0;
+    }
+}
+
+static const double step = 1.2;
 
 MVGluonDistribution::MVGluonDistribution(double LambdaMV, double q2min, double q2max, double Qs2min, double Qs2max) :
- LambdaMV(LambdaMV), q2min(q2min), q2max(q2max), Qs2min(Qs2min), Qs2max(Qs2max), F_dist(NULL), F_error(NULL), interp_dist(NULL), interp_error(NULL), q2_accel(NULL), Qs2_accel(NULL) {
+ LambdaMV(LambdaMV), q2min(q2min), q2max(q2max), Qs2min(Qs2min), Qs2max(Qs2max),
+ F_dist_leading_q2(NULL), F_dist_subleading_q2(NULL), F_dist(NULL),
+ interp_dist_leading_q2(NULL), interp_dist_subleading_q2(NULL), interp_dist(NULL),
+ q2_accel(NULL), Qs2_accel(NULL) {
     static const size_t subinterval_limit = 1000;
     MVIntegrationParameters params(this);
     gsl_function func;
-    func.function = &mv_gdist_integrand;
     func.params = &params;
     gsl_integration_workspace* workspace = gsl_integration_workspace_alloc(subinterval_limit);
     
     const double log_step = log(step);
     const double log_q2min = log(q2min);
     const double log_Qs2min = log(Qs2min);
+    assert(log_step > 0);
+    
     size_t q2_dimension = (size_t)((log(q2max) - log_q2min) / log_step) + 1; // subtracting logs rather than dividing may help accuracy
     size_t Qs2_dimension = (size_t)((log(Qs2max) - log_Qs2min) / log_step) + 1;
     
     log_q2_values = new double[q2_dimension];
     log_Qs2_values = new double[Qs2_dimension];
     
+    double error; // throwaway
+    
+    // calculate the coefficients for the series approximation
+    func.function = &mv_gdist_series_term_integrand;
+    F_dist_leading_q2 = new double[Qs2_dimension]; // zeroth order term in series around q2 = 0
+    F_dist_subleading_q2 = new double[Qs2_dimension]; // second order term in series around q2 = 0
+    for (size_t i_Qs2 = 0; i_Qs2 < Qs2_dimension; i_Qs2++) {
+        log_Qs2_values[i_Qs2] = log_Qs2min + i_Qs2 * log_step;
+        params.Qs2 = exp(log_Qs2_values[i_Qs2]);
+        
+        params.n = 0;
+        gsl_integration_qagiu(&func, 0, 0, 0.0001, subinterval_limit, workspace, F_dist_leading_q2 + i_Qs2, &error);
+        
+        params.n = 2;
+        gsl_integration_qagiu(&func, 0, 0, 0.0001, subinterval_limit, workspace, F_dist_subleading_q2 + i_Qs2, &error);
+    }
+    
+    // calculate the values for the 2D interpolation
+    func.function = &mv_gdist_integrand;
     F_dist = new double[q2_dimension * Qs2_dimension];
-    F_error = new double[q2_dimension * Qs2_dimension];
     for (size_t i_q2 = 0; i_q2 < q2_dimension; i_q2++) {
         log_q2_values[i_q2] = log_q2min + i_q2 * log_step;
         params.q = exp(0.5 * log_q2_values[i_q2]);
         for (size_t i_Qs2 = 0; i_Qs2 < Qs2_dimension; i_Qs2++) {
-            if (i_q2 == 0) { // only have to set the values in the array once
-                log_Qs2_values[i_Qs2] = log_Qs2min + i_Qs2 * log_step;
-            }
             params.Qs2 = exp(log_Qs2_values[i_Qs2]);
             size_t index = INDEX_2D(i_q2, i_Qs2, q2_dimension, Qs2_dimension);
-            gsl_integration_qagiu(&func, 0, 0, 0.0001, subinterval_limit, workspace, F_dist + index, F_error + index);
+            gsl_integration_qagiu(&func, 0, 0, 0.0001, subinterval_limit, workspace, F_dist + index, &error);
         }
     }
+    
+    interp_dist_leading_q2 = gsl_interp_alloc(gsl_interp_cspline, Qs2_dimension);
+    gsl_interp_init(interp_dist_leading_q2, log_Qs2_values, F_dist_leading_q2, Qs2_dimension);
+    
+    interp_dist_subleading_q2 = gsl_interp_alloc(gsl_interp_cspline, Qs2_dimension);
+    gsl_interp_init(interp_dist_subleading_q2, log_Qs2_values, F_dist_subleading_q2, Qs2_dimension);
     
     interp_dist = interp2d_alloc(interp2d_bilinear, q2_dimension, Qs2_dimension);
     interp2d_init(interp_dist, log_q2_values, log_Qs2_values, F_dist, q2_dimension, Qs2_dimension);
     
-    interp_error = interp2d_alloc(interp2d_bilinear, q2_dimension, Qs2_dimension);
-    interp2d_init(interp_error, log_q2_values, log_Qs2_values, F_error, q2_dimension, Qs2_dimension);
-
     q2_accel = gsl_interp_accel_alloc();
     Qs2_accel = gsl_interp_accel_alloc();
 }
@@ -77,12 +112,16 @@ MVGluonDistribution::MVGluonDistribution(double LambdaMV, double q2min, double q
 MVGluonDistribution::~MVGluonDistribution() {
     delete[] F_dist;
     F_dist = NULL;
-    delete[] F_error;
-    F_error = NULL;
+    delete[] F_dist_leading_q2;
+    F_dist_leading_q2 = NULL;
+    delete[] F_dist_subleading_q2;
+    F_dist_subleading_q2 = NULL;
     interp2d_free(interp_dist);
     interp_dist = NULL;
-    interp2d_free(interp_error);
-    interp_error = NULL;
+    gsl_interp_free(interp_dist_leading_q2);
+    interp_dist = NULL;
+    gsl_interp_free(interp_dist_subleading_q2);
+    interp_dist = NULL;
     gsl_interp_accel_free(q2_accel);
     q2_accel = NULL;
     gsl_interp_accel_free(Qs2_accel);
@@ -96,7 +135,14 @@ double MVGluonDistribution::S4(double r2, double s2, double t2, double Qs2) {
     return S2(s2, Qs2) * S2(t2, Qs2);
 }
 double MVGluonDistribution::F(double q2, double Qs2) {
-    return interp2d_eval(interp_dist, log_q2_values, log_Qs2_values, F_dist, log(q2), log(Qs2), q2_accel, Qs2_accel);
+    if (q2 > q2min) {
+        return interp2d_eval(interp_dist, log_q2_values, log_Qs2_values, F_dist, log(q2), log(Qs2), q2_accel, Qs2_accel);
+    }
+    else {
+        double c0 = gsl_interp_eval(interp_dist_leading_q2, log_Qs2_values, F_dist_leading_q2, log(Qs2), Qs2_accel);
+        double c2 = gsl_interp_eval(interp_dist_subleading_q2, log_Qs2_values, F_dist_subleading_q2, log(Qs2), Qs2_accel);
+        return c0 + c2 * q2;
+    }
 }
 
 #ifdef GLUON_DIST_DRIVER

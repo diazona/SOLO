@@ -30,10 +30,12 @@ private:
     double Qs2min, Qs2max;
     double* log_q2_values;
     double* log_Qs2_values;
+    double* F_dist_leading_q2;
+    double* F_dist_subleading_q2;
     double* F_dist;
-    double* F_error;
+    gsl_interp* interp_dist_leading_q2;
+    gsl_interp* interp_dist_subleading_q2;
     interp2d* interp_dist;
-    interp2d* interp_error;
     gsl_interp_accel* q2_accel;
     gsl_interp_accel* Qs2_accel;
 #ifdef GLUON_DIST_DRIVER
