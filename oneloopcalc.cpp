@@ -240,7 +240,7 @@ int main(int argc, char** argv) {
         else if (strcmp(argv[i], "GBW") == 0) {
             gdist_type = GBW;
         }
-        else if (argv[i][0] == 'h') {
+        else if (argv[i][0] == 'h' || argv[i][1] == ':') {
             hfgroups.push_back(parse_hf_spec(argv[i]));
             hfgnames.push_back(argv[i]);
         }
@@ -267,6 +267,7 @@ int main(int argc, char** argv) {
         }
         else {
             cerr << "Unrecognized argument " << argv[i] << endl;
+            exit(1);
         }
     }
 
