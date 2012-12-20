@@ -58,10 +58,12 @@ MVGluonDistribution::MVGluonDistribution(double LambdaMV, double q2min, double q
     const double log_step = log(step);
     const double log_q2min = log(q2min);
     const double log_Qs2min = log(Qs2min);
+    const double log_q2max = log(q2max);
+    const double log_Qs2max = log(Qs2max);
     assert(log_step > 0);
     
-    size_t q2_dimension = (size_t)((log(q2max) - log_q2min) / log_step) + 2; // subtracting logs rather than dividing may help accuracy
-    size_t Qs2_dimension = (size_t)((log(Qs2max) - log_Qs2min) / log_step) + 2;
+    size_t q2_dimension = (size_t)((log_q2max - log_q2min) / log_step) + 2; // subtracting logs rather than dividing may help accuracy
+    size_t Qs2_dimension = (size_t)((log_Qs2max - log_Qs2min) / log_step) + 2;
     
     log_q2_values = new double[q2_dimension];
     log_Qs2_values = new double[Qs2_dimension];
@@ -95,6 +97,11 @@ MVGluonDistribution::MVGluonDistribution(double LambdaMV, double q2min, double q
             gsl_integration_qagiu(&func, 0, 0, 0.0001, subinterval_limit, workspace, F_dist + index, &error);
         }
     }
+    
+    assert(log_q2_values[0] <= log_q2min);
+    assert(log_q2_values[q2_dimension - 1] >= log_q2max);
+    assert(log_Qs2_values[0] <= log_Qs2min);
+    assert(log_Qs2_values[Qs2_dimension - 1] >= log_Qs2max);
     
     interp_dist_leading_q2 = gsl_interp_alloc(gsl_interp_cspline, Qs2_dimension);
     gsl_interp_init(interp_dist_leading_q2, log_Qs2_values, F_dist_leading_q2, Qs2_dimension);
