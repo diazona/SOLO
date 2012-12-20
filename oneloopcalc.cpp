@@ -84,6 +84,8 @@ void store_minmax(const IntegrationContext* ictx, const double real, const doubl
     if (ictx == NULL) {
         return;
     }
+    store(z);
+    store(xi);
     store(xx);
     store(xy);
     store(yx);
@@ -96,9 +98,13 @@ void store_minmax(const IntegrationContext* ictx, const double real, const doubl
     store(q2y);
     store(q3x);
     store(q3y);
-    store(xi);
-    store(z);
+    store(kT);
+    store(kT2);
+    store(xp);
+    store(xg);
     store(xiprime);
+    store(Qs2);
+    store(alphasbar);
 }
 
 void write_nonzero(const IntegrationContext* ictx, const double real, const double imag) {
@@ -368,6 +374,12 @@ int main(int argc, char** argv) {
         cerr << "z\t" << min_ictx.z << "\t" << max_ictx.z << "\t" << endl;
         cerr << "xi\t" << min_ictx.xi << "\t" << max_ictx.xi << "\t" << endl;
         cerr << "xip\t" << min_ictx.xiprime << "\t" << max_ictx.xiprime << "\t" << endl;
+        cerr << "kT\t" << min_ictx.kT << "\t" << max_ictx.kT << "\t" << endl;
+        cerr << "kT2\t" << min_ictx.kT2 << "\t" << max_ictx.kT2 << "\t" << endl;
+        cerr << "xp\t" << min_ictx.xp << "\t" << max_ictx.xp << "\t" << endl;
+        cerr << "xg\t" << min_ictx.xg << "\t" << max_ictx.xg << "\t" << endl;
+        cerr << "Qs2\t" << min_ictx.Qs2 << "\t" << max_ictx.Qs2 << "\t" << endl;
+        cerr << "alphasbar\t" << min_ictx.alphasbar << "\t" << max_ictx.alphasbar << "\t" << endl;
     }
     
     for (vector<HardFactorList*>::iterator it = hfgroups.begin(); it != hfgroups.end(); it++) {
