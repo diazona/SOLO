@@ -60,8 +60,8 @@ MVGluonDistribution::MVGluonDistribution(double LambdaMV, double q2min, double q
     const double log_Qs2min = log(Qs2min);
     assert(log_step > 0);
     
-    size_t q2_dimension = (size_t)((log(q2max) - log_q2min) / log_step) + 1; // subtracting logs rather than dividing may help accuracy
-    size_t Qs2_dimension = (size_t)((log(Qs2max) - log_Qs2min) / log_step) + 1;
+    size_t q2_dimension = (size_t)((log(q2max) - log_q2min) / log_step) + 2; // subtracting logs rather than dividing may help accuracy
+    size_t Qs2_dimension = (size_t)((log(Qs2max) - log_Qs2min) / log_step) + 2;
     
     log_q2_values = new double[q2_dimension];
     log_Qs2_values = new double[Qs2_dimension];
