@@ -216,6 +216,7 @@ int main(int argc, char** argv) {
     vector<HardFactorList*> hfgroups;
     vector<string> hfgnames;
     vector<double> pT;
+    double pTmax = 0;
 
     // process options
     for (int i = 1; i < argc; i++) {
@@ -263,6 +264,9 @@ int main(int argc, char** argv) {
                     exit(1);
                 }
                 pT.push_back(d);
+                if (d > pTmax) {
+                    pTmax = d;
+                }
             }
         }
         else {
@@ -305,10 +309,13 @@ int main(int argc, char** argv) {
     double k2min, k2max, Qs2min, Qs2max;
     switch (gdist_type) {
         case MV:
-            k2min = 1e-12;
-            k2max = gsl_pow_2(inf + gctx.sqs / exp(gctx.Y)); // qmax + sqrt(smax) / exp(Ymin)
-            Qs2min = gctx.Q02x0lambda; // c A^1/3 Q02 x0^λ
-            Qs2max = gctx.Q02x0lambda / exp(-2 * gctx.lambda * gctx.Y); // c A^1/3 Q02 (x0 / exp(-2Y))^λ
+            // TODO: if we ever change to allow multiple values of sqs or Y per run,
+            // change this to find maxima and minima accordingly
+            k2min = 1e-6;
+            k2max = gsl_pow_2(inf + gctx.sqs / exp(gctx.Y)) + gsl_pow_2(inf); // (qxmax + sqrt(smax) / exp(Ymin))^2 + (qymax)^2
+            Qs2min = gctx.Q02x0lambda * exp(2 * gctx.lambda * gctx.Y); // c A^1/3 Q02 (x0 / exp(-2Y))^λ
+            Qs2max = gctx.Q02x0lambda * pow(pTmax / gctx.sqs * exp(-gctx.Y), -gctx.lambda); // c A^1/3 Q02 x0^λ / (pT / sqs exp(-Y))^λ
+            cerr << "Creating MV gluon distribution with " << k2min << " < k2 < " << k2max << ", " << Qs2min << " < Qs2 < " << Qs2max << endl;
             assert(k2min < k2max);
             assert(Qs2min < Qs2max);
             gctx.gdist = new MVGluonDistribution(
