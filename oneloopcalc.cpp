@@ -318,7 +318,7 @@ int main(int argc, char** argv) {
             // TODO: if we ever change to allow multiple values of sqs or Y per run,
             // change this to find maxima and minima accordingly
             k2min = 1e-6;
-            k2max = gsl_pow_2(inf + gctx.sqs / exp(gctx.Y)) + gsl_pow_2(inf); // (qxmax + sqrt(smax) / exp(Ymin))^2 + (qymax)^2
+            k2max = gsl_pow_2(2 * inf + gctx.sqs / exp(gctx.Y)) + gsl_pow_2(2 * inf); // (2 qxmax + sqrt(smax) / exp(Ymin))^2 + (2 qymax)^2
             Qs2min = gctx.Q02x0lambda * exp(2 * gctx.lambda * gctx.Y); // c A^1/3 Q02 (x0 / exp(-2Y))^λ
             Qs2max = gctx.Q02x0lambda * pow(pTmax / gctx.sqs * exp(-gctx.Y), -gctx.lambda); // c A^1/3 Q02 x0^λ / (pT / sqs exp(-Y))^λ
             cerr << "Creating MV gluon distribution with " << k2min << " < k2 < " << k2max << ", " << Qs2min << " < Qs2 < " << Qs2max << endl;
