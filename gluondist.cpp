@@ -42,28 +42,38 @@ static double mv_gdist_series_term_integrand(double r, void* closure) {
     }
 }
 
-static const double step = 1.2;
-
 MVGluonDistribution::MVGluonDistribution(double LambdaMV, double q2min, double q2max, double Qs2min, double Qs2max) :
  LambdaMV(LambdaMV), q2min(q2min), q2max(q2max), Qs2min(Qs2min), Qs2max(Qs2max),
  F_dist_leading_q2(NULL), F_dist_subleading_q2(NULL), F_dist(NULL),
  interp_dist_leading_q2(NULL), interp_dist_subleading_q2(NULL), interp_dist(NULL),
  q2_accel(NULL), Qs2_accel(NULL) {
     static const size_t subinterval_limit = 1000;
+    double step = 1.2;
     MVIntegrationParameters params(this);
     gsl_function func;
     func.params = &params;
     gsl_integration_workspace* workspace = gsl_integration_workspace_alloc(subinterval_limit);
     
-    const double log_step = log(step);
-    const double log_q2min = log(q2min);
-    const double log_Qs2min = log(Qs2min);
-    const double log_q2max = log(q2max);
-    const double log_Qs2max = log(Qs2max);
+    double log_step = log(step);
+    double log_q2min = log(q2min);
+    double log_Qs2min = log(Qs2min);
+    double log_q2max = log(q2max);
+    double log_Qs2max = log(Qs2max);
     assert(log_step > 0);
     
     size_t q2_dimension = (size_t)((log_q2max - log_q2min) / log_step) + 2; // subtracting logs rather than dividing may help accuracy
     size_t Qs2_dimension = (size_t)((log_Qs2max - log_Qs2min) / log_step) + 2;
+    
+    while (q2_dimension < 4) { // 4 points needed for bicubic interpolation
+        q2min /= step;
+        log_q2min -= log_step;
+        q2_dimension++;
+    }
+    while (Qs2_dimension < 4) { // 4 points needed for bicubic interpolation
+        Qs2min /= step;
+        log_Qs2min -= log_step;
+        Qs2_dimension++;
+    }
     
     log_q2_values = new double[q2_dimension];
     log_Qs2_values = new double[Qs2_dimension];
