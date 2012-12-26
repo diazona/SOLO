@@ -29,8 +29,8 @@ void IntegrationContext::update_parton_factors(double z, double y) {
     this->alphasbar = ctx->cpl->alphasbar(this->kT2);
 
     double qqfactor = 0.0d, ggfactor = 0.0d, gqfactor = 0.0d, qgfactor = 0.0d;
-    c_mstwpdf* pdf_object = ctx->pdf_object;
-    DSSpiNLO* ff_object = ctx->ff_object;
+    c_mstwpdf* pdf_object = tlctx->pdf_object;
+    DSSpiNLO* ff_object = tlctx->ff_object;
     
     // Calculate the new quark/gluon factors
     pdf_object->update(xp, sqrt(ctx->mu2));

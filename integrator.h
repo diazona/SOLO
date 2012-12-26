@@ -22,7 +22,7 @@ private:
     integration_strategy strategy;
     void (*callback)(const IntegrationContext*, double, double);
 public:
-    Integrator(const Context* ctx, integration_strategy strategy, HardFactorList hflist);
+    Integrator(const Context* ctx, const ThreadLocalContext* tlctx, integration_strategy strategy, HardFactorList hflist);
     ~Integrator();
     void update1D(const double* values);
     void update2D(const double* values);

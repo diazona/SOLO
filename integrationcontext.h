@@ -6,6 +6,7 @@
 class IntegrationContext {
 public:
     const Context* ctx;
+    const ThreadLocalContext* tlctx;
     // updated
     double z;
     double xi;
@@ -35,8 +36,9 @@ public:
     double Fq1, Fq2, Fq3;
     double Fkq1, Fkq2, Fkq3;
     
-    IntegrationContext(const Context* ctx) :
+    IntegrationContext(const Context* ctx, const ThreadLocalContext* tlctx) :
       ctx(ctx),
+      tlctx(tlctx),
       z(0), xi(0),
       xx(0), xy(0),
       yx(0), yy(0),

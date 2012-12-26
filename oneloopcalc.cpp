@@ -73,8 +73,8 @@ void write_data_point(const IntegrationContext* ictx, const double real, const d
     }
 }
 
-static IntegrationContext min_ictx(NULL);
-static IntegrationContext max_ictx(NULL);
+static IntegrationContext min_ictx(NULL, NULL);
+static IntegrationContext max_ictx(NULL, NULL);
 
 #define store(property) \
   min_ictx.property = min_ictx.property == 0 ? ictx->property : min(min_ictx.property, ictx->property); \
@@ -116,13 +116,14 @@ void write_nonzero(const IntegrationContext* ictx, const double real, const doub
 class ResultsCalculator {
 private:
     Context* ctx;
+    ThreadLocalContext* tlctx;
     vector<double> pTlist;
     vector<HardFactorList*> hfgroups;
     double* real;
     double* imag;
     double* error;
 public:
-    ResultsCalculator(Context* ctx, vector<double> pTlist, vector<HardFactorList*> hfgroups) : ctx(ctx), pTlist(pTlist), hfgroups(hfgroups) {
+    ResultsCalculator(Context* ctx, ThreadLocalContext* tlctx, vector<double> pTlist, vector<HardFactorList*> hfgroups) : ctx(ctx), tlctx(tlctx), pTlist(pTlist), hfgroups(hfgroups) {
         size_t hflen = hfgroups.size();
         size_t pTlen = pTlist.size();
         real = new double[hflen * pTlen];
@@ -158,7 +159,7 @@ void ResultsCalculator::calculate() {
         ctx->recalculate();
         cerr << "Beginning calculation at pT = " << pT << endl;
         for (vector<HardFactorList*>::iterator hit = hfgroups.begin(); hit != hfgroups.end(); hit++) {
-            Integrator* integrator = new Integrator(ctx, strategy, **hit);
+            Integrator* integrator = new Integrator(ctx, tlctx, strategy, **hit);
             if (trace) {
                 integrator->set_callback(write_data_point);
             }
@@ -309,9 +310,13 @@ int main(int argc, char** argv) {
       1.0,      // pT2 (dummy value)
       200,      // sqs
       3.2,      // Y
-      NULL,     // to be inserted later
-      cpl,
-      "mstw2008nlo.00.dat", "PINLO.DAT");
+      NULL,     // gluon distribution - to be inserted later
+      cpl       // coupling
+    );
+    ThreadLocalContext tlctx(
+      "mstw2008nlo.00.dat",
+      "PINLO.DAT"
+    );
     double k2min, k2max, Qs2min, Qs2max;
     switch (gdist_type) {
         case MV:
@@ -338,7 +343,7 @@ int main(int argc, char** argv) {
             break;
     }
 
-    ResultsCalculator* rc = new ResultsCalculator(&gctx, pT, hfgroups);
+    ResultsCalculator* rc = new ResultsCalculator(&gctx, &tlctx, pT, hfgroups);
     rc->calculate();
     cout << "pT\t";
     for (vector<string>::iterator it = hfgnames.begin(); it != hfgnames.end(); it++) {

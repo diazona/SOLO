@@ -9,7 +9,7 @@
 
 #define checkfinite(d) assert(gsl_finite(d))
 
-Integrator::Integrator(const Context* ctx, const integration_strategy strategy, const HardFactorList hflist) : ictx(ctx), strategy(strategy), current_type(DipoleIntegrationType::get_instance()), callback(NULL) {
+Integrator::Integrator(const Context* ctx, const ThreadLocalContext* tlctx, const integration_strategy strategy, const HardFactorList hflist) : ictx(ctx, tlctx), strategy(strategy), current_type(DipoleIntegrationType::get_instance()), callback(NULL) {
     assert(hflist.size() > 0);
 #ifndef NDEBUG
     size_t total1 = 0;
