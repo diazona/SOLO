@@ -1,11 +1,11 @@
-LDFLAGS=-lgsl -lm
+LDFLAGS+=-lgsl -lm
 
 oneloopcalc: oneloopcalc.o integrator.o hardfactors_position.o hardfactors_momentum.o dss_pinlo.o mstwpdf.o cubature.o gluondist.o integrationcontext.o integrationtype.o libinterp2d.a
 	g++ $(CPPFLAGS) -o oneloopcalc oneloopcalc.o dss_pinlo.o mstwpdf.o cubature.o gluondist.o integrationcontext.o integrationtype.o hardfactors_position.o hardfactors_momentum.o integrator.o libinterp2d.a $(LDFLAGS)
 gbwoneloopcalc: gbwoneloopcalc.cpp dss_pinlo.cpp mstwpdf.cc cubature.c libinterp2d.a
-	g++ $(CPPFLAGS) -o gbwoneloopcalc gbwoneloopcalc.cpp dss_pinlo.cpp mstwpdf.cc cubature.c libinterp2d.a -lgsl -lm
+	g++ $(CPPFLAGS) -o gbwoneloopcalc gbwoneloopcalc.cpp dss_pinlo.cpp mstwpdf.cc cubature.c libinterp2d.a $(LDFLAGS)
 mvgluondist: gluondist.cpp gluondist.h interp2d.h
-	g++ $(CPPFLAGS) -DGLUON_DIST_DRIVER -o mvgluondist gluondist.cpp libinterp2d.a -lgsl -lm
+	g++ $(CPPFLAGS) -DGLUON_DIST_DRIVER -o mvgluondist gluondist.cpp libinterp2d.a $(LDFLAGS)
 
 .PHONY: clean
 
