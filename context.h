@@ -21,14 +21,17 @@ public:
     double pT2;
     double sqs;
     double Y;
+    const char* pdf_filename;
+    const char* ff_filename;
+
     double Q02x0lambda;
     double tau;
     
     GluonDistribution* gdist;
     Coupling* cpl;
 
-    Context(double x0, double A, double c, double lambda, double mu2, double Nc, double Nf, double CF, double TR, double Sperp, double pT2, double sqs, double Y, GluonDistribution* gdist, Coupling* cpl) :
-     x0(x0), A(A), c(c), lambda(lambda), mu2(mu2), Nc(Nc), Nf(Nf), CF(CF), TR(TR), Sperp(Sperp), pT2(pT2), sqs(sqs), Y(Y), gdist(gdist), cpl(cpl) {
+    Context(double x0, double A, double c, double lambda, double lambdaQCD, double mu2, double Nc, double Nf, double CF, double TR, double Sperp, double pT2, double sqs, double Y, const char* pdf_filename, const char* ff_filename, GluonDistribution* gdist, Coupling* cpl) :
+     x0(x0), A(A), c(c), lambda(lambda), lambdaQCD(lambdaQCD), mu2(mu2), Nc(Nc), Nf(Nf), CF(CF), TR(TR), Sperp(Sperp), pT2(pT2), sqs(sqs), Y(Y), pdf_filename(pdf_filename), ff_filename(ff_filename), gdist(gdist), cpl(cpl) {
          recalculate();
     }
 
@@ -45,6 +48,7 @@ class ThreadLocalContext {
 
 public:
     ThreadLocalContext(const char* pdf_filename, const char* ff_filename) : pdf_object(new c_mstwpdf(pdf_filename)), ff_object(new DSSpiNLO(ff_filename)) {}
+    ThreadLocalContext(const Context* ctx) : pdf_object(new c_mstwpdf(ctx->pdf_filename)), ff_object(new DSSpiNLO(ctx->ff_filename)) {};
     
     ~ThreadLocalContext() {
         if (pdf_object) {

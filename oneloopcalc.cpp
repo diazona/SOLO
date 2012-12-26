@@ -311,12 +311,11 @@ int main(int argc, char** argv) {
       200,      // sqs
       3.2,      // Y
       NULL,     // gluon distribution - to be inserted later
-      cpl       // coupling
-    );
-    ThreadLocalContext tlctx(
+      cpl,      // coupling
       "mstw2008nlo.00.dat",
       "PINLO.DAT"
     );
+    ThreadLocalContext tlctx(&gctx);
     double k2min, k2max, Qs2min, Qs2max;
     switch (gdist_type) {
         case MV:
