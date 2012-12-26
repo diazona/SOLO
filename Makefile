@@ -1,4 +1,4 @@
-LDFLAGS+=-lgsl -lm
+LDFLAGS += -lgsl -lgslcblas -lm
 
 oneloopcalc: oneloopcalc.o integrator.o hardfactors_position.o hardfactors_momentum.o dss_pinlo.o mstwpdf.o cubature.o gluondist.o integrationcontext.o integrationtype.o libinterp2d.a
 	g++ $(CPPFLAGS) -o oneloopcalc oneloopcalc.o dss_pinlo.o mstwpdf.o cubature.o gluondist.o integrationcontext.o integrationtype.o hardfactors_position.o hardfactors_momentum.o integrator.o libinterp2d.a $(LDFLAGS)
