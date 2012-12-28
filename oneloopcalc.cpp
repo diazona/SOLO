@@ -35,6 +35,7 @@
 #include "hardfactors_position.h"
 #include "hardfactors_momentum.h"
 #include "integrator.h"
+#include "utils.h"
 
 using namespace std;
 
@@ -115,35 +116,34 @@ void write_nonzero(const IntegrationContext* ictx, const double real, const doub
 
 class ResultsCalculator {
 private:
-    Context* ctx;
-    ThreadLocalContext* tlctx;
-    vector<double> pTlist;
+    ContextCollection& cc;
+    ThreadLocalContext& tlctx;
     vector<HardFactorList*> hfgroups;
     double* real;
     double* imag;
     double* error;
 public:
-    ResultsCalculator(Context* ctx, ThreadLocalContext* tlctx, vector<double> pTlist, vector<HardFactorList*> hfgroups) : ctx(ctx), tlctx(tlctx), pTlist(pTlist), hfgroups(hfgroups) {
+    ResultsCalculator(ContextCollection& cc, ThreadLocalContext& tlctx, vector<HardFactorList*> hfgroups) : cc(cc), tlctx(tlctx), hfgroups(hfgroups) {
         size_t hflen = hfgroups.size();
-        size_t pTlen = pTlist.size();
-        real = new double[hflen * pTlen];
-        imag = new double[hflen * pTlen];
-        error = new double[hflen * pTlen];
+        size_t cclen = cc.size();
+        real = new double[hflen * cclen];
+        imag = new double[hflen * cclen];
+        error = new double[hflen * cclen];
     };
     ~ResultsCalculator() {
         delete[] real;
         delete[] imag;
         delete[] error;
     };
-    size_t index_from(size_t pTindex, size_t hfindex) {
-        return pTindex * hfgroups.size() + hfindex;
+    size_t index_from(size_t ccindex, size_t hfindex) {
+        return ccindex * hfgroups.size() + hfindex;
     };
-    void result(size_t pTindex, size_t hfindex, double* real, double* imag, double* error);
+    void result(size_t ccindex, size_t hfindex, double* real, double* imag, double* error);
     void calculate();
 };
 
-void ResultsCalculator::result(size_t pTindex, size_t hfindex, double* real, double* imag, double* error) {
-    size_t index = index_from(pTindex, hfindex);
+void ResultsCalculator::result(size_t ccindex, size_t hfindex, double* real, double* imag, double* error) {
+    size_t index = index_from(ccindex, hfindex);
     (*real) = this->real[index];
     (*imag) = this->imag[index];
     (*error) = this->error[index];
@@ -153,13 +153,11 @@ void ResultsCalculator::calculate() {
     double* l_real = real;
     double* l_imag = imag;
     double* l_error = error;
-    for (vector<double>::iterator it = pTlist.begin(); it != pTlist.end(); it++) {
-        double pT = *it;
-        ctx->pT2 = pT*pT;
-        ctx->recalculate();
-        cerr << "Beginning calculation at pT = " << pT << endl;
+    for (ContextCollection::iterator it = cc.begin(); it != cc.end(); it++) {
+        Context ctx = *it;
+        cerr << "Beginning calculation at pT = " << sqrt(ctx.pT2) << endl;
         for (vector<HardFactorList*>::iterator hit = hfgroups.begin(); hit != hfgroups.end(); hit++) {
-            Integrator* integrator = new Integrator(ctx, tlctx, strategy, **hit);
+            Integrator* integrator = new Integrator(&ctx, &tlctx, strategy, **hit);
             if (trace) {
                 integrator->set_callback(write_data_point);
             }
@@ -173,19 +171,8 @@ void ResultsCalculator::calculate() {
     }
 }
 
-// from http://stackoverflow.com/a/236803/56541
-vector<string> &split(const string &s, char delim, vector<string> &elems) {
-    stringstream ss(s);
-    string item;
-    while(getline(ss, item, delim)) {
-        elems.push_back(item);
-    }
-    return elems;
-}
-
 HardFactorList* parse_hf_spec(const string& spec) {
-    vector<string> hfnames;
-    split(spec, ',', hfnames);
+    vector<string> hfnames = split(spec, ", ");
     HardFactorList* hfobjs = new HardFactorList();
     for (vector<string>::iterator it = hfnames.begin(); it != hfnames.end(); it++) {
         string s = *it;
@@ -222,8 +209,11 @@ int main(int argc, char** argv) {
     Coupling* cpl = new FixedCoupling(0.2 / (2*M_PI));
     vector<HardFactorList*> hfgroups;
     vector<string> hfgnames;
-    vector<double> pT;
-    double pTmax = 0;
+    vector<double> pT2;
+    double pT2max = 0;
+    vector<double> Y;
+    double Ymax = 0;
+    double Ymin = 0;
 
     // process options
     for (int i = 1; i < argc; i++) {
@@ -261,8 +251,7 @@ int main(int argc, char** argv) {
             hfgnames.push_back(argv[i]);
         }
         else if (::isdigit(argv[i][0])) {
-            vector<string> pTnums;
-            split(argv[i], ',', pTnums);
+            vector<string> pTnums = split(argv[i], ", ");
             for (vector<string>::iterator it = pTnums.begin(); it != pTnums.end(); it++) {
                 double d = strtod(it->c_str(), NULL);
                 if (errno != 0) {
@@ -270,9 +259,9 @@ int main(int argc, char** argv) {
                     cerr << ERANGE << ": range error" << endl;
                     exit(1);
                 }
-                pT.push_back(d);
-                if (d > pTmax) {
-                    pTmax = d;
+                pT2.push_back(d*d);
+                if (d*d > pT2max) {
+                    pT2max = d*d;
                 }
             }
         }
@@ -282,8 +271,8 @@ int main(int argc, char** argv) {
         }
     }
 
-    if (pT.size() == 0) {
-        cerr << "No momenta specified!" << endl;
+    if (pT2.size() == 0) {
+        cerr << "No momenta or no rapidities specified!" << endl;
         exit(1);
     }
     if (hfgroups.size() == 0) {
@@ -296,39 +285,30 @@ int main(int argc, char** argv) {
     assert(hfgroups.size() == hfgnames.size());
     
     gsl_rng_env_setup();
-    Context gctx(
-      0.000304, // x0
-      197,      // A
-      0.56,     // c
-      0.288,    // lambda
-      10,       // mu2
-      3,        // Nc
-      3,        // Nf
-      1.5,      // CF
-      0.5,      // TR
-      1.0,      // Sperp
-      1.0,      // pT2 (dummy value)
-      200,      // sqs
-      3.2,      // Y
-      NULL,     // gluon distribution - to be inserted later
-      cpl,      // coupling
-      "mstw2008nlo.00.dat",
-      "PINLO.DAT"
-    );
-    ThreadLocalContext tlctx(&gctx);
+    ContextCollection cc;
+    cc.A = 197;
+    cc.c = 0.56;
+    cc.mu2 = 10;
+    cc.Sperp = 1.0;
+    cc.pT2 = pT2;
+    cc.sqs = 200;
+    Y.push_back(3.2);
+    Ymax = Ymin = Y[0];
+    cc.Y = Y;
+    cc.cpl = cpl;
+    ThreadLocalContext tlctx(cc);
     double k2min, k2max, Qs2min, Qs2max;
     switch (gdist_type) {
         case MV:
-            // TODO: if we ever change to allow multiple values of sqs or Y per run,
-            // change this to find maxima and minima accordingly
+            // TODO: check usage of Ymax and Ymin in these formulas
             k2min = 1e-6;
-            k2max = gsl_pow_2(2 * inf + gctx.sqs / exp(gctx.Y)) + gsl_pow_2(2 * inf); // (2 qxmax + sqrt(smax) / exp(Ymin))^2 + (2 qymax)^2
-            Qs2min = gctx.Q02x0lambda * exp(2 * gctx.lambda * gctx.Y); // c A^1/3 Q02 (x0 / exp(-2Y))^λ
-            Qs2max = gctx.Q02x0lambda * pow(pTmax / gctx.sqs * exp(-gctx.Y), -gctx.lambda); // c A^1/3 Q02 x0^λ / (pT / sqs exp(-Y))^λ
+            k2max = gsl_pow_2(2 * inf + cc.sqs / exp(Ymin)) + gsl_pow_2(2 * inf); // (2 qxmax + sqrt(smax) / exp(Ymin))^2 + (2 qymax)^2
+            Qs2min = cc.Q02x0lambda() * exp(2 * cc.lambda * Ymin); // c A^1/3 Q02 (x0 / exp(-2Ymin))^λ
+            Qs2max = cc.Q02x0lambda() * pow(sqrt(pT2max) / cc.sqs * exp(-Ymin), -cc.lambda); // c A^1/3 Q02 x0^λ / (pT / sqs * exp(-Ymin))^λ
             cerr << "Creating MV gluon distribution with " << k2min << " < k2 < " << k2max << ", " << Qs2min << " < Qs2 < " << Qs2max << endl;
             assert(k2min < k2max);
             assert(Qs2min < Qs2max);
-            gctx.gdist = new MVGluonDistribution(
+            cc.gdist = new MVGluonDistribution(
                 0.24,  // TODO: replace with LambdaMV parameter
                 k2min, // k2min
                 k2max, // k2max
@@ -338,11 +318,11 @@ int main(int argc, char** argv) {
             break;
         case GBW:
         default:
-            gctx.gdist = new GBWGluonDistribution();
+            cc.gdist = new GBWGluonDistribution();
             break;
     }
 
-    ResultsCalculator* rc = new ResultsCalculator(&gctx, &tlctx, pT, hfgroups);
+    ResultsCalculator* rc = new ResultsCalculator(cc, tlctx, hfgroups);
     rc->calculate();
     cout << "pT\t";
     for (vector<string>::iterator it = hfgnames.begin(); it != hfgnames.end(); it++) {
@@ -350,12 +330,12 @@ int main(int argc, char** argv) {
     }
     cout << "total" << endl;
     double l_real, l_imag, l_error;
-    for (size_t pTindex = 0; pTindex < pT.size(); pTindex++) {
-        cout << pT[pTindex] << "\t";
+    for (size_t ccindex = 0; ccindex < cc.size(); ccindex++) {
+        cout << sqrt(cc[ccindex].pT2) << "\t";
 
         double total = 0;
         for (size_t hfgindex = 0; hfgindex < hfgroups.size(); hfgindex++) {
-            rc->result(pTindex, hfgindex, &l_real, &l_imag, &l_error);
+            rc->result(ccindex, hfgindex, &l_real, &l_imag, &l_error);
             cout << l_real << "±" << l_error << "\t";
             total += l_real;
         }
@@ -389,7 +369,7 @@ int main(int argc, char** argv) {
     for (vector<HardFactorList*>::iterator it = hfgroups.begin(); it != hfgroups.end(); it++) {
         delete *it;
     }
-    delete gctx.gdist;
+    delete cc.gdist;
     delete cpl;
     return 0;
 }
