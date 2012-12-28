@@ -35,3 +35,4 @@ oneloopcalc.o: oneloopcalc.cpp cubature.h mstwpdf.h dss_pinlo.h \
  interp2d.h coupling.h gluondist.h context.h integrationcontext.h \
  hardfactors_position.h hardfactors_momentum.h hardfactor.h integrationtype.h \
  integrator.h
+utils.o: utils.cpp utils.h
