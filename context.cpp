@@ -8,6 +8,30 @@
 using namespace std;
 
 Context ContextCollection::get_context(size_t n) {
+#define check_property(p) if (p == unset) { cerr << "No value for " #p << endl; err = true; }
+#define check_container(p) if (p.empty()) { cerr << "No value for " #p << endl; err = true; }
+    bool err = false;
+    check_property(x0)
+    check_property(A)
+    check_property(c)
+    check_property(lambda)
+    check_property(lambdaQCD)
+    check_property(mu2)
+    check_property(Nc)
+    check_property(Nf)
+    check_property(CF)
+    check_property(TR)
+    check_property(Sperp)
+    check_container(pT2)
+    check_property(sqs)
+    check_container(Y)
+    check_container(pdf_filename)
+    check_container(ff_filename)
+    if (err) {
+        exit(1);
+    }
+#undef check_property
+#undef check_container
     double l_pT2 = pT2[n / Y.size()];
     double l_Y = Y[n % Y.size()];
     Context ctx(
@@ -207,30 +231,6 @@ void ContextCollection::read_config(istream& in) {
             cerr << "unrecognized property " << key << endl;
         }
     }
-#define check_property(p) if (p == unset) { cerr << "No value for " #p << endl; err = true; }
-#define check_container(p) if (p.empty()) { cerr << "No value for " #p << endl; err = true; }
-    bool err = false;
-    check_property(x0)
-    check_property(A)
-    check_property(c)
-    check_property(lambda)
-    check_property(lambdaQCD)
-    check_property(mu2)
-    check_property(Nc)
-    check_property(Nf)
-    check_property(CF)
-    check_property(TR)
-    check_property(Sperp)
-    check_container(pT2)
-    check_property(sqs)
-    check_container(Y)
-    check_container(pdf_filename)
-    check_container(ff_filename)
-    if (err) {
-        exit(1);
-    }
-#undef check_property
-#undef check_container
 }
 
 std::ostream& operator<<(std::ostream& out, Context& ctx) {
