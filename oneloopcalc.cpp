@@ -155,7 +155,7 @@ void ResultsCalculator::calculate() {
     double* l_error = error;
     for (ContextCollection::iterator it = cc.begin(); it != cc.end(); it++) {
         Context ctx = *it;
-        cerr << "Beginning calculation at pT = " << sqrt(ctx.pT2) << endl;
+        cerr << "Beginning calculation at pT = " << sqrt(ctx.pT2) << ", Y = " << ctx.Y << endl;
         for (vector<HardFactorList*>::iterator hit = hfgroups.begin(); hit != hfgroups.end(); hit++) {
             Integrator* integrator = new Integrator(&ctx, &tlctx, strategy, **hit);
             if (trace) {
@@ -210,10 +210,10 @@ int main(int argc, char** argv) {
     vector<HardFactorList*> hfgroups;
     vector<string> hfgnames;
     vector<double> pT2;
-    double pT2max = 0;
     vector<double> Y;
-    double Ymax = 0;
-    double Ymin = 0;
+    ContextCollection cc;
+    ifstream config;
+    bool config_is_read = false;
 
     // process options
     for (int i = 1; i < argc; i++) {
@@ -260,43 +260,62 @@ int main(int argc, char** argv) {
                     exit(1);
                 }
                 pT2.push_back(d*d);
-                if (d*d > pT2max) {
-                    pT2max = d*d;
-                }
             }
         }
         else {
-            cerr << "Unrecognized argument " << argv[i] << endl;
-            exit(1);
+            // try opening as a file
+            config.open(argv[i]);
+            if (config.good()) {
+                if (config_is_read) {
+                    cerr << "Warning: reading extra config file " << argv[i] << endl;
+                }
+                config >> cc;
+                config.close();
+                config_is_read = true;
+            }
+            else {
+                cerr << "Unrecognized argument " << argv[i] << endl;
+                exit(1);
+            }
         }
     }
 
-    if (pT2.size() == 0) {
-        cerr << "No momenta or no rapidities specified!" << endl;
+    if (!config_is_read) {
+        cerr << "No config file specified! (one argument must name a config file)" << endl;
         exit(1);
     }
-    if (hfgroups.size() == 0) {
+    if (pT2.empty() && cc.pT2.empty()) {
+        cerr << "No momenta specified!" << endl;
+        exit(1);
+    }
+    if (cc.Y.empty()) {
+        cerr << "No rapidities specified!" << endl;
+        exit(1);
+    }
+    if (!pT2.empty()) {
+        cc.pT2 = pT2;
+    }
+    if (hfgroups.empty()) {
         hfgroups.push_back(parse_hf_spec(default_lo_spec));
         hfgnames.push_back("lo");
         hfgroups.push_back(parse_hf_spec(default_nlo_spec));
         hfgnames.push_back("nlo");
     }
-    assert(hfgroups.size() > 0);
+    assert(!hfgroups.empty());
     assert(hfgroups.size() == hfgnames.size());
     
     gsl_rng_env_setup();
-    ContextCollection cc;
     cc.A = 197;
     cc.c = 0.56;
     cc.mu2 = 10;
     cc.Sperp = 1.0;
-    cc.pT2 = pT2;
     cc.sqs = 200;
-    Y.push_back(3.2);
-    Ymax = Ymin = Y[0];
-    cc.Y = Y;
     cc.cpl = cpl;
     ThreadLocalContext tlctx(cc);
+    double pT2min = min(cc.pT2);
+    double pT2max = max(cc.pT2);
+    double Ymin = min(cc.Y);
+    double Ymax = max(cc.Y);
     double k2min, k2max, Qs2min, Qs2max;
     switch (gdist_type) {
         case MV:
@@ -324,7 +343,7 @@ int main(int argc, char** argv) {
 
     ResultsCalculator* rc = new ResultsCalculator(cc, tlctx, hfgroups);
     rc->calculate();
-    cout << "pT\t";
+    cout << "pT\tY\t";
     for (vector<string>::iterator it = hfgnames.begin(); it != hfgnames.end(); it++) {
         cout << *it << "\t";
     }
@@ -332,6 +351,7 @@ int main(int argc, char** argv) {
     double l_real, l_imag, l_error;
     for (size_t ccindex = 0; ccindex < cc.size(); ccindex++) {
         cout << sqrt(cc[ccindex].pT2) << "\t";
+        cout << sqrt(cc[ccindex].Y) << "\t";
 
         double total = 0;
         for (size_t hfgindex = 0; hfgindex < hfgroups.size(); hfgindex++) {
