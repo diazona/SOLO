@@ -74,6 +74,13 @@ int main(int argc, char** argv) {
         cout << "'" << *it << "' ";
     }
     cout << endl;
+    
+    vector<double> v;
+    for (double d = 0; d < 10; d++) { v.push_back(d); }
+    random_shuffle(v.begin(), v.end());
+    cout << "max(0,...,10) = " << max(v) << endl;
+    cout << "min(0,...,10) = " << min(v) << endl;
+    
     return 0;
 }
 #endif
