@@ -1,5 +1,7 @@
 #include "integrationtype.h"
 
+const double inf = 10;
+
 void PlainIntegrationType::fill_min(IntegrationContext& ictx, const size_t core_dimensions, double* min) const {
     size_t i = 0;
     while (i < core_dimensions) { min[i++] = ictx.ctx->tau; }
