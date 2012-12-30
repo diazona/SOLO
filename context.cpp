@@ -1,64 +1,41 @@
+#include <cassert>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
-#include <map>
-#include <cstdlib>
+#include <gsl/gsl_math.h>
 #include "context.h"
 #include "utils.h"
 
+#define check_property_default(p, typename, parse, default) \
+    itit = options.equal_range(#p);\
+    typename p;\
+    if (itit.first == itit.second) {\
+        p = default;\
+    }\
+    else {\
+        p = parse(itit);\
+    }
+#define check_property(p, typename, parse) \
+    itit = options.equal_range(#p);\
+    typename p;\
+    if (itit.first == itit.second) {\
+        cerr << "No value for " #p << endl;\
+        err = true;\
+    }\
+    else {\
+        p = parse(itit);\
+    }
+
 using namespace std;
 
-Context ContextCollection::get_context(size_t n) {
-#define check_property(p) if (p == unset) { cerr << "No value for " #p << endl; err = true; }
-#define check_container(p) if (p.empty()) { cerr << "No value for " #p << endl; err = true; }
-    bool err = false;
-    check_property(x0)
-    check_property(A)
-    check_property(c)
-    check_property(lambda)
-    check_property(lambdaQCD)
-    check_property(mu2)
-    check_property(Nc)
-    check_property(Nf)
-    check_property(CF)
-    check_property(TR)
-    check_property(Sperp)
-    check_container(pT2)
-    check_property(sqs)
-    check_container(Y)
-    check_container(pdf_filename)
-    check_container(ff_filename)
-    if (err) {
-        exit(1);
-    }
-#undef check_property
-#undef check_container
-    double l_pT2 = pT2[n / Y.size()];
-    double l_Y = Y[n % Y.size()];
-    Context ctx(
-        x0,
-        A,
-        c,
-        lambda,
-        lambdaQCD,
-        mu2,
-        Nc,
-        Nf,
-        CF,
-        TR,
-        Sperp,
-        l_pT2,
-        sqs,
-        l_Y,
-        pdf_filename,
-        ff_filename,
-        gdist,
-        cpl);
-    return ctx;
-}
+extern const double inf;
 
 const string canonicalize(const string& key) {
     if (key == "lambda_QCD" || key == "LAMBDA_QCD") {
         return "lambdaQCD";
+    }
+    else if (key == "lambda_MV" || key == "LAMBDA_MV") {
+        return "lambdaMV";
     }
     else if (key == "mu^2") {
         return "mu2";
@@ -78,159 +55,211 @@ const string canonicalize(const string& key) {
     else if (key == "alphas_bar" || key == "alpha_s_bar") {
         return "alphasbar";
     }
+    else if (key == "coupling" || key == "cpl") {
+        return "coupling_type";
+    }
+    else if (key == "gdist" || key == "gluon_distribution" || key == "gluon distribution" || key == "gluon dist") {
+        return "gdist_type";
+    }
     else {
         return key;
     }
 }
 
+double parse_double(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
+    multimap<string, string>::iterator el = range.first;
+    assert(++el == range.second);
+    return atof(range.first->second.c_str());
+}
+
+string& parse_string(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
+    multimap<string, string>::iterator el = range.first;
+    assert(++el == range.second);
+    return range.first->second;
+}
+
+vector<double> parse_vector(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
+    vector<double> v;
+    for (multimap<string, string>::iterator it = range.first; it != range.second; it++) {
+        v.push_back(atof(it->second.c_str()));
+    }
+    return v;
+}
+
+void ContextCollection::create_contexts() {
+    pair<multimap<string, string>::iterator, multimap<string, string>::iterator> itit;
+    bool err = false;
+
+    check_property(x0,           double, parse_double)
+    check_property(A,            double, parse_double)
+    check_property(c,            double, parse_double)
+    check_property(lambda,       double, parse_double)
+    check_property(mu2,          double, parse_double)
+    check_property(Nc,           double, parse_double)
+    check_property(Nf,           double, parse_double)
+    check_property(CF,           double, parse_double)
+    check_property(TR,           double, parse_double)
+    check_property(Sperp,        double, parse_double)
+    check_property(sqs,          double, parse_double)
+    check_property(pT,           vector<double>, parse_vector)
+    check_property(Y,            vector<double>, parse_vector)
+    check_property(pdf_filename, string, parse_string)
+    check_property(ff_filename,  string, parse_string)
+    if (err) {
+        exit(1);
+    }
+    
+    // create gluon distribution
+    if (gdist == NULL) {
+        check_property(gdist_type, string, parse_string)
+        if (err) {
+            exit(1);
+        }
+        if (gdist_type == "GBW") {
+            gdist = new GBWGluonDistribution();
+        }
+        else if (gdist_type == "MV") {
+            double Ymin = min(Y);
+            double Ymax = max(Y);
+            double pTmin = min(pT);
+            double pTmax = max(pT);
+            double Q02x0lambda = c * pow(A, 1./3.) * pow(x0, lambda);
+            check_property(lambdaMV, double, parse_double)
+            check_property_default(q2min,  double, parse_double, 1e-6)
+            // q2max = (2 qxmax + sqrt(smax) / exp(Ymin))^2 + (2 qymax)^2
+            check_property_default(q2max,  double, parse_double, gsl_pow_2(2 * inf + sqs / exp(Ymin)) + gsl_pow_2(2 * inf))
+            // Qs2min = c A^1/3 Q02 (x0 / exp(-2Ymin))^λ
+            check_property_default(Qs2min, double, parse_double, Q02x0lambda * exp(2 * lambda * Ymin))
+            // Qs2max = c A^1/3 Q02 x0^λ / (pT / sqs * exp(-Ymin))^λ
+            check_property_default(Qs2max, double, parse_double, Q02x0lambda * pow(pTmax / sqs * exp(-Ymin), -lambda))
+            cerr << "Creating MV gluon distribution with " << q2min << " < k2 < " << q2max << ", " << Qs2min << " < Qs2 < " << Qs2max << endl;
+            assert(q2min < q2max);
+            assert(Qs2min < Qs2max);
+            gdist = new MVGluonDistribution(lambdaMV, q2min, q2max, Qs2min, Qs2max);
+        }
+        else {
+            cerr << "Invalid value '" << gdist_type << "' for gdist_type!" << endl;
+            err = true;
+        }
+        if (err) {
+            exit(1);
+        }
+    }
+
+    // create coupling
+    if (cpl == NULL) {
+        check_property(coupling_type, string, parse_string)
+        if (err) {
+            exit(1);
+        }
+        if (coupling_type == "fixed") {
+            check_property(alphasbar, double, parse_double)
+            cpl = new FixedCoupling(alphasbar);
+        }
+        else if (coupling_type == "running") {
+            check_property(lambdaQCD, double, parse_double)
+            check_property(beta,      double, parse_double)
+            check_property(regulator, double, parse_double)
+            cpl = new LORunningCoupling(lambdaQCD, beta, regulator);
+        }
+        else {
+            cerr << "Invalid value '" << coupling_type << "' for coupling_type!" << endl;
+            err = true;
+        }
+        if (err) {
+            exit(1);
+        }
+    }
+    
+    // create contexts
+    for (vector<double>::iterator pTit = pT.begin(); pTit != pT.end(); pTit++) {
+        for (vector<double>::iterator Yit = Y.begin(); Yit != Y.end(); Yit++) {
+            contexts.push_back(Context(x0, A, c, lambda, mu2, Nc, Nf, CF, TR, Sperp, gsl_pow_2(*pTit), sqs, *Yit, pdf_filename, ff_filename, gdist, cpl));
+        }
+    }
+}
+
+Context& ContextCollection::get_context(size_t n) {
+    if (contexts.empty()) {
+        create_contexts();
+    }
+    return contexts[n];
+}
+
+Context& ContextCollection::operator[](size_t n) {
+    if (contexts.empty()) {
+        create_contexts();
+    }
+    return get_context(n);
+}
+
+bool ContextCollection::empty() {
+    return size() == 0;
+}
+
+size_t ContextCollection::size() {
+    if (contexts.empty()) {
+        return options.count("pT") * options.count("Y");
+    }
+    else {
+        return contexts.size();
+    }
+}
+
+void ContextCollection::set(string key, string value) {
+    assert(contexts.empty());
+    key = canonicalize(key);
+    options.erase(key);
+    options.insert(pair<string, string>(key, value));
+}
+
+void ContextCollection::erase(string key) {
+    assert(contexts.empty());
+    key = canonicalize(key);
+    options.erase(key);
+}
+
+void ContextCollection::add(string key, string value) {
+    assert(contexts.empty());
+    key = canonicalize(key);
+    // these are the keys that allow multiple values
+    if (!(key == "pT" || key == "Y")) {
+        options.erase(key);
+    }
+    options.insert(pair<string, string>(key, value));
+}
+
+void ContextCollection::setup_defaults() {
+    options.insert(pair<string, string>("x0", "0.000304"));
+    options.insert(pair<string, string>("lambda", "0.288"));
+    options.insert(pair<string, string>("lambdaMV", "0.24"));
+    options.insert(pair<string, string>("lambdaQCD", "0.24248711")); // sqrt(0.0588)
+    options.insert(pair<string, string>("mu2", "10"));
+    options.insert(pair<string, string>("Nc", "3"));
+    options.insert(pair<string, string>("Nf", "3"));
+    options.insert(pair<string, string>("CF", "1.5"));
+    options.insert(pair<string, string>("TR", "0.5"));
+    options.insert(pair<string, string>("pdf_filename", "mstw2008nlo.00.dat"));
+    options.insert(pair<string, string>("ff_filename", "PINLO.DAT"));
+}
 
 void ContextCollection::read_config(istream& in) {
-    multimap<string, string> options;
-
-    // read options
     string line;
     do {
         getline(in, line);
         if (line.size() > 2 && line[0] != '#') {
             // Split the line into two pieces on the '=' character
             // The first piece becomes the key, the second becomes the value
-            vector<string> kv = split(line, " \n\t=", 2);
-            const string key = canonicalize(kv[0]);
+            vector<string> kv = split(line, "\n=", 2);
+            string key = canonicalize(trim(kv[0], " \t"));
             // split the value on commas
             vector<string> v = split(kv[1], ",");
             for (vector<string>::iterator it = v.begin(); it != v.end(); it++) {
-                pair<string, string> p(key, trim(*it, " \n\t"));
-                options.insert(p);
+                string value = trim(*it, " \n\t");
+                add(key, value);
             }
         }
     } while (!in.eof());
-
-    // now process the options
-    for (map<string, string>::const_iterator it = options.begin(); it != options.end(); it++) {
-        const string key = it->first;
-        const string value = it->second;
-        if (key == "x0") {
-            x0 = atof(value.c_str());
-        }
-        else if (key == "A") {
-            A = atoi(value.c_str());
-        }
-        else if (key == "c") {
-            c = atof(value.c_str());
-        }
-        else if (key == "lambda") {
-            lambda = atof(value.c_str());
-        }
-        else if (key == "lambdaQCD") {
-            lambdaQCD = atof(value.c_str());
-        }
-        else if (key == "mu2") {
-            mu2 = atof(value.c_str());
-        }
-        else if (key == "NC") {
-            Nc = atoi(value.c_str());
-        }
-        else if (key == "NF") {
-            Nf = atoi(value.c_str());
-        }
-        else if (key == "CF") {
-            CF = atof(value.c_str());
-        }
-        else if (key == "TR") {
-            TR = atof(value.c_str());
-        }
-        else if (key == "Sperp") {
-            Sperp = atof(value.c_str());
-        }
-        else if (key == "pT2") {
-            pT2.push_back(atof(value.c_str()));
-        }
-        else if (key == "sqs") {
-            sqs = atof(value.c_str());
-        }
-        else if (key == "Y") {
-            Y.push_back(atof(value.c_str()));
-        }
-        else if (key == "pdf_filename") {
-            pdf_filename = value;
-        }
-        else if (key == "ff_filename") {
-            ff_filename = value;
-        }
-        else if (key == "coupling") {
-            if (value == "fixed") {
-                multimap<string, string>::const_iterator subit = options.find("alphasbar");
-                if (subit == options.end()) {
-                    cerr << "No value for fixed coupling" << endl;
-                    continue;
-                }
-                double alphasbar = atof(subit->second.c_str());
-                cpl = new FixedCoupling(alphasbar);
-            }
-            else if (value == "running") {
-                multimap<string, string>::const_iterator subit = options.find("lambdaQCD");
-                if (subit == options.end()) {
-                    cerr << "No value for lambdaQCD";
-                    continue;
-                }
-                double lambdaQCD = atof(subit->second.c_str());
-                subit = options.find("beta");
-                if (subit == options.end()) {
-                    cerr << "No value for beta";
-                    continue;
-                }
-                double beta = atof(subit->second.c_str());
-                subit = options.find("regulator");
-                if (subit == options.end()) {
-                    cerr << "No value for regulator";
-                    continue;
-                }
-                double regulator = atof(subit->second.c_str());
-                cpl = new LORunningCoupling(lambdaQCD, beta, regulator);
-            }
-        }
-        else if (key == "gluon distribution" || key == "gdist") {
-            if (value == "GBW") {
-                gdist = new GBWGluonDistribution();
-            }
-            else if (value == "MV") {
-                multimap<string, string>::const_iterator subit = options.find("lambdaMV");
-                if (subit == options.end()) {
-                    cerr << "No value for Lambda MV" << endl;
-                    continue;
-                }
-                double lambdaMV = atof(subit->second.c_str());
-                subit = options.find("q2min");
-                if (subit == options.end()) {
-                    cerr << "No value for q2min" << endl;
-                    continue;
-                }
-                double q2min = atof(subit->second.c_str());
-                subit = options.find("q2max");
-                if (subit == options.end()) {
-                    cerr << "No value for q2max" << endl;
-                    continue;
-                }
-                double q2max = atof(subit->second.c_str());
-                subit = options.find("Qs2min");
-                if (subit == options.end()) {
-                    cerr << "No value for Qs2min" << endl;
-                    continue;
-                }
-                double Qs2min = atof(subit->second.c_str());
-                subit = options.find("Qs2max");
-                if (subit == options.end()) {
-                    cerr << "No value for Qs2max" << endl;
-                    continue;
-                }
-                double Qs2max = atof(subit->second.c_str());
-                gdist = new MVGluonDistribution(lambdaMV, q2min, q2max, Qs2min, Qs2max);
-            }
-        }
-        else {
-            cerr << "unrecognized property " << key << endl;
-        }
-    }
 }
 
 std::ostream& operator<<(std::ostream& out, Context& ctx) {
@@ -238,7 +267,6 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "A\t= "          << ctx.A            << endl;
     out << "c\t= "          << ctx.c            << endl;
     out << "lambda\t= "     << ctx.lambda       << endl;
-    out << "lambdaQCD\t= "  << ctx.lambdaQCD    << endl;
     out << "mu2\t= "        << ctx.mu2          << endl;
     out << "Nc\t= "         << ctx.Nc           << endl;
     out << "Nf\t= "         << ctx.Nf           << endl;
@@ -250,8 +278,6 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "Y\t= "          << ctx.Y            << endl;
     out <<"pdf_filename\t= "<< ctx.pdf_filename << endl;
     out << "ff_filename\t= "<< ctx.ff_filename  << endl;
-//     out << "gdist\t="       << ctx.gdist        << endl;
-//     out << "coupling\t="    << ctx.cpl          << endl;
     return out;
 }
 
@@ -272,44 +298,54 @@ std::istream& operator>>(std::istream& in, ContextCollection& cc) {
 }
 
 std::ostream& operator<<(std::ostream& out, ContextCollection& cc) {
-    out << "x0           = " << cc.x0           << endl;
-    out << "A            = " << cc.A            << endl;
-    out << "c            = " << cc.c            << endl;
-    out << "lambda       = " << cc.lambda       << endl;
-    out << "lambdaQCD    = " << cc.lambdaQCD    << endl;
-    out << "mu2          = " << cc.mu2          << endl;
-    out << "Nc           = " << cc.Nc           << endl;
-    out << "Nf           = " << cc.Nf           << endl;
-    out << "CF           = " << cc.CF           << endl;
-    out << "TR           = " << cc.TR           << endl;
-    out << "Sperp        = " << cc.Sperp        << endl;
-    out << "pT2          = " << cc.pT2          << endl;
-    out << "sqs          = " << cc.sqs          << endl;
-    out << "Y            = " << cc.Y            << endl;
-    out << "pdf_filename = " << cc.pdf_filename << endl;
-    out << "ff_filename  = " << cc.ff_filename  << endl;
-//     out << "gdist\t="       << cc.gdist        << endl;
-//     out << "coupling\t="    << cc.cpl          << endl;
+    string last_key;
+    for (multimap<string, string>::iterator it = cc.options.begin(); it != cc.options.end(); it++) {
+        if (last_key == it->first) {
+            out << ", " << it->second;
+        }
+        else {
+            if (!last_key.empty()) {
+                out << endl;
+            }
+            out << it->first << " = " << it->second;
+        }
+        last_key = it->first;
+    }
+    out << endl;
     return out;
 }
 
 ContextCollection::iterator ContextCollection::begin() {
-    return ContextCollectionIterator(*this, 0);
+    if (contexts.empty()) {
+        create_contexts();
+    }
+    return contexts.begin();
 }
 ContextCollection::iterator ContextCollection::end() {
-    return ContextCollectionIterator(*this, size());
+    if (contexts.empty()) {
+        create_contexts();
+    }
+    return contexts.end();
 }
 
 
 #ifdef CONTEXT_TEST
+const double inf = 10;
+
 int main(int argc, char** argv) {
     if (argc < 2) {
         cerr << "Usage: " << argv[0] << " <filename.cfg>" << endl;
         return 1;
     }
     ContextCollection cc(argv[1]);
-    cout << "Successfully parsed " << argv[1] << " into " << cc.size() << " contexts" << endl;
-    cout << cc;
+    cout << "Successfully parsed " << argv[1];
+    if (cc.empty()) {
+        cout << endl << cc << "No contexts defined!" << endl;
+    }
+    else {
+        cout << " into " << cc.size() << " contexts" << endl;
+        cout << cc;
+    }
 }
 #endif
 

@@ -205,12 +205,10 @@ static const char* default_nlo_spec = "p:h12qq,p:h14qq,p:h12gg,m:h12qqbar,m:h16g
 
 int main(int argc, char** argv) {
     bool separate = false;
-    enum {GBW, MV} gdist_type = GBW; 
-    Coupling* cpl = new FixedCoupling(0.2 / (2*M_PI));
+    string gdist_type;
+    vector<string> pT;
     vector<HardFactorList*> hfgroups;
     vector<string> hfgnames;
-    vector<double> pT2;
-    vector<double> Y;
     ContextCollection cc;
     ifstream config;
     bool config_is_read = false;
@@ -233,10 +231,10 @@ int main(int argc, char** argv) {
             separate = true;
         }
         else if (strcmp(argv[i], "MV") == 0) {
-            gdist_type = MV;
+            gdist_type = argv[i];
         }
         else if (strcmp(argv[i], "GBW") == 0) {
-            gdist_type = GBW;
+            gdist_type = argv[i];
         }
         else if (argv[i][0] == 'h' || argv[i][1] == ':') {
             hfgroups.push_back(parse_hf_spec(argv[i]));
@@ -252,15 +250,7 @@ int main(int argc, char** argv) {
         }
         else if (::isdigit(argv[i][0])) {
             vector<string> pTnums = split(argv[i], ", ");
-            for (vector<string>::iterator it = pTnums.begin(); it != pTnums.end(); it++) {
-                double d = strtod(it->c_str(), NULL);
-                if (errno != 0) {
-                    cerr << "Error " << errno << " parsing " << argv[i] << " as floating-point" << endl;
-                    cerr << ERANGE << ": range error" << endl;
-                    exit(1);
-                }
-                pT2.push_back(d*d);
-            }
+            pT.insert(pT.end(), pTnums.begin(), pTnums.end());
         }
         else {
             // try opening as a file
@@ -284,16 +274,15 @@ int main(int argc, char** argv) {
         cerr << "No config file specified! (one argument must name a config file)" << endl;
         exit(1);
     }
-    if (pT2.empty() && cc.pT2.empty()) {
-        cerr << "No momenta specified!" << endl;
-        exit(1);
+    if (!pT.empty()) {
+        cc.erase("pT");
+        for (vector<string>::iterator it = pT.begin(); it != pT.end(); it++) {
+            cc.add("pT", *it);
+        }
     }
-    if (cc.Y.empty()) {
-        cerr << "No rapidities specified!" << endl;
+    if (cc.empty()) {
+        cerr << "No momenta or no rapidities specified!" << endl;
         exit(1);
-    }
-    if (!pT2.empty()) {
-        cc.pT2 = pT2;
     }
     if (hfgroups.empty()) {
         hfgroups.push_back(parse_hf_spec(default_lo_spec));
@@ -305,41 +294,10 @@ int main(int argc, char** argv) {
     assert(hfgroups.size() == hfgnames.size());
     
     gsl_rng_env_setup();
-    cc.A = 197;
-    cc.c = 0.56;
-    cc.mu2 = 10;
-    cc.Sperp = 1.0;
-    cc.sqs = 200;
-    cc.cpl = cpl;
-    ThreadLocalContext tlctx(cc);
-    double pT2min = min(cc.pT2);
-    double pT2max = max(cc.pT2);
-    double Ymin = min(cc.Y);
-    double Ymax = max(cc.Y);
-    double k2min, k2max, Qs2min, Qs2max;
-    switch (gdist_type) {
-        case MV:
-            // TODO: check usage of Ymax and Ymin in these formulas
-            k2min = 1e-6;
-            k2max = gsl_pow_2(2 * inf + cc.sqs / exp(Ymin)) + gsl_pow_2(2 * inf); // (2 qxmax + sqrt(smax) / exp(Ymin))^2 + (2 qymax)^2
-            Qs2min = cc.Q02x0lambda() * exp(2 * cc.lambda * Ymin); // c A^1/3 Q02 (x0 / exp(-2Ymin))^λ
-            Qs2max = cc.Q02x0lambda() * pow(sqrt(pT2max) / cc.sqs * exp(-Ymin), -cc.lambda); // c A^1/3 Q02 x0^λ / (pT / sqs * exp(-Ymin))^λ
-            cerr << "Creating MV gluon distribution with " << k2min << " < k2 < " << k2max << ", " << Qs2min << " < Qs2 < " << Qs2max << endl;
-            assert(k2min < k2max);
-            assert(Qs2min < Qs2max);
-            cc.gdist = new MVGluonDistribution(
-                0.24,  // TODO: replace with LambdaMV parameter
-                k2min, // k2min
-                k2max, // k2max
-                Qs2min,// Qs2min
-                Qs2max // Qs2max
-            );
-            break;
-        case GBW:
-        default:
-            cc.gdist = new GBWGluonDistribution();
-            break;
+    if (!gdist_type.empty()) {
+        cc.set("gdist", gdist_type);
     }
+    ThreadLocalContext tlctx(cc);
 
     ResultsCalculator* rc = new ResultsCalculator(cc, tlctx, hfgroups);
     rc->calculate();
@@ -351,7 +309,7 @@ int main(int argc, char** argv) {
     double l_real, l_imag, l_error;
     for (size_t ccindex = 0; ccindex < cc.size(); ccindex++) {
         cout << sqrt(cc[ccindex].pT2) << "\t";
-        cout << sqrt(cc[ccindex].Y) << "\t";
+        cout << cc[ccindex].Y << "\t";
 
         double total = 0;
         for (size_t hfgindex = 0; hfgindex < hfgroups.size(); hfgindex++) {
@@ -389,7 +347,5 @@ int main(int argc, char** argv) {
     for (vector<HardFactorList*>::iterator it = hfgroups.begin(); it != hfgroups.end(); it++) {
         delete *it;
     }
-    delete cc.gdist;
-    delete cpl;
     return 0;
 }
