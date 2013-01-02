@@ -288,11 +288,13 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "pT2\t= "        << ctx.pT2          << endl;
     out << "sqs\t= "        << ctx.sqs          << endl;
     out << "Y\t= "          << ctx.Y            << endl;
-    out <<"pdf_filename\t= "<< ctx.pdf_filename << endl;
-    out << "ff_filename\t= "<< ctx.ff_filename  << endl;
+    out << "pdf_filename\t= " << ctx.pdf_filename << endl;
+    out << "ff_filename\t= " << ctx.ff_filename  << endl;
     out << "miser_iterations\t= " << ctx.miser_iterations << endl;
     out << "vegas_initial_iterations\t= " << ctx.vegas_initial_iterations << endl;
     out << "vegas_incremental_iterations\t= " << ctx.vegas_incremental_iterations << endl;
+    out << "gluon distribution\t = " << ctx.gdist << endl;
+    out << "coupling\t = " << ctx.cpl << endl;
     return out;
 }
 

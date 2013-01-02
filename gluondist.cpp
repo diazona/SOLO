@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cmath>
+#include <sstream>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_sf_bessel.h>
@@ -15,6 +16,10 @@ double GBWGluonDistribution::S4(double r2, double s2, double t2, double Qs2) {
 double GBWGluonDistribution::F(double q2, double Qs2) {
     return M_1_PI * exp(-q2/Qs2) / Qs2;
 }
+const char* GBWGluonDistribution::name() {
+    return "GBW";
+}
+
 
 class MVIntegrationParameters {
 public:
@@ -124,6 +129,10 @@ MVGluonDistribution::MVGluonDistribution(double LambdaMV, double q2min, double q
     
     q2_accel = gsl_interp_accel_alloc();
     Qs2_accel = gsl_interp_accel_alloc();
+
+    std::ostringstream s;
+    s << "MV(LambdaMV = " << LambdaMV << ", q2min = " << q2min << ", q2max = " << q2max << ", Qs2min = " << Qs2min << ", Qs2max = " << Qs2max << ")";
+    _name = s.str();
 }
 
 MVGluonDistribution::~MVGluonDistribution() {
@@ -160,6 +169,15 @@ double MVGluonDistribution::F(double q2, double Qs2) {
         double c2 = gsl_interp_eval(interp_dist_subleading_q2, log_Qs2_values, F_dist_subleading_q2, log(Qs2), Qs2_accel);
         return c0 + c2 * q2;
     }
+}
+
+const char* MVGluonDistribution::name() {
+    return _name.c_str();
+}
+
+std::ostream& operator<<(std::ostream& out, GluonDistribution& gdist) {
+    out << gdist.name();
+    return out;
 }
 
 #ifdef GLUON_DIST_DRIVER

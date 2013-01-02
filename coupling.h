@@ -2,20 +2,23 @@
 #define _COUPLING_H_
 
 #include <cmath>
+#include <ostream>
+#include <string>
 
 class Coupling {
 public:
     virtual double alphasbar(double kT2) = 0;
+    virtual const char* name() = 0;
 };
 
 class FixedCoupling : public Coupling {
 private:
     double value;
+    std::string _name;
 public:
-    FixedCoupling(double alphasbar) : value(alphasbar) {}
-    double alphasbar(double kT2) {
-        return value;
-    }
+    FixedCoupling(double alphasbar);
+    double alphasbar(double kT2);
+    const char* name();
 };
 
 class LORunningCoupling : public Coupling {
@@ -23,11 +26,13 @@ private:
     double log_LambdaQCD;
     double inverse_beta_2pi;
     double regulator; // position of the Landau pole
+    std::string _name;
 public:
-    LORunningCoupling(double LambdaQCD, double beta, double regulator) : log_LambdaQCD(log(LambdaQCD)), inverse_beta_2pi(0.5 / (M_PI * beta)), regulator(regulator) {}
-    double alphasbar(double kT2) {
-        return inverse_beta_2pi / (log(kT2 + regulator) - log_LambdaQCD);
-    }
+    LORunningCoupling(double LambdaQCD, double beta, double regulator);
+    double alphasbar(double kT2);
+    const char* name();
 };
+
+std::ostream& operator<<(std::ostream& out, Coupling& cpl);
 
 #endif // _COUPLING_H_

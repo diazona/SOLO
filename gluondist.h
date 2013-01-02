@@ -1,6 +1,7 @@
 #ifndef _GLUONDIST_H_
 #define _GLUONDIST_H_
 
+#include <string>
 #include "interp2d.h"
 
 class GluonDistribution {
@@ -8,6 +9,7 @@ public:
     virtual double S2(double r2, double Qs2) = 0;
     virtual double S4(double r2, double s2, double t2, double Qs2) = 0;
     virtual double F(double q2, double Qs2) = 0;
+    virtual const char* name() = 0;
 };
 
 class GBWGluonDistribution: public GluonDistribution {
@@ -15,6 +17,7 @@ public:
     double S2(double r2, double Qs2);
     double S4(double r2, double s2, double t2, double Qs2);
     double F(double q2, double Qs2);
+    const char* name();
 };
 
 class MVGluonDistribution: public GluonDistribution {
@@ -24,6 +27,7 @@ public:
     double S2(double r2, double Qs2);
     double S4(double r2, double s2, double t2, double Qs2);
     double F(double q2, double Qs2);
+    const char* name();
 private:
     double LambdaMV;
     double q2min, q2max;
@@ -38,10 +42,13 @@ private:
     interp2d* interp_dist;
     gsl_interp_accel* q2_accel;
     gsl_interp_accel* Qs2_accel;
+    std::string _name;
 #ifdef GLUON_DIST_DRIVER
 public:
     void write_grid();
 #endif
 };
+
+std::ostream& operator<<(std::ostream& out, GluonDistribution& gdist);
 
 #endif // _GLUONDIST_H_
