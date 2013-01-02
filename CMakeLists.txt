@@ -16,3 +16,6 @@ set_target_properties(contextreader PROPERTIES COMPILE_DEFINITIONS CONTEXT_TEST)
 
 add_executable(utils_test utils.cpp)
 set_target_properties(utils_test PROPERTIES COMPILE_DEFINITIONS UTILS_TEST)
+
+add_executable(dss_pinlo_test dss_pinlo_test.cpp dss_pinlo.cpp)
+target_link_libraries(dss_pinlo_test ${CMAKE_SOURCE_DIR}/libinterp2d.a ${LIBS})
