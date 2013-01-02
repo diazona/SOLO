@@ -69,7 +69,7 @@ const string canonicalize(const string& key) {
 double parse_double(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
     multimap<string, string>::iterator el = range.first;
     assert(++el == range.second);
-    return atof(range.first->second.c_str());
+    return strtod(range.first->second.c_str(), NULL);
 }
 
 string& parse_string(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
@@ -81,7 +81,7 @@ string& parse_string(pair<multimap<string, string>::iterator, multimap<string, s
 vector<double> parse_vector(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
     vector<double> v;
     for (multimap<string, string>::iterator it = range.first; it != range.second; it++) {
-        v.push_back(atof(it->second.c_str()));
+        v.push_back(strtod(it->second.c_str(), NULL));
     }
     return v;
 }
