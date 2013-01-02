@@ -24,13 +24,14 @@
 
 class DSSpiNLO {
 private:
-    const static size_t number_of_lnz_values = 35;
-    const static size_t number_of_lnqs2_values = 24;
     const static size_t number_of_flavors = 9;
 
-    double lnz_array[number_of_lnz_values];
-    double lnqs2_array[number_of_lnqs2_values];
-    double ff_arrays[number_of_flavors][number_of_lnz_values * number_of_lnqs2_values];
+    size_t number_of_lnz_values;
+    size_t number_of_lnqs2_values;
+
+    double* lnz_array;
+    double* lnqs2_array;
+    double** ff_arrays;
 
     const char* filename;
     

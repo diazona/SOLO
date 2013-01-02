@@ -18,24 +18,62 @@
  */
 
 #include <cassert>
-#include <fstream>
-#include <iostream>
 #include <cmath>
 #include <cstdlib>
+#include <fstream>
+#include <iostream>
+#include <set>
 #include <gsl/gsl_interp.h>
 #include "dss_pinlo.h"
 #include "interp2d.h"
 
-DSSpiNLO::DSSpiNLO(const char* filename) : filename(filename) {
-    // read data from the file
+DSSpiNLO::DSSpiNLO(const char* filename) :
+ number_of_lnz_values(0), number_of_lnqs2_values(0),
+ lnz_array(NULL), lnqs2_array(NULL), ff_arrays(NULL),
+ filename(filename) {
     std::cerr << "Reading FF data from file " << filename << std::endl;
     double lnz;
     double lnqs2;
     size_t index;
     std::ifstream input;
     
+    size_t lines = 0;
+    std::set<double> lnz_values;
+    std::set<double> lnqs2_values;
+    
     input.open(filename);
     
+    // Read through once to identify unique lnz and lnQs2 values
+    input >> lnz >> lnqs2;
+    while (!input.eof()) {
+        input.ignore(256, '\n'); // read and ignore until end of line
+        lines++;
+        lnz_values.insert(lnz);
+        lnqs2_values.insert(lnqs2);
+        input >> lnz >> lnqs2;
+    }
+    number_of_lnz_values = lnz_values.size();
+    number_of_lnqs2_values = lnqs2_values.size();
+    if (lines != number_of_lnz_values * number_of_lnqs2_values) {
+        input.close();
+        std::cerr << "Data are not arranged in a complete grid" << std::endl;
+        std::cerr << "Found " << number_of_lnz_values << " values for ln(z)," << std::endl;
+        std::cerr << "      " << number_of_lnqs2_values << " values for ln(Qs2)," << std::endl;
+        std::cerr << "      " << lines << " lines read from file" << std::endl;
+        exit(1);
+    }
+    
+    lnz_array = new double[number_of_lnz_values];
+    lnqs2_array = new double[number_of_lnqs2_values];
+    ff_arrays = new double*[number_of_flavors];
+    for (size_t i = 0; i < number_of_flavors; i++) {
+        ff_arrays[i] = new double[number_of_lnz_values * number_of_lnqs2_values];
+    }
+    
+    input.clear(); // have to clear the EOF bit before seeking
+    input.seekg(0, std::ios::beg);
+    
+    // Read through again to actually get the data
     for (size_t iz = 0; iz < number_of_lnz_values; iz++) {
         for (size_t iq = 0; iq < number_of_lnqs2_values; iq++) {
             index = INDEX_2D(iz, iq, number_of_lnz_values, number_of_lnqs2_values);
@@ -79,7 +117,15 @@ DSSpiNLO::~DSSpiNLO() {
         lnqs2_accel[i] = NULL;
         interp2d_free(interpolators[i]);
         interpolators[i] = NULL;
+        delete[] ff_arrays[i];
+        ff_arrays[i] = NULL;
     }
+    delete[] ff_arrays;
+    ff_arrays = NULL;
+    delete[] lnz_array;
+    lnz_array = NULL;
+    delete[] lnqs2_array;
+    lnqs2_array = NULL;
 }
 
 void DSSpiNLO::update(double z, double qs2) {
