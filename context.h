@@ -30,6 +30,10 @@ public:
 
     GluonDistribution* gdist;
     Coupling* cpl;
+    
+    size_t miser_iterations;
+    size_t vegas_initial_iterations;
+    size_t vegas_incremental_iterations;
 
     double Q02x0lambda;
     double tau;
@@ -50,6 +54,9 @@ public:
         double Y,
         std::string pdf_filename,
         std::string ff_filename,
+        size_t miser_iterations,
+        size_t vegas_initial_iterations,
+        size_t vegas_incremental_iterations,
         GluonDistribution* gdist,
         Coupling* cpl) :
      x0(x0),
@@ -67,6 +74,9 @@ public:
      Y(Y),
      pdf_filename(pdf_filename),
      ff_filename(ff_filename),
+     miser_iterations(miser_iterations),
+     vegas_initial_iterations(vegas_initial_iterations),
+     vegas_incremental_iterations(vegas_incremental_iterations),
      gdist(gdist),
      cpl(cpl),
      Q02x0lambda(c * pow(A, 1.0d/3.0d) * pow(x0, lambda)),
@@ -87,6 +97,9 @@ public:
      Y(other.Y),
      pdf_filename(other.pdf_filename),
      ff_filename(other.ff_filename),
+     miser_iterations(other.miser_iterations),
+     vegas_initial_iterations(other.vegas_initial_iterations),
+     vegas_incremental_iterations(other.vegas_incremental_iterations),
      gdist(other.gdist),
      cpl(other.cpl),
      Q02x0lambda(other.Q02x0lambda),

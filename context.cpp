@@ -66,6 +66,12 @@ const string canonicalize(const string& key) {
     }
 }
 
+size_t parse_size(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
+    multimap<string, string>::iterator el = range.first;
+    assert(++el == range.second);
+    return (size_t)strtoul(range.first->second.c_str(), NULL, 0);
+}
+
 double parse_double(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
     multimap<string, string>::iterator el = range.first;
     assert(++el == range.second);
@@ -105,6 +111,9 @@ void ContextCollection::create_contexts() {
     check_property(Y,            vector<double>, parse_vector)
     check_property(pdf_filename, string, parse_string)
     check_property(ff_filename,  string, parse_string)
+    check_property(miser_iterations, size_t, parse_size)
+    check_property(vegas_initial_iterations, size_t, parse_size)
+    check_property(vegas_incremental_iterations, size_t, parse_size)
     if (err) {
         exit(1);
     }
@@ -174,7 +183,7 @@ void ContextCollection::create_contexts() {
     // create contexts
     for (vector<double>::iterator pTit = pT.begin(); pTit != pT.end(); pTit++) {
         for (vector<double>::iterator Yit = Y.begin(); Yit != Y.end(); Yit++) {
-            contexts.push_back(Context(x0, A, c, lambda, mu2, Nc, Nf, CF, TR, Sperp, gsl_pow_2(*pTit), sqs, *Yit, pdf_filename, ff_filename, gdist, cpl));
+            contexts.push_back(Context(x0, A, c, lambda, mu2, Nc, Nf, CF, TR, Sperp, gsl_pow_2(*pTit), sqs, *Yit, pdf_filename, ff_filename, miser_iterations, vegas_initial_iterations, vegas_incremental_iterations, gdist, cpl));
         }
     }
 }
@@ -241,6 +250,9 @@ void ContextCollection::setup_defaults() {
     options.insert(pair<string, string>("TR", "0.5"));
     options.insert(pair<string, string>("pdf_filename", "mstw2008nlo.00.dat"));
     options.insert(pair<string, string>("ff_filename", "PINLO.DAT"));
+    options.insert(pair<string, string>("miser_iterations", "10000000"));
+    options.insert(pair<string, string>("vegas_initial_iterations", "100000"));
+    options.insert(pair<string, string>("vegas_incremental_iterations", "1000000"));
 }
 
 void ContextCollection::read_config(istream& in) {
@@ -278,6 +290,9 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "Y\t= "          << ctx.Y            << endl;
     out <<"pdf_filename\t= "<< ctx.pdf_filename << endl;
     out << "ff_filename\t= "<< ctx.ff_filename  << endl;
+    out << "miser_iterations\t= " << ctx.miser_iterations << endl;
+    out << "vegas_initial_iterations\t= " << ctx.vegas_initial_iterations << endl;
+    out << "vegas_incremental_iterations\t= " << ctx.vegas_incremental_iterations << endl;
     return out;
 }
 
