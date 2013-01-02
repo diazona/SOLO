@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cstdlib>
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <gsl/gsl_math.h>
@@ -7,7 +8,7 @@
 #include "utils.h"
 
 #define check_property_default(p, typename, parse, default) \
-    itit = options.equal_range(#p);\
+    itit = options.equal_range(canonicalize(#p));\
     typename p;\
     if (itit.first == itit.second) {\
         p = default;\
@@ -16,7 +17,7 @@
         p = parse(itit);\
     }
 #define check_property(p, typename, parse) \
-    itit = options.equal_range(#p);\
+    itit = options.equal_range(canonicalize(#p));\
     typename p;\
     if (itit.first == itit.second) {\
         cerr << "No value for " #p << endl;\
@@ -30,27 +31,26 @@ using namespace std;
 
 extern const double inf;
 
-const string canonicalize(const string& key) {
-    if (key == "lambda_QCD" || key == "LAMBDA_QCD") {
-        return "lambdaQCD";
+const string canonicalize(const string& i_key) {
+    string key = trim(i_key, " \t\n");
+    transform(key.begin(), key.end(), key.begin(), ::tolower);
+    if (key == "lambda_qcd") {
+        return "lambdaqcd";
     }
-    else if (key == "lambda_MV" || key == "LAMBDA_MV") {
-        return "lambdaMV";
+    else if (key == "lambda_mv") {
+        return "lambdamv";
     }
     else if (key == "mu^2") {
         return "mu2";
     }
-    else if (key == "ncolors" || key == "nc") {
-        return "NC";
+    else if (key == "ncolors") {
+        return "nc";
     }
-    else if (key == "nflavors" || key == "nf") {
-        return "NF";
+    else if (key == "nflavors") {
+        return "nf";
     }
-    else if (key == "colorfactor" || key == "cf") {
-        return "CF";
-    }
-    else if (key == "tr") {
-        return "TR";
+    else if (key == "colorfactor") {
+        return "cf";
     }
     else if (key == "alphas_bar" || key == "alpha_s_bar") {
         return "alphasbar";
@@ -208,7 +208,7 @@ bool ContextCollection::empty() {
 
 size_t ContextCollection::size() {
     if (contexts.empty()) {
-        return options.count("pT") * options.count("Y");
+        return options.count("pt") * options.count("y");
     }
     else {
         return contexts.size();
@@ -232,7 +232,7 @@ void ContextCollection::add(string key, string value) {
     assert(contexts.empty());
     key = canonicalize(key);
     // these are the keys that allow multiple values
-    if (!(key == "pT" || key == "Y")) {
+    if (!(key == "pt" || key == "y")) {
         options.erase(key);
     }
     options.insert(pair<string, string>(key, value));
@@ -241,13 +241,13 @@ void ContextCollection::add(string key, string value) {
 void ContextCollection::setup_defaults() {
     options.insert(pair<string, string>("x0", "0.000304"));
     options.insert(pair<string, string>("lambda", "0.288"));
-    options.insert(pair<string, string>("lambdaMV", "0.24"));
-    options.insert(pair<string, string>("lambdaQCD", "0.24248711")); // sqrt(0.0588)
+    options.insert(pair<string, string>("lambdamv", "0.24"));
+    options.insert(pair<string, string>("lambdaqcd", "0.24248711")); // sqrt(0.0588)
     options.insert(pair<string, string>("mu2", "10"));
-    options.insert(pair<string, string>("Nc", "3"));
-    options.insert(pair<string, string>("Nf", "3"));
-    options.insert(pair<string, string>("CF", "1.5"));
-    options.insert(pair<string, string>("TR", "0.5"));
+    options.insert(pair<string, string>("nc", "3"));
+    options.insert(pair<string, string>("nf", "3"));
+    options.insert(pair<string, string>("cf", "1.5"));
+    options.insert(pair<string, string>("tr", "0.5"));
     options.insert(pair<string, string>("pdf_filename", "mstw2008nlo.00.dat"));
     options.insert(pair<string, string>("ff_filename", "PINLO.DAT"));
     options.insert(pair<string, string>("miser_iterations", "10000000"));
@@ -263,7 +263,7 @@ void ContextCollection::read_config(istream& in) {
             // Split the line into two pieces on the '=' character
             // The first piece becomes the key, the second becomes the value
             vector<string> kv = split(line, "\n=", 2);
-            string key = canonicalize(trim(kv[0], " \t"));
+            string key = canonicalize(kv[0]);
             // split the value on commas
             vector<string> v = split(kv[1], ",");
             for (vector<string>::iterator it = v.begin(); it != v.end(); it++) {
