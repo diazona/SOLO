@@ -298,10 +298,10 @@ int main(int argc, char** argv) {
         cc.set("gdist", gdist_type);
     }
     ThreadLocalContext tlctx(cc);
+    cout << cc << "------------" << endl;
 
     ResultsCalculator* rc = new ResultsCalculator(cc, tlctx, hfgroups);
     rc->calculate();
-    cout << cc << "------------" << endl;
     cout << "pT\tY\t";
     for (vector<string>::iterator it = hfgnames.begin(); it != hfgnames.end(); it++) {
         cout << *it << "\t";
