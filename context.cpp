@@ -140,7 +140,7 @@ void ContextCollection::create_contexts() {
             // Qs2min = c A^1/3 Q02 (x0 / exp(-2Ymin))^λ
             check_property_default(Qs2min, double, parse_double, Q02x0lambda * exp(2 * lambda * Ymin))
             // Qs2max = c A^1/3 Q02 x0^λ / (pT / sqs * exp(-Ymin))^λ
-            check_property_default(Qs2max, double, parse_double, Q02x0lambda * pow(pTmax / sqs * exp(-Ymin), -lambda))
+            check_property_default(Qs2max, double, parse_double, Q02x0lambda * pow(pTmin / sqs * exp(-Ymax), -lambda))
             cerr << "Creating MV gluon distribution with " << q2min << " < k2 < " << q2max << ", " << Qs2min << " < Qs2 < " << Qs2max << endl;
             assert(q2min < q2max);
             assert(Qs2min < Qs2max);
