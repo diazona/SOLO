@@ -3,6 +3,8 @@
 
 #include <map>
 #include <vector>
+#include <gsl/gsl_monte_miser.h>
+#include <gsl/gsl_monte_vegas.h>
 #include "context.h"
 #include "integrationcontext.h"
 #include "integrationtype.h"
@@ -21,6 +23,8 @@ private:
     HardFactorTypeMap terms;
     integration_strategy strategy;
     void (*callback)(const IntegrationContext*, double, double);
+    void (*miser_callback)(double*, double*, gsl_monte_miser_state*);
+    void (*vegas_callback)(double*, double*, gsl_monte_vegas_state*);
 public:
     Integrator(const Context* ctx, const ThreadLocalContext* tlctx, integration_strategy strategy, HardFactorList hflist);
     ~Integrator();
@@ -34,6 +38,12 @@ public:
     }
     void set_callback(void (*callback)(const IntegrationContext*, double, double)) {
         this->callback = callback;
+    }
+    void set_miser_callback(void (*miser_callback)(double*, double*, gsl_monte_miser_state*)) {
+        this->miser_callback = miser_callback;
+    }
+    void set_vegas_callback(void (*vegas_callback)(double*, double*, gsl_monte_vegas_state*)) {
+        this->vegas_callback = vegas_callback;
     }
 private:
     void integrate_impl(const size_t core_dimensions, double* result, double* error);

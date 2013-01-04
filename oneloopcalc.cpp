@@ -114,6 +114,13 @@ void write_nonzero(const IntegrationContext* ictx, const double real, const doub
     }
 }
 
+void vegas_eprint_callback(double* p_result, double* p_abserr, gsl_monte_vegas_state* s) {
+    cerr << "VEGAS output: " << *p_result << " err: " << *p_abserr << " chisq:" << gsl_monte_vegas_chisq(s) << endl;
+}
+void miser_eprint_callback(double* p_result, double* p_abserr, gsl_monte_miser_state* s) {
+    cerr << "MISER output: " << *p_result << " err: " << *p_abserr << endl;
+}
+
 class ResultsCalculator {
 private:
     ContextCollection& cc;
@@ -156,18 +163,25 @@ void ResultsCalculator::calculate() {
     for (ContextCollection::iterator it = cc.begin(); it != cc.end(); it++) {
         Context ctx = *it;
         cerr << "Beginning calculation at pT = " << sqrt(ctx.pT2) << ", Y = " << ctx.Y << endl;
-        for (vector<HardFactorList*>::iterator hit = hfgroups.begin(); hit != hfgroups.end(); hit++) {
-            Integrator* integrator = new Integrator(&ctx, &tlctx, strategy, **hit);
-            if (trace) {
-                integrator->set_callback(write_data_point);
+        try {
+            for (vector<HardFactorList*>::iterator hit = hfgroups.begin(); hit != hfgroups.end(); hit++) {
+                Integrator* integrator = new Integrator(&ctx, &tlctx, strategy, **hit);
+                if (trace) {
+                    integrator->set_callback(write_data_point);
+                }
+                else if (minmax) {
+                    integrator->set_callback(store_minmax);
+                }
+                integrator->set_miser_callback(miser_eprint_callback);
+                integrator->set_vegas_callback(vegas_eprint_callback);
+                integrator->integrate(l_real++, l_imag++, l_error++);
+                delete integrator;
             }
-            else if (minmax) {
-                integrator->set_callback(store_minmax);
-            }
-            integrator->integrate(l_real++, l_imag++, l_error++);
-            delete integrator;
+            cerr << "...done" << endl;
         }
-        cerr << "...done" << endl;
+        catch (const exception& e) {
+            cerr << e.what() << endl;
+        }
     }
 }
 
@@ -203,7 +217,56 @@ HardFactorList* parse_hf_spec(const string& spec) {
 static const char* default_lo_spec = "p:h02qq,p:h02gg";
 static const char* default_nlo_spec = "p:h12qq,p:h14qq,p:h12gg,m:h12qqbar,m:h16gg,p:h112gq,p:h122gq,m:h14gq,p:h112qg,p:h122qg,m:h14qg";
 
-int main(int argc, char** argv) {
+class GSLException : public exception {
+private:
+    string _reason;
+    string _file;
+    int _line;
+    int _gsl_errno;
+    string _message;
+public:
+    GSLException(const char* reason, const char* file, int line, int gsl_errno) throw() :
+        _reason(reason), _file(file), _line(line), _gsl_errno(gsl_errno) {
+        ostringstream s;
+        s << "GSL error " << gsl_errno << "(" << gsl_strerror(gsl_errno) << "): " << reason << " at " << file << ":" << line;
+        _message = s.str();
+    }
+    GSLException(const GSLException& e) throw() :
+        _reason(e._reason), _file(e._file), _line(e._line), _gsl_errno(e._gsl_errno), _message(e._message) {
+    }
+    GSLException& operator=(const GSLException& e) throw() {
+        _reason = e._reason;
+        _file = e._file;
+        _line = e._line;
+        _gsl_errno = e._gsl_errno;
+        _message = e._message;
+    }
+    ~GSLException() throw() {
+    }
+    const string& reason() const {
+        return _reason;
+    }
+    const string& file() const {
+        return _file;
+    }
+    const int line() const {
+        return _line;
+    }
+    const int gsl_errno() const {
+        return _gsl_errno;
+    }
+    const char* what() const throw() {
+        return _message.c_str();
+    }
+};
+
+void gsl_error_throw(const char* reason, const char* file, int line, int gsl_errno) {
+    throw GSLException(reason, file, line, gsl_errno);
+}
+
+ostream& logger = cerr;
+
+int run(int argc, char** argv) {
     bool separate = false;
     string gdist_type;
     vector<string> pT;
@@ -294,6 +357,7 @@ int main(int argc, char** argv) {
     assert(hfgroups.size() == hfgnames.size());
     
     gsl_rng_env_setup();
+    gsl_set_error_handler(&gsl_error_throw);
     if (!gdist_type.empty()) {
         cc.set("gdist", gdist_type);
     }
@@ -349,4 +413,18 @@ int main(int argc, char** argv) {
         delete *it;
     }
     return 0;
+}
+
+int main(int argc, char** argv) {
+    try {
+        return run(argc, argv);
+    }
+    catch (const exception& e) {
+        cerr << e.what() << endl;
+        return 1;
+    }
+    catch (...) {
+        cerr << "unknown error" << endl;
+        return 1;
+    }
 }

@@ -9,7 +9,9 @@
 
 #define checkfinite(d) assert(gsl_finite(d))
 
-Integrator::Integrator(const Context* ctx, const ThreadLocalContext* tlctx, const integration_strategy strategy, const HardFactorList hflist) : ictx(ctx, tlctx), strategy(strategy), current_type(DipoleIntegrationType::get_instance()), callback(NULL) {
+Integrator::Integrator(const Context* ctx, const ThreadLocalContext* tlctx, const integration_strategy strategy, const HardFactorList hflist) :
+  ictx(ctx, tlctx), strategy(strategy), current_type(DipoleIntegrationType::get_instance()),
+  callback(NULL), miser_callback(NULL), vegas_callback(NULL) {
     assert(hflist.size() > 0);
 #ifndef NDEBUG
     size_t total1 = 0;
@@ -186,13 +188,6 @@ void vegas_integrate(double (*func)(double*, size_t, void*), size_t dim, void* c
     rng = NULL;
 }
 
-void vegas_eprint_callback(double* p_result, double* p_abserr, gsl_monte_vegas_state* s) {
-    cerr << "VEGAS output: " << *p_result << " err: " << *p_abserr << " chisq:" << gsl_monte_vegas_chisq(s) << endl;
-}
-void miser_eprint_callback(double* p_result, double* p_abserr, gsl_monte_miser_state* s) {
-    cerr << "MISER output: " << *p_result << " err: " << *p_abserr << endl;
-}
-
 void Integrator::integrate_impl(size_t core_dimensions, double* result, double* error) {
     // it should already have been checked that there is at least one term of the appropriate type
     // and the type should be set appropriately
@@ -211,10 +206,10 @@ void Integrator::integrate_impl(size_t core_dimensions, double* result, double* 
     current_type->fill_max(ictx, core_dimensions, max);
     
     if (strategy == MC_VEGAS) {
-        vegas_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->vegas_initial_iterations, ictx.ctx->vegas_incremental_iterations, vegas_eprint_callback);
+        vegas_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->vegas_initial_iterations, ictx.ctx->vegas_incremental_iterations, vegas_callback);
     }
     else if (strategy == MC_MISER) {
-        miser_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->miser_iterations, miser_eprint_callback);
+        miser_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->miser_iterations, miser_callback);
     }
     if (callback) {
         callback(NULL, 0, 0);

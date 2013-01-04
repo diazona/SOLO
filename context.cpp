@@ -1,11 +1,15 @@
 #include <cassert>
 #include <cstdlib>
 #include <algorithm>
+#include <exception>
 #include <fstream>
 #include <iostream>
 #include <gsl/gsl_math.h>
 #include "context.h"
+#include "log.h"
 #include "utils.h"
+
+using namespace std;
 
 #define check_property_default(p, typename, parse, default) \
     itit = options.equal_range(canonicalize(#p));\
@@ -20,14 +24,11 @@
     itit = options.equal_range(canonicalize(#p));\
     typename p;\
     if (itit.first == itit.second) {\
-        cerr << "No value for " #p << endl;\
-        err = true;\
+        throw MissingPropertyException(#p);\
     }\
     else {\
         p = parse(itit);\
     }
-
-using namespace std;
 
 extern const double inf;
 
@@ -94,7 +95,6 @@ vector<double> parse_vector(pair<multimap<string, string>::iterator, multimap<st
 
 void ContextCollection::create_contexts() {
     pair<multimap<string, string>::iterator, multimap<string, string>::iterator> itit;
-    bool err = false;
 
     check_property(x0,           double, parse_double)
     check_property(A,            double, parse_double)
@@ -114,16 +114,10 @@ void ContextCollection::create_contexts() {
     check_property(miser_iterations, size_t, parse_size)
     check_property(vegas_initial_iterations, size_t, parse_size)
     check_property(vegas_incremental_iterations, size_t, parse_size)
-    if (err) {
-        exit(1);
-    }
     
     // create gluon distribution
     if (gdist == NULL) {
         check_property(gdist_type, string, parse_string)
-        if (err) {
-            exit(1);
-        }
         if (gdist_type == "GBW") {
             gdist = new GBWGluonDistribution();
         }
@@ -141,26 +135,19 @@ void ContextCollection::create_contexts() {
             check_property_default(Qs2min, double, parse_double, Q02x0lambda * exp(2 * lambda * Ymin))
             // Qs2max = c A^1/3 Q02 x0^λ / (pT / sqs * exp(-Ymin))^λ
             check_property_default(Qs2max, double, parse_double, Q02x0lambda * pow(pTmin / sqs * exp(-Ymax), -lambda))
-            cerr << "Creating MV gluon distribution with " << q2min << " < k2 < " << q2max << ", " << Qs2min << " < Qs2 < " << Qs2max << endl;
+            logger << "Creating MV gluon distribution with " << q2min << " < k2 < " << q2max << ", " << Qs2min << " < Qs2 < " << Qs2max << endl;
             assert(q2min < q2max);
             assert(Qs2min < Qs2max);
             gdist = new MVGluonDistribution(lambdaMV, q2min, q2max, Qs2min, Qs2max);
         }
         else {
-            cerr << "Invalid value '" << gdist_type << "' for gdist_type!" << endl;
-            err = true;
-        }
-        if (err) {
-            exit(1);
+            throw InvalidPropertyValueException<string>("gdist_type", gdist_type);
         }
     }
 
     // create coupling
     if (cpl == NULL) {
         check_property(coupling_type, string, parse_string)
-        if (err) {
-            exit(1);
-        }
         if (coupling_type == "fixed") {
             check_property(alphasbar, double, parse_double)
             cpl = new FixedCoupling(alphasbar);
@@ -172,11 +159,7 @@ void ContextCollection::create_contexts() {
             cpl = new LORunningCoupling(lambdaQCD, beta, regulator);
         }
         else {
-            cerr << "Invalid value '" << coupling_type << "' for coupling_type!" << endl;
-            err = true;
-        }
-        if (err) {
-            exit(1);
+            throw InvalidPropertyValueException<string>("coupling_type", coupling_type);
         }
     }
     
@@ -348,6 +331,7 @@ ContextCollection::iterator ContextCollection::end() {
 
 #ifdef CONTEXT_TEST
 const double inf = 10;
+ostream& logger = cerr;
 
 int main(int argc, char** argv) {
     if (argc < 2) {

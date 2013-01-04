@@ -3,6 +3,7 @@
 
 #include <iterator>
 #include <map>
+#include <sstream>
 #include <string>
 #include <vector>
 #include "mstwpdf.h"
@@ -179,6 +180,51 @@ public:
     ~ThreadLocalContext() {
         delete pdf_object;
         delete ff_object;
+    }
+};
+
+class MissingPropertyException : public exception {
+private:
+    string _property;
+    string _message;
+public:
+    MissingPropertyException(const char* property) throw() : _property(property) {
+        std::ostringstream s;
+        s << "Not value for " << property << "!" << std::endl;
+        _message = s.str();
+    }
+    MissingPropertyException(const MissingPropertyException& other) throw() : _property(other._property), _message(other._message) {}
+    ~MissingPropertyException() throw() {}
+    void operator=(const MissingPropertyException& other) {
+        _property = other._property;
+        _message = other._message;
+    }
+    const char* what() const throw() {
+        return _message.c_str();
+    }
+};
+
+template<typename T>
+class InvalidPropertyValueException : public exception {
+private:
+    string _property;
+    T _value;
+    string _message;
+public:
+    InvalidPropertyValueException(const char* property, T& value) throw() : _property(property), _value(value) {
+        std::ostringstream s;
+        s << "Invalid value '" << value << "' for " << property << "!" << std::endl;
+        _message = s.str();
+    }
+    InvalidPropertyValueException(const InvalidPropertyValueException& other) throw() : _property(other._property), _value(other._value), _message(other._message) {}
+    ~InvalidPropertyValueException() throw() {}
+    void operator=(const InvalidPropertyValueException& other) throw() {
+        _property = other._property;
+        _value = other._value;
+        _message = other._message;
+    }
+    const char* what() const throw() {
+        return _message.c_str();
     }
 };
 
