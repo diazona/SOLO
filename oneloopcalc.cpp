@@ -19,6 +19,7 @@
 
 #include <cassert>
 #include <cctype>
+#include <csignal>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -36,12 +37,12 @@
 #include "hardfactors_momentum.h"
 #include "integrator.h"
 #include "utils.h"
+#include "log.h"
 
 using namespace std;
 
 const int SUCCESS = 0;
 
-static bool trace = false;
 static bool minmax = false;
 
 static integration_strategy strategy = MC_VEGAS;
@@ -126,11 +127,17 @@ private:
     ContextCollection& cc;
     ThreadLocalContext& tlctx;
     vector<HardFactorList*> hfgroups;
+    vector<string> hfgnames;
+    size_t _valid;
     double* real;
     double* imag;
     double* error;
+    friend ostream& operator<<(ostream&, ResultsCalculator&);
 public:
-    ResultsCalculator(ContextCollection& cc, ThreadLocalContext& tlctx, vector<HardFactorList*> hfgroups) : cc(cc), tlctx(tlctx), hfgroups(hfgroups) {
+    const bool trace;
+    const bool minmax;
+    ResultsCalculator(ContextCollection& cc, ThreadLocalContext& tlctx, vector<HardFactorList*>& hfgroups, vector<string>& hfgnames, bool trace = false, bool minmax = false) :
+      cc(cc), tlctx(tlctx), hfgroups(hfgroups), hfgnames(hfgnames), _valid(0), trace(trace), minmax(minmax) {
         size_t hflen = hfgroups.size();
         size_t cclen = cc.size();
         real = new double[hflen * cclen];
@@ -145,15 +152,25 @@ public:
     size_t index_from(size_t ccindex, size_t hfindex) {
         return ccindex * hfgroups.size() + hfindex;
     };
+    bool valid(size_t ccindex, size_t hfindex) {
+        return index_from(ccindex, hfindex) < _valid;
+    }
     void result(size_t ccindex, size_t hfindex, double* real, double* imag, double* error);
     void calculate();
 };
 
 void ResultsCalculator::result(size_t ccindex, size_t hfindex, double* real, double* imag, double* error) {
     size_t index = index_from(ccindex, hfindex);
-    (*real) = this->real[index];
-    (*imag) = this->imag[index];
-    (*error) = this->error[index];
+    if (valid(ccindex, hfindex)) {
+        *real = this->real[index];
+        *imag = this->imag[index];
+        *error = this->error[index];
+    }
+    else {
+        ostringstream s;
+        s << "Invalid index: " << index << " out of " << _valid << " results computed" << endl;
+        throw s.str().c_str();
+    }
 }
 
 void ResultsCalculator::calculate() {
@@ -175,6 +192,7 @@ void ResultsCalculator::calculate() {
                 integrator->set_miser_callback(miser_eprint_callback);
                 integrator->set_vegas_callback(vegas_eprint_callback);
                 integrator->integrate(l_real++, l_imag++, l_error++);
+                _valid++;
                 delete integrator;
             }
             cerr << "...done" << endl;
@@ -185,9 +203,178 @@ void ResultsCalculator::calculate() {
     }
 }
 
-HardFactorList* parse_hf_spec(const string& spec) {
-    vector<string> hfnames = split(spec, ", ");
+ostream& operator<<(ostream& out, ResultsCalculator& rc) {
+    bool all_valid = true;
+    out << "pT\tY\t";
+    for (vector<string>::iterator it = rc.hfgnames.begin(); it != rc.hfgnames.end(); it++) {
+        out << *it << "\t";
+    }
+    out << "total" << endl;
+    double l_real, l_imag, l_error;
+    for (size_t ccindex = 0; ccindex < rc.cc.size(); ccindex++) {
+        out << sqrt(rc.cc[ccindex].pT2) << "\t";
+        out << rc.cc[ccindex].Y << "\t";
+
+        double total = 0;
+        for (size_t hfgindex = 0; hfgindex < rc.hfgroups.size(); hfgindex++) {
+            if (rc.valid(ccindex, hfgindex)) {
+                rc.result(ccindex, hfgindex, &l_real, &l_imag, &l_error);
+                out << l_real << "±" << l_error << "\t";
+                total += l_real;
+            }
+            else {
+                out << "---\t";
+                all_valid = false;
+            }
+        }
+        if (!all_valid) {
+            out << "---" << endl;
+        }
+        else {
+            out << total << endl;
+        }
+    }
+    if (!all_valid) {
+        out << "WARNING: some results were not computed" << endl;
+    }
+
+    if (rc.minmax) {
+        out << "xx\t" << min_ictx.xx << "\t" << max_ictx.xx << "\t" << endl;
+        out << "xy\t" << min_ictx.xy << "\t" << max_ictx.xy << "\t" << endl;
+        out << "yx\t" << min_ictx.yx << "\t" << max_ictx.yx << "\t" << endl;
+        out << "yy\t" << min_ictx.yy << "\t" << max_ictx.yy << "\t" << endl;
+        out << "bx\t" << min_ictx.bx << "\t" << max_ictx.bx << "\t" << endl;
+        out << "by\t" << min_ictx.by << "\t" << max_ictx.by << "\t" << endl;
+        out << "q1x\t" << min_ictx.q1x << "\t" << max_ictx.q1x << "\t" << endl;
+        out << "q1y\t" << min_ictx.q1y << "\t" << max_ictx.q1y << "\t" << endl;
+        out << "q2x\t" << min_ictx.q2x << "\t" << max_ictx.q2x << "\t" << endl;
+        out << "q2y\t" << min_ictx.q2y << "\t" << max_ictx.q2y << "\t" << endl;
+        out << "q3x\t" << min_ictx.q3x << "\t" << max_ictx.q3x << "\t" << endl;
+        out << "q3y\t" << min_ictx.q3y << "\t" << max_ictx.q3y << "\t" << endl;
+        out << "z\t" << min_ictx.z << "\t" << max_ictx.z << "\t" << endl;
+        out << "xi\t" << min_ictx.xi << "\t" << max_ictx.xi << "\t" << endl;
+        out << "xip\t" << min_ictx.xiprime << "\t" << max_ictx.xiprime << "\t" << endl;
+        out << "kT\t" << min_ictx.kT << "\t" << max_ictx.kT << "\t" << endl;
+        out << "kT2\t" << min_ictx.kT2 << "\t" << max_ictx.kT2 << "\t" << endl;
+        out << "xp\t" << min_ictx.xp << "\t" << max_ictx.xp << "\t" << endl;
+        out << "xg\t" << min_ictx.xg << "\t" << max_ictx.xg << "\t" << endl;
+        out << "Qs2\t" << min_ictx.Qs2 << "\t" << max_ictx.Qs2 << "\t" << endl;
+        out << "alphasbar\t" << min_ictx.alphasbar << "\t" << max_ictx.alphasbar << "\t" << endl;
+    }
+}
+
+class ProgramConfiguration {
+public:
+    ProgramConfiguration(int argc, char** argv);
+    ~ProgramConfiguration();
+    ContextCollection& context_collection() {
+        return cc;
+    }
+    vector<HardFactorList*>& hard_factor_groups() {
+        return hfgroups;
+    }
+    vector<string>& hard_factor_names() {
+        return hfgnames;
+    }
+    
+private:
+    integration_strategy strategy;
+    string gdist_type;
+    bool trace;
+    bool minmax;
+    bool separate;
+    ContextCollection cc;
+    vector<string> pT;
+    vector<HardFactorList*> hfgroups;
+    vector<string> hfgnames;
+    
+    void parse_hf_spec(const string& spec);
+};
+
+ProgramConfiguration::ProgramConfiguration(int argc, char** argv) {
+    for (int i = 1; i < argc; i++) {
+        string a = argv[i];
+        if (a == "--miser") {
+            strategy = MC_MISER;
+        }
+        else if (a == "--vegas") {
+            strategy = MC_VEGAS;
+        }
+        else if (a == "--trace") {
+            trace = true;
+        }
+        else if (a == "--minmax") {
+            minmax = true;
+        }
+        else if (a == "--separate") {
+            separate = true;
+        }
+        else if (a == "MV" || a == "GBW") {
+            gdist_type = a;
+        }
+        else if (a[0] == 'h' || a[1] == ':' || a == "lo" || a == "nlo") {
+            parse_hf_spec(a);
+        }
+        else if (::isdigit(a[0])) {
+            vector<string> pTnums = split(a, ",");
+            for (vector<string>::iterator it = pTnums.begin(); it != pTnums.end(); it++) {
+                pT.push_back(trim(*it, " \t"));
+            }
+        }
+        else {
+            // try opening as a file
+            ifstream config;
+            config.open(a.c_str());
+            if (config.good()) {
+                logger << "Reading config file " << a << endl;
+                config >> cc;
+                config.close();
+            }
+            else {
+                logger << "Unrecognized argument " << a << endl;
+            }
+        }
+    }
+
+    if (!pT.empty()) {
+        cc.erase("pT");
+        for (vector<string>::iterator it = pT.begin(); it != pT.end(); it++) {
+            cc.add("pT", *it);
+        }
+    }
+    if (!gdist_type.empty()) {
+        cc.set("gdist", gdist_type);
+    }
+    if (hfgroups.empty()) {
+        parse_hf_spec("lo");
+        parse_hf_spec("nlo");
+    }
+    assert(!hfgroups.empty());
+    assert(hfgroups.size() == hfgnames.size());
+}
+
+ProgramConfiguration::~ProgramConfiguration() {
+    for (vector<HardFactorList*>::iterator it = hfgroups.begin(); it != hfgroups.end(); it++) {
+        delete *it;
+    }
+}
+
+static const char* default_lo_spec = "p:h02qq,p:h02gg";
+static const char* default_nlo_spec = "p:h12qq,p:h14qq,p:h12gg,m:h12qqbar,m:h16gg,p:h112gq,p:h122gq,m:h14gq,p:h112qg,p:h122qg,m:h14qg";
+
+void ProgramConfiguration::parse_hf_spec(const string& spec) {
+    vector<string> hfnames;
+    if (spec == "lo") {
+        hfnames = split(default_lo_spec, ", ");
+    }
+    else if (spec == "nlo") {
+        hfnames = split(default_nlo_spec, ", ");
+    }
+    else {
+        hfnames = split(spec, ", ");
+    }
     HardFactorList* hfobjs = new HardFactorList();
+    assert(hfobjs != NULL);
     for (vector<string>::iterator it = hfnames.begin(); it != hfnames.end(); it++) {
         string s = *it;
         const HardFactorRegistry* registry = position::registry::get_instance(); // default
@@ -204,18 +391,16 @@ HardFactorList* parse_hf_spec(const string& spec) {
         }
         const HardFactor* hf = registry->get_hard_factor(s);
         if (hf == NULL) {
-            cerr << "No such hard factor " << *it << endl;
-            exit(1);
+            logger << "No such hard factor " << s << endl;
         }
-        hfobjs->push_back(hf);
+        else {
+            hfobjs->push_back(hf);
+        }
     }
-    assert(hfobjs != NULL);
     assert(hfobjs->size() > 0);
-    return hfobjs;
+    hfgroups.push_back(hfobjs);
+    hfgnames.push_back(spec);
 }
-
-static const char* default_lo_spec = "p:h02qq,p:h02gg";
-static const char* default_nlo_spec = "p:h12qq,p:h14qq,p:h12gg,m:h12qqbar,m:h16gg,p:h112gq,p:h122gq,m:h14gq,p:h112qg,p:h122qg,m:h14qg";
 
 class GSLException : public exception {
 private:
@@ -266,152 +451,43 @@ void gsl_error_throw(const char* reason, const char* file, int line, int gsl_err
 
 ostream& logger = cerr;
 
+static ResultsCalculator* p_rc = NULL;
+
+void termination_handler(int signal) {
+    static bool terminated = false;
+    if (!terminated) {
+        terminated = true;
+        cout << *p_rc;
+    }
+    _exit(2);
+}
+
 int run(int argc, char** argv) {
-    bool separate = false;
-    string gdist_type;
-    vector<string> pT;
-    vector<HardFactorList*> hfgroups;
-    vector<string> hfgnames;
-    ContextCollection cc;
-    ifstream config;
-    bool config_is_read = false;
-
-    // process options
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--miser")==0) {
-            strategy = MC_MISER;
-        }
-        else if (strcmp(argv[i], "--vegas")==0) {
-            strategy = MC_VEGAS;
-        }
-        else if (strcmp(argv[i], "--trace")==0) {
-            trace = true;
-        }
-        else if (strcmp(argv[i], "--minmax")==0) {
-            minmax = true;
-        }
-        else if (strcmp(argv[i], "--separate")==0) {
-            separate = true;
-        }
-        else if (strcmp(argv[i], "MV") == 0) {
-            gdist_type = argv[i];
-        }
-        else if (strcmp(argv[i], "GBW") == 0) {
-            gdist_type = argv[i];
-        }
-        else if (argv[i][0] == 'h' || argv[i][1] == ':') {
-            hfgroups.push_back(parse_hf_spec(argv[i]));
-            hfgnames.push_back(argv[i]);
-        }
-        else if (strcmp(argv[i], "lo") == 0) {
-            hfgroups.push_back(parse_hf_spec(default_lo_spec));
-            hfgnames.push_back(argv[i]);
-        }
-        else if (strcmp(argv[i], "nlo") == 0) {
-            hfgroups.push_back(parse_hf_spec(default_nlo_spec));
-            hfgnames.push_back(argv[i]);
-        }
-        else if (::isdigit(argv[i][0])) {
-            vector<string> pTnums = split(argv[i], ", ");
-            pT.insert(pT.end(), pTnums.begin(), pTnums.end());
-        }
-        else {
-            // try opening as a file
-            config.open(argv[i]);
-            if (config.good()) {
-                if (config_is_read) {
-                    cerr << "Warning: reading extra config file " << argv[i] << endl;
-                }
-                config >> cc;
-                config.close();
-                config_is_read = true;
-            }
-            else {
-                cerr << "Unrecognized argument " << argv[i] << endl;
-                exit(1);
-            }
-        }
-    }
-
-    if (!config_is_read) {
-        cerr << "No config file specified! (one argument must name a config file)" << endl;
-        exit(1);
-    }
-    if (!pT.empty()) {
-        cc.erase("pT");
-        for (vector<string>::iterator it = pT.begin(); it != pT.end(); it++) {
-            cc.add("pT", *it);
-        }
-    }
-    if (cc.empty()) {
-        cerr << "No momenta or no rapidities specified!" << endl;
-        exit(1);
-    }
-    if (hfgroups.empty()) {
-        hfgroups.push_back(parse_hf_spec(default_lo_spec));
-        hfgnames.push_back("lo");
-        hfgroups.push_back(parse_hf_spec(default_nlo_spec));
-        hfgnames.push_back("nlo");
-    }
-    assert(!hfgroups.empty());
-    assert(hfgroups.size() == hfgnames.size());
-    
     gsl_rng_env_setup();
     gsl_set_error_handler(&gsl_error_throw);
-    if (!gdist_type.empty()) {
-        cc.set("gdist", gdist_type);
+
+    ProgramConfiguration pc(argc, argv);
+    ContextCollection cc = pc.context_collection();
+    if (cc.empty()) {
+        logger << "No momenta or no rapidities specified!" << endl;
+        return 1;
     }
+    
     ThreadLocalContext tlctx(cc);
     cout << cc << "------------" << endl;
 
-    ResultsCalculator* rc = new ResultsCalculator(cc, tlctx, hfgroups);
-    rc->calculate();
-    cout << "pT\tY\t";
-    for (vector<string>::iterator it = hfgnames.begin(); it != hfgnames.end(); it++) {
-        cout << *it << "\t";
-    }
-    cout << "total" << endl;
-    double l_real, l_imag, l_error;
-    for (size_t ccindex = 0; ccindex < cc.size(); ccindex++) {
-        cout << sqrt(cc[ccindex].pT2) << "\t";
-        cout << cc[ccindex].Y << "\t";
-
-        double total = 0;
-        for (size_t hfgindex = 0; hfgindex < hfgroups.size(); hfgindex++) {
-            rc->result(ccindex, hfgindex, &l_real, &l_imag, &l_error);
-            cout << l_real << "±" << l_error << "\t";
-            total += l_real;
-        }
-        cout << total << endl;
-    }
+    ResultsCalculator rc(cc, tlctx, pc.hard_factor_groups(), pc.hard_factor_names());
+    p_rc = &rc;
     
-    if (minmax) {
-        cerr << "xx\t" << min_ictx.xx << "\t" << max_ictx.xx << "\t" << endl;
-        cerr << "xy\t" << min_ictx.xy << "\t" << max_ictx.xy << "\t" << endl;
-        cerr << "yx\t" << min_ictx.yx << "\t" << max_ictx.yx << "\t" << endl;
-        cerr << "yy\t" << min_ictx.yy << "\t" << max_ictx.yy << "\t" << endl;
-        cerr << "bx\t" << min_ictx.bx << "\t" << max_ictx.bx << "\t" << endl;
-        cerr << "by\t" << min_ictx.by << "\t" << max_ictx.by << "\t" << endl;
-        cerr << "q1x\t" << min_ictx.q1x << "\t" << max_ictx.q1x << "\t" << endl;
-        cerr << "q1y\t" << min_ictx.q1y << "\t" << max_ictx.q1y << "\t" << endl;
-        cerr << "q2x\t" << min_ictx.q2x << "\t" << max_ictx.q2x << "\t" << endl;
-        cerr << "q2y\t" << min_ictx.q2y << "\t" << max_ictx.q2y << "\t" << endl;
-        cerr << "q3x\t" << min_ictx.q3x << "\t" << max_ictx.q3x << "\t" << endl;
-        cerr << "q3y\t" << min_ictx.q3y << "\t" << max_ictx.q3y << "\t" << endl;
-        cerr << "z\t" << min_ictx.z << "\t" << max_ictx.z << "\t" << endl;
-        cerr << "xi\t" << min_ictx.xi << "\t" << max_ictx.xi << "\t" << endl;
-        cerr << "xip\t" << min_ictx.xiprime << "\t" << max_ictx.xiprime << "\t" << endl;
-        cerr << "kT\t" << min_ictx.kT << "\t" << max_ictx.kT << "\t" << endl;
-        cerr << "kT2\t" << min_ictx.kT2 << "\t" << max_ictx.kT2 << "\t" << endl;
-        cerr << "xp\t" << min_ictx.xp << "\t" << max_ictx.xp << "\t" << endl;
-        cerr << "xg\t" << min_ictx.xg << "\t" << max_ictx.xg << "\t" << endl;
-        cerr << "Qs2\t" << min_ictx.Qs2 << "\t" << max_ictx.Qs2 << "\t" << endl;
-        cerr << "alphasbar\t" << min_ictx.alphasbar << "\t" << max_ictx.alphasbar << "\t" << endl;
-    }
-    
-    for (vector<HardFactorList*>::iterator it = hfgroups.begin(); it != hfgroups.end(); it++) {
-        delete *it;
-    }
+    struct sigaction siga;
+    siga.sa_handler = termination_handler;
+    struct sigaction oldsiga;
+    sigaction(SIGTERM, &siga, &oldsiga);
+    sigaction(SIGINT, &siga, &oldsiga);
+    rc.calculate();
+    sigaction(SIGTERM, &oldsiga, NULL);
+    sigaction(SIGINT, &oldsiga, NULL);
+    cout << rc;
     return 0;
 }
 
