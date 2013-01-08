@@ -139,13 +139,12 @@ double gsl_monte_wrapper_2D(double* coordinates, size_t ncoords, void* closure) 
 }
 
 void miser_integrate(double (*func)(double*, size_t, void*), size_t dim, void* closure, double* min, double* max, double* p_result, double* p_abserr,
-               size_t iterations, void (*callback)(double*, double*, gsl_monte_miser_state*)) {
+               size_t iterations, gsl_rng* rng, void (*callback)(double*, double*, gsl_monte_miser_state*)) {
     gsl_monte_function f;
     f.f = func;
     f.dim = dim;
     f.params = closure;
 
-    gsl_rng* rng = gsl_rng_alloc(gsl_rng_default);
     gsl_monte_miser_state* s = gsl_monte_miser_alloc(dim);
     gsl_monte_miser_integrate(&f, min, max, dim, iterations, rng, s, p_result, p_abserr);
     checkfinite(*p_result);
@@ -155,18 +154,15 @@ void miser_integrate(double (*func)(double*, size_t, void*), size_t dim, void* c
     }
     gsl_monte_miser_free(s);
     s = NULL;
-    gsl_rng_free(rng);
-    rng = NULL;
 }
 
 void vegas_integrate(double (*func)(double*, size_t, void*), size_t dim, void* closure, double* min, double* max, double* p_result, double* p_abserr,
-               size_t initial_iterations, size_t incremental_iterations, void (*callback)(double*, double*, gsl_monte_vegas_state*)) {
+               size_t initial_iterations, size_t incremental_iterations, gsl_rng* rng, void (*callback)(double*, double*, gsl_monte_vegas_state*)) {
     gsl_monte_function f;
     f.f = func;
     f.dim = dim;
     f.params = closure;
 
-    gsl_rng* rng = gsl_rng_alloc(gsl_rng_default);
     gsl_monte_vegas_state* s = gsl_monte_vegas_alloc(dim);
     gsl_monte_vegas_integrate(&f, min, max, dim, initial_iterations, rng, s, p_result, p_abserr);
     checkfinite(*p_result);
@@ -184,8 +180,6 @@ void vegas_integrate(double (*func)(double*, size_t, void*), size_t dim, void* c
     } while (*p_abserr > 0 && fabs(gsl_monte_vegas_chisq(s) - 1.0) > 0.2);
     gsl_monte_vegas_free(s);
     s = NULL;
-    gsl_rng_free(rng);
-    rng = NULL;
 }
 
 void Integrator::integrate_impl(size_t core_dimensions, double* result, double* error) {
@@ -205,12 +199,16 @@ void Integrator::integrate_impl(size_t core_dimensions, double* result, double* 
     current_type->fill_min(ictx, core_dimensions, min);
     current_type->fill_max(ictx, core_dimensions, max);
     
+    gsl_rng* rng = gsl_rng_alloc(ictx.ctx->pseudorandom_generator_type);
+    gsl_rng_set(rng, ictx.ctx->pseudorandom_generator_seed);
     if (strategy == MC_VEGAS) {
-        vegas_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->vegas_initial_iterations, ictx.ctx->vegas_incremental_iterations, vegas_callback);
+        vegas_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->vegas_initial_iterations, ictx.ctx->vegas_incremental_iterations, rng, vegas_callback);
     }
     else if (strategy == MC_MISER) {
-        miser_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->miser_iterations, miser_callback);
+        miser_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->miser_iterations, rng, miser_callback);
     }
+    gsl_rng_free(rng);
+    rng = NULL;
     if (callback) {
         callback(NULL, 0, 0);
     }

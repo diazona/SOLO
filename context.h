@@ -6,6 +6,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <gsl/gsl_rng.h>
 #include "mstwpdf.h"
 #include "dss_pinlo.h"
 #include "coupling.h"
@@ -28,6 +29,9 @@ public:
     double Y;
     std::string pdf_filename;
     std::string ff_filename;
+    
+    const gsl_rng_type* pseudorandom_generator_type;
+    unsigned long int pseudorandom_generator_seed;
 
     GluonDistribution* gdist;
     Coupling* cpl;
@@ -58,6 +62,8 @@ public:
         size_t miser_iterations,
         size_t vegas_initial_iterations,
         size_t vegas_incremental_iterations,
+        const gsl_rng_type* pseudorandom_generator_type,
+        unsigned long int pseudorandom_generator_seed,
         GluonDistribution* gdist,
         Coupling* cpl) :
      x0(x0),
@@ -78,6 +84,8 @@ public:
      miser_iterations(miser_iterations),
      vegas_initial_iterations(vegas_initial_iterations),
      vegas_incremental_iterations(vegas_incremental_iterations),
+     pseudorandom_generator_type(pseudorandom_generator_type),
+     pseudorandom_generator_seed(pseudorandom_generator_seed),
      gdist(gdist),
      cpl(cpl),
      Q02x0lambda(c * pow(A, 1.0d/3.0d) * pow(x0, lambda)),
@@ -101,6 +109,8 @@ public:
      miser_iterations(other.miser_iterations),
      vegas_initial_iterations(other.vegas_initial_iterations),
      vegas_incremental_iterations(other.vegas_incremental_iterations),
+     pseudorandom_generator_type(other.pseudorandom_generator_type),
+     pseudorandom_generator_seed(other.pseudorandom_generator_seed),
      gdist(other.gdist),
      cpl(other.cpl),
      Q02x0lambda(other.Q02x0lambda),

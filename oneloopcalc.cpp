@@ -463,7 +463,6 @@ void termination_handler(int signal) {
 }
 
 int run(int argc, char** argv) {
-    gsl_rng_env_setup();
     gsl_set_error_handler(&gsl_error_throw);
 
     ProgramConfiguration pc(argc, argv);
@@ -474,6 +473,7 @@ int run(int argc, char** argv) {
     }
     
     ThreadLocalContext tlctx(cc);
+
     cout << cc << "------------" << endl;
 
     ResultsCalculator rc(cc, tlctx, pc.hard_factor_groups(), pc.hard_factor_names());

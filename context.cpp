@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <gsl/gsl_math.h>
+#include <gsl/gsl_rng.h>
 #include "context.h"
 #include "log.h"
 #include "utils.h"
@@ -62,6 +63,12 @@ const string canonicalize(const string& i_key) {
     else if (key == "gdist" || key == "gluon_distribution" || key == "gluon distribution" || key == "gluon dist") {
         return "gdist_type";
     }
+    else if (key == "pseudorandom generator type" || key == "rng type") {
+        return "pseudorandom_generator_type";
+    }
+    else if (key == "pseudorandom generator seed" || key == "rng seed" || key == "seed") {
+        return "pseudorandom_generator_seed";
+    }
     else {
         return key;
     }
@@ -71,6 +78,12 @@ size_t parse_size(pair<multimap<string, string>::iterator, multimap<string, stri
     multimap<string, string>::iterator el = range.first;
     assert(++el == range.second);
     return (size_t)strtoul(range.first->second.c_str(), NULL, 0);
+}
+
+unsigned long int parse_ulong(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
+    multimap<string, string>::iterator el = range.first;
+    assert(++el == range.second);
+    return strtoul(range.first->second.c_str(), NULL, 0);
 }
 
 double parse_double(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
@@ -83,6 +96,19 @@ string& parse_string(pair<multimap<string, string>::iterator, multimap<string, s
     multimap<string, string>::iterator el = range.first;
     assert(++el == range.second);
     return range.first->second;
+}
+
+const gsl_rng_type* parse_rng_type(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
+    multimap<string, string>::iterator el = range.first;
+    assert(++el == range.second);
+    static const gsl_rng_type** types = gsl_rng_types_setup();
+    for (const gsl_rng_type** t = types; *t != NULL; t++) {
+        string name((*t)->name);
+        if (name == range.first->second) {
+            return *t;
+        }
+    }
+    GSL_ERROR_VAL("unknown generator", GSL_EINVAL, NULL);
 }
 
 vector<double> parse_vector(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
@@ -114,6 +140,8 @@ void ContextCollection::create_contexts() {
     check_property(miser_iterations, size_t, parse_size)
     check_property(vegas_initial_iterations, size_t, parse_size)
     check_property(vegas_incremental_iterations, size_t, parse_size)
+    check_property(pseudorandom_generator_type, const gsl_rng_type*, parse_rng_type)
+    check_property(pseudorandom_generator_seed, unsigned long int, parse_ulong)
     
     // create gluon distribution
     if (gdist == NULL) {
@@ -166,7 +194,30 @@ void ContextCollection::create_contexts() {
     // create contexts
     for (vector<double>::iterator pTit = pT.begin(); pTit != pT.end(); pTit++) {
         for (vector<double>::iterator Yit = Y.begin(); Yit != Y.end(); Yit++) {
-            contexts.push_back(Context(x0, A, c, lambda, mu2, Nc, Nf, CF, TR, Sperp, gsl_pow_2(*pTit), sqs, *Yit, pdf_filename, ff_filename, miser_iterations, vegas_initial_iterations, vegas_incremental_iterations, gdist, cpl));
+            contexts.push_back(
+                Context(
+                    x0,
+                    A,
+                    c,
+                    lambda,
+                    mu2,
+                    Nc,
+                    Nf,
+                    CF,
+                    TR,
+                    Sperp,
+                    gsl_pow_2(*pTit),
+                    sqs,
+                    *Yit,
+                    pdf_filename,
+                    ff_filename,
+                    miser_iterations,
+                    vegas_initial_iterations,
+                    vegas_incremental_iterations,
+                    pseudorandom_generator_type,
+                    pseudorandom_generator_seed,
+                    gdist,
+                    cpl));
         }
     }
 }
@@ -236,6 +287,11 @@ void ContextCollection::setup_defaults() {
     options.insert(pair<string, string>("miser_iterations", "10000000"));
     options.insert(pair<string, string>("vegas_initial_iterations", "100000"));
     options.insert(pair<string, string>("vegas_incremental_iterations", "1000000"));
+    // Adapted from the GSL source code - basically this reimplements gsl_rng_env_setup
+    const char* type = getenv("GSL_RNG_TYPE");
+    options.insert(pair<string, string>("pseudorandom_generator_type", type == NULL ? "mt19937" : type));
+    const char* seed = getenv("GSL_RNG_SEED");
+    options.insert(pair<string, string>("pseudorandom_generator_seed", seed == NULL ? "0" : seed));
 }
 
 void ContextCollection::read_config(istream& in) {
@@ -278,6 +334,8 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "vegas_incremental_iterations\t= " << ctx.vegas_incremental_iterations << endl;
     out << "gluon distribution\t = " << ctx.gdist << endl;
     out << "coupling\t = " << ctx.cpl << endl;
+    out << "pseudorandom generator type: " <<  ctx.pseudorandom_generator_type->name << endl;
+    out << "pseudorandom generator seed: " << ctx.pseudorandom_generator_seed << endl;
     return out;
 }
 
