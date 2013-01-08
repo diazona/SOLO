@@ -166,7 +166,8 @@ void ContextCollection::create_contexts() {
             logger << "Creating MV gluon distribution with " << q2min << " < k2 < " << q2max << ", " << Qs2min << " < Qs2 < " << Qs2max << endl;
             assert(q2min < q2max);
             assert(Qs2min < Qs2max);
-            gdist = new MVGluonDistribution(lambdaMV, q2min, q2max, Qs2min, Qs2max);
+            check_property_default(mv_subinterval_limit, size_t, parse_size, 10000)
+            gdist = new MVGluonDistribution(lambdaMV, q2min, q2max, Qs2min, Qs2max, mv_subinterval_limit);
         }
         else {
             throw InvalidPropertyValueException<string>("gdist_type", gdist_type);

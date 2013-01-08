@@ -47,12 +47,11 @@ static double mv_gdist_series_term_integrand(double r, void* closure) {
     }
 }
 
-MVGluonDistribution::MVGluonDistribution(double LambdaMV, double q2min, double q2max, double Qs2min, double Qs2max) :
+MVGluonDistribution::MVGluonDistribution(double LambdaMV, double q2min, double q2max, double Qs2min, double Qs2max, size_t subinterval_limit) :
  LambdaMV(LambdaMV), q2min(q2min), q2max(q2max), Qs2min(Qs2min), Qs2max(Qs2max),
  F_dist_leading_q2(NULL), F_dist_subleading_q2(NULL), F_dist(NULL),
  interp_dist_leading_q2(NULL), interp_dist_subleading_q2(NULL), interp_dist(NULL),
  q2_accel(NULL), Qs2_accel(NULL) {
-    static const size_t subinterval_limit = 1000;
     double step = 1.2;
     MVIntegrationParameters params(this);
     gsl_function func;

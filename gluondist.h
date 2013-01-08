@@ -22,7 +22,7 @@ public:
 
 class MVGluonDistribution: public GluonDistribution {
 public:
-    MVGluonDistribution(double LambdaMV, double q2min, double q2max, double Qs2min, double Qs2max);
+    MVGluonDistribution(double LambdaMV, double q2min, double q2max, double Qs2min, double Qs2max, size_t subinterval_limit = 10000);
     ~MVGluonDistribution();
     double S2(double r2, double Qs2);
     double S4(double r2, double s2, double t2, double Qs2);
