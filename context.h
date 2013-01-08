@@ -200,7 +200,7 @@ private:
 public:
     MissingPropertyException(const char* property) throw() : _property(property) {
         std::ostringstream s;
-        s << "Not value for " << property << "!" << std::endl;
+        s << "No value for " << property << "!" << std::endl;
         _message = s.str();
     }
     MissingPropertyException(const MissingPropertyException& other) throw() : _property(other._property), _message(other._message) {}
