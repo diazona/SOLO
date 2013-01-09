@@ -1,6 +1,8 @@
 /*
  * A calculation of the NLO cross section of pA->pion collisions
  * 
+ * This file contains the driver code, including main() and some other stuff
+ * 
  * Copyright 2012 David Zaslavsky
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -40,8 +42,14 @@
 
 using namespace std;
 
+/* The following functions are callback functions to be used with
+ * Integrator.set_callback(). These would be invoked every time
+ * the Monte Carlo routine evaluates the function.
+ */
 
-// callbacks
+/**
+ * A callback function that prints out a bunch of kinematic variables.
+ */
 void write_data_point(const IntegrationContext* ictx, const double real, const double imag) {
     if (ictx) {
 //         if ((++count) % 500 == 0) {
@@ -69,13 +77,23 @@ void write_data_point(const IntegrationContext* ictx, const double real, const d
     }
 }
 
+/** An IntegrationContext to store the minimum values of variables */
 static IntegrationContext min_ictx(NULL, NULL);
+/** An IntegrationContext to store the maximum values of variables */
 static IntegrationContext max_ictx(NULL, NULL);
 
+/** Stores a property into min_ictx and/or max_ictx if it is a min or max, respectively */
 #define store(property) \
   min_ictx.property = min_ictx.property == 0 ? ictx->property : min(min_ictx.property, ictx->property); \
   max_ictx.property = max_ictx.property == 0 ? ictx->property : max(max_ictx.property, ictx->property);
 
+/**
+ * A callback function that iterates through various variables and
+ * stores each into min_ictx if it is the lowest such value seen,
+ * or into max_ictx if it is the highest such value seen. This is
+ * used with the --minmax command-line option that allows printing
+ * out the range each variable takes on during the integration.
+ */
 void store_minmax(const IntegrationContext* ictx, const double real, const double imag) {
     if (ictx == NULL) {
         return;
@@ -103,33 +121,73 @@ void store_minmax(const IntegrationContext* ictx, const double real, const doubl
     store(alphasbar);
 }
 
+/**
+ * A callback function that writes out the result of the integration
+ * if either the real or imaginary part is nonzero.
+ */
 void write_nonzero(const IntegrationContext* ictx, const double real, const double imag) {
     if (real != 0 || imag != 0) {
         cerr << real << "\t" << imag << endl;
     }
 }
 
+/* The following functions are callback functions to be used with
+ * Integrator.set_miser_callback() or Integrator.set_vegas_callback().
+ * These would be invoked when the Monte Carlo routine returns a
+ * final value, not every time it evaluates the function.
+ */
+
+/**
+ * A callback for VEGAS integration that prints out the result of the
+ * integration with its error bound and chi-squared value.
+ */
 void vegas_eprint_callback(double* p_result, double* p_abserr, gsl_monte_vegas_state* s) {
     cerr << "VEGAS output: " << *p_result << " err: " << *p_abserr << " chisq:" << gsl_monte_vegas_chisq(s) << endl;
 }
+/**
+ * A callback for MISER integration that prints out the result of the
+ * integration with its error bound.
+ */
 void miser_eprint_callback(double* p_result, double* p_abserr, gsl_monte_miser_state* s) {
     cerr << "MISER output: " << *p_result << " err: " << *p_abserr << endl;
 }
 
+/**
+ * Stores the results of the integration and contains methods to run the calculation.
+ */
 class ResultsCalculator {
 private:
+    /** Collection of the contexts to be used for the calculation */
     ContextCollection& cc;
+    /** The thread-local context to be used for the calculation */
     ThreadLocalContext& tlctx;
+    /** The integration strategy to be used (e.g. MISER or VEGAS) */
     integration_strategy strategy;
+    /**
+     * The list of groups of hard factors
+     */
     vector<HardFactorList*> hfgroups;
+    /**
+     * The list of names of the hard factor groups. Each name goes with the
+     * hard factor group at the corresponding index in hfgroups.
+     */
     vector<string> hfgnames;
+    /**
+     * The number of results that have been computed so far
+     */
     size_t _valid;
+    /** Array to hold the real parts of the results */
     double* real;
+    /** Array to hold the imaginary parts of the results */
     double* imag;
+    /** Array to hold the error bounds of the results */
     double* error;
+    
     friend ostream& operator<<(ostream&, ResultsCalculator&);
 public:
+    /** Whether to trace execution */
     const bool trace;
+    /** Whether to store minimum and maximum values */
     const bool minmax;
     
     ResultsCalculator(ContextCollection& cc, ThreadLocalContext& tlctx, integration_strategy strategy, vector<HardFactorList*>& hfgroups, vector<string>& hfgnames, bool trace = false, bool minmax = false) :
@@ -145,13 +203,30 @@ public:
         delete[] imag;
         delete[] error;
     };
+    /**
+     * Turns a context index and a hard factor group index into an index into a
+     * 1D row-major array
+     */
     size_t index_from(size_t ccindex, size_t hfindex) {
         return ccindex * hfgroups.size() + hfindex;
     };
+    /**
+     * Return whether the given combination of context index and hard factor
+     * group index is valid - that is, whether a result has been computed
+     * for that combination
+     */
     bool valid(size_t ccindex, size_t hfindex) {
         return index_from(ccindex, hfindex) < _valid;
     }
+    /**
+     * Places the result at the given context index and hard factor group
+     * index into the variables real, imag, and error. This should only
+     * be called after calculate().
+     */
     void result(size_t ccindex, size_t hfindex, double* real, double* imag, double* error);
+    /**
+     * Runs the calculation.
+     */
     void calculate();
 };
 
@@ -199,6 +274,9 @@ void ResultsCalculator::calculate() {
     }
 }
 
+/**
+ * Write the list of results in a ResultsCalculator to the given output stream.
+ */
 ostream& operator<<(ostream& out, ResultsCalculator& rc) {
     bool all_valid = true;
     out << "pT\tY\t";
@@ -259,33 +337,72 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
     }
 }
 
+/**
+ * Stores high-level program configuration variables, e.g. information
+ * about which command line options were passed.
+ */
 class ProgramConfiguration {
 public:
     ProgramConfiguration(int argc, char** argv);
     ~ProgramConfiguration();
+    /**
+     * Return a ContextCollection constructed using the information in
+     * the ProgramConfiguration.
+     */
     ContextCollection& context_collection() {
         return cc;
     }
+    /** Return the integration strategy to be used */
     integration_strategy strategy() { // TODO: maybe this should go in the Context
         return _strategy;
     }
+    /**
+     * Return the list of hard factor groups specified in the command-line
+     * arguments
+     */
     vector<HardFactorList*>& hard_factor_groups() {
         return hfgroups;
     }
+    /**
+     * Return the list of names of the hard factor groups that were specified
+     * in the command-line arguments
+     */
     vector<string>& hard_factor_names() {
         return hfgnames;
     }
     
 private:
+    /** The integration strategy */
     integration_strategy _strategy;
+    /** Indicates whether the --trace option was specified */
     bool trace;
+    /** Indicates whether the --minmax option was specified */
     bool minmax;
+    /** Indicates whether the --separate option was specified */
     bool separate;
+    /**
+     * The collection of contexts to be used in the calculation. Information
+     * collected from the command line options and read from configuration files
+     * specified on the command line will be stored in this.
+     */
     ContextCollection cc;
+    /**
+     * The list of transverse momenta given on the command line, if any
+     */
     vector<string> pT;
+    /**
+     * The list of hard factor groups given on the command line
+     */
     vector<HardFactorList*> hfgroups;
+    /**
+     * The list of names of hard factor groups given on the command line
+     */
     vector<string> hfgnames;
     
+    /**
+     * Parse a string specification of a hard factor group and add the
+     * resulting hard factors and names to the lists
+     */
     void parse_hf_spec(const string& spec);
 };
 
@@ -358,11 +475,20 @@ ProgramConfiguration::~ProgramConfiguration() {
     }
 }
 
+/**
+ * This defines the hard factor group that is used when "lo" is given
+ * on the command line
+ */
 static const char* default_lo_spec = "p:h02qq,p:h02gg";
+/**
+ * This defines the hard factor group that is used when "nlo" is given
+ * on the command line
+ */
 static const char* default_nlo_spec = "p:h12qq,p:h14qq,p:h12gg,m:h12qqbar,m:h16gg,p:h112gq,p:h122gq,m:h14gq,p:h112qg,p:h122qg,m:h14qg";
 
 void ProgramConfiguration::parse_hf_spec(const string& spec) {
     vector<string> hfnames;
+    // Split the specification string on commas to get individual hard factor names
     if (spec == "lo") {
         hfnames = split(default_lo_spec, ", ");
     }
@@ -374,20 +500,29 @@ void ProgramConfiguration::parse_hf_spec(const string& spec) {
     }
     HardFactorList* hfobjs = new HardFactorList();
     assert(hfobjs != NULL);
+    // Iterate over the individual hard factor names
     for (vector<string>::iterator it = hfnames.begin(); it != hfnames.end(); it++) {
         string s = *it;
-        const HardFactorRegistry* registry = position::registry::get_instance(); // default
+        // The default is to create a position-space hard factor
+        const HardFactorRegistry* registry = position::registry::get_instance();
         if (s[1] == ':') {
             switch (s[0]) {
                 case 'm':
+                    // If the hard factor name starts with "m:", create
+                    // a momentum-space hard factor
                     registry = momentum::registry::get_instance();
                     break;
                 case 'p':
+                    // If the hard factor name starts with "p:", explicitly create
+                    // a position-space hard factor
                     registry = position::registry::get_instance();
                     break;
             }
+            // chop off "m:" or "p:"
             s = s.substr(2);
         }
+        // Pass the remaining name (e.g. "h02qq") to the hard factor registry
+        // to get the actual hard factor object
         const HardFactor* hf = registry->get_hard_factor(s);
         if (hf == NULL) {
             logger << "No such hard factor " << s << endl;
@@ -397,10 +532,15 @@ void ProgramConfiguration::parse_hf_spec(const string& spec) {
         }
     }
     assert(hfobjs->size() > 0);
+    // This constitutes one group. Add it to the list and add the
+    // specification to the list of names.
     hfgroups.push_back(hfobjs);
     hfgnames.push_back(spec);
 }
 
+/**
+ * An exception to be thrown when there is an error in the GSL code.
+ */
 class GSLException : public exception {
 private:
     string _reason;
@@ -444,14 +584,26 @@ public:
     }
 };
 
+/**
+ * GSL error handler function that throws a GSLException.
+ */
 void gsl_error_throw(const char* reason, const char* file, int line, int gsl_errno) {
     throw GSLException(reason, file, line, gsl_errno);
 }
 
+/* The output stream to write logging messages to. Declared in log.h. */
 ostream& logger = cerr;
 
+/** The one instance of ResultsCalculator used for the program */
 static ResultsCalculator* p_rc = NULL;
 
+/**
+ * Takes care of finishing the program if it gets interrupted by a signal.
+ * 
+ * This happens when a PBS job is cut off before it finishes, for example. This
+ * function will write out all results computed so far by writing the
+ * ResultsCalculator object to standard output, and then exit the program.
+ */
 void termination_handler(int signal) {
     static bool terminated = false;
     if (!terminated) {
@@ -461,6 +613,12 @@ void termination_handler(int signal) {
     _exit(2);
 }
 
+/**
+ * Runs the program.
+ * 
+ * This is like main() except that it can throw exceptions, which will
+ * be caught in the real main().
+ */
 int run(int argc, char** argv) {
     gsl_set_error_handler(&gsl_error_throw);
 
@@ -473,23 +631,37 @@ int run(int argc, char** argv) {
     
     ThreadLocalContext tlctx(cc);
 
+    /* First write out all the configuration variables. Having the configuration written
+     * out as part of the output file makes it easy to tell what parameters were used in
+     * and given run, and is also useful in case we want to reproduce a run.
+     */
     cout << cc << "------------" << endl;
 
     ResultsCalculator rc(cc, tlctx, pc.strategy(), pc.hard_factor_groups(), pc.hard_factor_names());
     p_rc = &rc;
-    
+
+    /* Set up a signal handler so that if the program receives a SIGINT (Ctrl+C)
+     * or SIGTERM (e.g. runs out of time in PBS), it will invoke termination_handler()
+     * to print what results it has so far
+     */
     struct sigaction siga;
     siga.sa_handler = termination_handler;
     struct sigaction oldsiga;
     sigaction(SIGTERM, &siga, &oldsiga);
     sigaction(SIGINT, &siga, &oldsiga);
+    // Run the actual calculation
     rc.calculate();
+    // Reset the signal handler
     sigaction(SIGTERM, &oldsiga, NULL);
     sigaction(SIGINT, &oldsiga, NULL);
+    // And print out results
     cout << rc;
     return 0;
 }
 
+/**
+ * This just calls run() and catches any exceptions that may be thrown.
+ */
 int main(int argc, char** argv) {
     try {
         return run(argc, argv);

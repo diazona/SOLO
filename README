@@ -1,0 +1,231 @@
+Compiling
+---------------
+
+If CMake is installed, and configured to be able to locate the GSL headers and libraries, this program can be compiled by running
+    cmake .
+    make
+
+If CMake is not installed, something like the following command should do it:
+    g++ -o oneloopcalc oneloopcalc.cpp integrator.cpp hardfactors_position.cpp \
+        hardfactors_momentum.cpp dss_pinlo.cpp mstwpdf.cc gluondist.cpp coupling.cpp \
+        integrationcontext.cpp integrationtype.cpp context.cpp utils.cpp libinterp2d.a \
+        -lgsl -lgslcblas -lm
+
+Running
+---------------
+
+The program is invoked as
+    ./oneloopcalc <options>
+where the <options> can include any number of the following, in any order:
+
+- Hard factor group specifications
+
+    These tell the program which terms to calculate. A hard factor _group_
+    specification is made of any number of individual hard factor specifications
+    separated by commas. The program will calculate the results for all the
+    terms in the group and display a total for each group.
+    
+    An _individual_ hard factor specification is a string like "p:h02qq" or
+    "m:h16gg". The "p:" at the beginning specifies the position space
+    implementation, and the "m:" specifies the momentum space implementation.
+    That prefix can be omitted, in which case position space is taken as the
+    default.
+    
+    The rest of the string gives the name of a hard factor. The canonical set
+    of possible names that can be used with a "p:" prefix are all the return
+    values from the get_name() methods in hardfactors_position.h, and the set
+    of names that can be used with an "m:" prefix are the return values from
+    get_name() methods in hardfactors_momentum.h. Here's a near-complete list:
+    
+        p:h02qq p:h02gg p:h12qq p:h14qq p:h12gg p:h12qqbar m:h12qqbar
+        p:h16gg m:h16gg p:h112qg p:h122qg p:h14qg m:h14qg
+        p:h112gq p:h122gq p:h14gq m:h14gq
+        
+    The names are case-insensitive.
+
+    It's also possible to specify the group of all leading order terms,
+    
+        p:h02qq,p:h02gg
+        
+    using the shortcut "lo", and the group of all next-to-leading order terms,
+    
+        p:h12qq,p:h14qq,p:h12gg,m:h12qqbar,m:h16gg,p:h112gq,p:h122gq,m:h14gq,p:h112qg,p:h122qg,m:h14qg
+        
+    using the shortcut "nlo". These are defined in oneloopcalc.cpp. The default if
+    no hard factor groups are specified on the command line is
+    
+        lo nlo
+
+- Configuration file names
+
+    Configuration files contain parameters for the program, in the format
+    
+        key1=value1
+        key2=value2
+        
+    and so on. Keys are case-insensitive. The canonical list of keys which
+    are used is the code in context.cpp. Here's a mostly-complete list:
+    
+    A (no default)
+        the mass number
+    alphasbar (default 0.031830989 = 0.2/2pi)
+        alpha_s over 2pi
+    c (no default)
+        the centrality coefficient, 0-1
+    CF (default 1.5)
+        the color factor
+    coupling_type (default fixed)
+        "fixed" or "running"
+    ff_filename (default PINLO.DAT)
+        filename to read DSS FF data from
+    gdist_type (default GBW)
+        the type of the gluon distribution, "GBW" or "MV"
+    lambda (default 0.288)
+        the exponent in the definition of the saturation scale
+    lambdaMV (default 0.24)
+        the parameter in the MV gluon distribution, in GeV
+    lambdaQCD (default 0.2428711 = sqrt(0.0588))
+        QCD lambda in GeV, used in the running coupling
+    miser_iterations (default 10000000 = 1e7)
+        number of iterations to use in MISER integration
+    mu2 (default 10)
+        factorization scale in GeV
+    Nc (default 3)
+        number of colors
+    Nf (default 3)
+        number of flavors
+    pdf_filename (default mstw2008nlo.00.dat)
+        filename to read MSTW PDF from
+    pseudorandom_generator_seed (default 0)
+        seed for the GSL random number generator
+    pseudorandom_generator_type (default mt19937)
+        algorithm to use for generating random numbers; allowed values are in the GSL documentation
+    pT (no default)
+        comma-separated list of transverse momenta
+    Sperp (default 1)
+        cross-sectional area of the hadron
+    sqs (no default)
+        sqrt(s), the collider's CM energy
+    TR (default 0.5)
+        group coefficient
+    vegas_incremental_iterations (default 1000000)
+        number of function evaluations to use in each step of the VEGAS Monte Carlo algorithm after the first
+    vegas_initial_iterations (default 100000)
+        number of function evaluations to use to refine the grid in the first step of the VEGAS algorithm
+    x0 (default 0.000304)
+        the fit parameter from the definition of the saturation scale
+    Y (no default)
+        comma-separated list of rapidities to calculate at
+
+    The configuration files have to at least set A, c, sqs, and Y, and also pT
+    if no transverse momenta are specified as command line arguments.
+        
+- Transverse momentum values
+
+    Any numbers given as command line arguments are put together into one big list
+    of transverse momentum values to run the calculation at. If a comma-separated
+    list of numbers is given, then it will be split apart and each number added to
+    the one big list. There's no significance to putting certain pT values together
+    and others not. (`0.5 0.7 0.8,0.9` and `0.5,0.7 0.8 0.9` are exactly equivalent.)
+    Any pT values specified on the command line will _replace_ pT values specified
+    in the config file, if there is one.
+
+- Literal options
+
+    --separate  Print out the results for each individual hard factor, not just
+                the total for each hard factor groups
+    --minmax    Track and print out the minimum and maximum values of kinematic
+                variables
+    --trace     Print out the integration context after every single evaluation
+                of the function (produces a LOT of output)
+        
+Structure
+---------------
+
+Basically the code runs as follows:
+
+1. Collect the command line options and settings from configuration files and
+   put everything into a ResultsCalculator
+2. For each combination of pT and Y, and for each hard factor group:
+    a. Create an Integrator with the current values of pT and y and the current
+       hard factor group
+    b. The Integrator calls the GSL Monte Carlo integration routine
+    c. For each time the MC routine evaluates the function
+        i.  Update the variables in the IntegrationContext
+        ii. Go through the list of HardFactor instances in the current group
+            and get a value from each one
+        iii.Return the total value
+    d. Store the value and error bound returned from the Monte Carlo
+3. Print out all the results
+
+Files
+---------------
+
+Source code for the program itself:
+
+oneloopcalc.cpp
+    Main program
+log.h
+    Declares an output stream to write status messages to
+hardfactors.h
+    A class that abstractly represents a hard factor (i.e. an expression to be integrated)
+hardfactors_momentum.h
+hardfactors_momentum.cpp
+    Implementation of the momentum space hard factors (terms)
+hardfactors_position.h
+hardfactors_position.cpp
+    Implementation of the position space hard factors (terms)
+gluondist.h
+gluondist.cpp
+    Implementations of the gluon distributions
+coupling.h
+coupling.cpp
+    Implementations of the fixed and LO running couplings
+integrationcontext.h
+integrationcontext.cpp
+    A class that stores the kinematic variables used in the calculation. The
+    values stored in this get updated every time the function is evaluated.
+integrator.h
+integrator.cpp
+    A class that stores the parameters for the integral and actually calls the
+    GSL Monte Carlo integration functions
+integrationtype.h
+integrationtype.cpp
+    Definitions of integration types. An integration type specifies how many
+    dimensions are in the Monte Carlo integral and what the limits are.
+utils.h
+utils.cpp
+    Some string and list processing functions
+
+Source code and object code for other things used by the program:
+    
+dss_pinlo.h
+dss_pinlo.cpp
+    A C++ interface to the DSS fragmentation functions
+dss_pinlo_test.cpp
+    Test program for the DSS FF interface
+interp2d.h
+libinterp2d.a
+    A 2D interpolation library compatible with the GSL
+    Full source code at https://github.com/diazona/interp2d
+
+Source code for other things used by the program, written by other people:
+    
+mstwpdf.h
+mstwpdf.cc
+    A C++ interface to the MSTW PDFs
+cubature.h
+cubature.c
+    A library for multidimensional cubature (deterministic integration)
+    Not currently used
+
+Non-source code files:
+    
+CMakeFiles.txt
+    Instructions for the build system, CMake
+PINLO.DAT
+    DSS fragmentation function data
+pinlo_extended.dat
+    DSS fragmentation function data with extrapolation to lower z
+mstw2008nlo.00.dat
+    MSTW PDF data

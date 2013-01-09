@@ -1,3 +1,22 @@
+/*
+ * Part of oneloopcalc
+ * 
+ * Copyright 2012 David Zaslavsky
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <cassert>
 #include <typeinfo>
 #include <gsl/gsl_rng.h>
@@ -7,6 +26,33 @@
 #include <gsl/gsl_monte_vegas.h>
 #include "integrator.h"
 
+/*
+ * Here's the overall "usage map" of the code in this file:
+ * 
+ * The program constructs an Integrator object,
+ * sets any relevant callbacks,
+ * and calls integrate() on it.
+ * (this happens in ResultsCalculator::calculate())
+ * 
+ * integrate() iterates over the IntegrationTypes, and for each, calls
+ *   integrate_impl() to do the "2D" integral, which calls
+ *     vegas_integrate(), which calls
+ *       gsl_monte_vegas_integrate(), passing the wrapper function gsl_monte_wrapper_2D as the function to be integrated. 
+ *         gsl_monte_wrapper_2D() calls
+ *           Integrator::update2D() to update the values in the IntegrationContext, and then calls
+ *           Integrator::evaluate_2D_integrand() to actually calculate the result
+ *   Then integrate() calls
+ *   integrate_impl() to do the "1D" integral, which calls
+ *     vegas_integrate(), which calls
+ *       gsl_monte_vegas_integrate(), passing the wrapper function gsl_monte_wrapper_1D as the function to be integrated. 
+ *         gsl_monte_wrapper_1D() calls
+ *           Integrator::update1D() to update the values in the IntegrationContext, and then calls
+ *           Integrator::evaluate_1D_integrand() to actually calculate the result
+ */
+
+/**
+ * Check whether a value is finite, i.e. not inf, -inf, or nan.
+ */
 #define checkfinite(d) assert(gsl_finite(d))
 
 Integrator::Integrator(const Context* ctx, const ThreadLocalContext* tlctx, const integration_strategy strategy, const HardFactorList hflist) :
@@ -116,6 +162,14 @@ void Integrator::evaluate_2D_integrand(double* real, double* imag) {
     *imag = jacobian * l_imag;
 }
 
+/**
+ * A wrapper function that can be passed to the GSL integration code
+ * to do the 1D integrand.
+ * 
+ * This updates the IntegrationContext using the values in `coordinates`
+ * and then evaluates the current list of hard factors. The `coordinates`
+ * are interpreted as z, (xiprime if applicable), rx, ry, etc.
+ */
 double gsl_monte_wrapper_1D(double* coordinates, size_t ncoords, void* closure) {
     double real;
     double imag;
@@ -127,6 +181,14 @@ double gsl_monte_wrapper_1D(double* coordinates, size_t ncoords, void* closure) 
     return real;
 }
 
+/**
+ * A wrapper function that can be passed to the GSL integration code
+ * to do the 2D integrand.
+ * 
+ * This updates the IntegrationContext using the values in `coordinates`
+ * and then evaluates the current list of hard factors. The `coordinates`
+ * are interpreted as z, y, (xiprime if applicable), rx, ry, etc.
+ */
 double gsl_monte_wrapper_2D(double* coordinates, size_t ncoords, void* closure) {
     double real;
     double imag;
@@ -138,6 +200,20 @@ double gsl_monte_wrapper_2D(double* coordinates, size_t ncoords, void* closure) 
     return real;
 }
 
+/**
+ * A wrapper function that calls the GSL integration routine for MISER integration.
+ * 
+ * @param func the integrand
+ * @param dim the number of dimensions it's being integrated over
+ * @param closure something to be passed to the integrand as its last argument
+ * @param min the lower bounds of the integration region
+ * @param max the upper bounds of the integration region
+ * @param[out] p_result the result
+ * @param[out] p_abserr the error bound
+ * @param iterations the number of function evaluations
+ * @param rng the random number generator
+ * @param callback a callback to call when the integration is done
+ */
 void miser_integrate(double (*func)(double*, size_t, void*), size_t dim, void* closure, double* min, double* max, double* p_result, double* p_abserr,
                size_t iterations, gsl_rng* rng, void (*callback)(double*, double*, gsl_monte_miser_state*)) {
     gsl_monte_function f;
@@ -156,6 +232,21 @@ void miser_integrate(double (*func)(double*, size_t, void*), size_t dim, void* c
     s = NULL;
 }
 
+/**
+ * A wrapper function that calls the GSL integration routine for VEGAS integration.
+ * 
+ * @param func the integrand
+ * @param dim the number of dimensions it's being integrated over
+ * @param closure something to be passed to the integrand as its last argument
+ * @param min the lower bounds of the integration region
+ * @param max the upper bounds of the integration region
+ * @param[out] p_result the result
+ * @param[out] p_abserr the error bound
+ * @param initial_iterations the number of function evaluations to use when first refining the grid
+ * @param incremental_iterations the number of function evaluations to use in subsequent steps
+ * @param rng the random number generator
+ * @param callback a callback to call when the integration is done
+ */
 void vegas_integrate(double (*func)(double*, size_t, void*), size_t dim, void* closure, double* min, double* max, double* p_result, double* p_abserr,
                size_t initial_iterations, size_t incremental_iterations, gsl_rng* rng, void (*callback)(double*, double*, gsl_monte_vegas_state*)) {
     gsl_monte_function f;
