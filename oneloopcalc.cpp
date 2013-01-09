@@ -26,7 +26,6 @@
 #include <sstream>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_rng.h>
-#include "cubature.h"
 #include "mstwpdf.h"
 #include "dss_pinlo.h"
 #include "coupling.h"
@@ -41,11 +40,6 @@
 
 using namespace std;
 
-const int SUCCESS = 0;
-
-static bool minmax = false;
-
-static integration_strategy strategy = MC_VEGAS;
 
 // callbacks
 void write_data_point(const IntegrationContext* ictx, const double real, const double imag) {
@@ -126,6 +120,7 @@ class ResultsCalculator {
 private:
     ContextCollection& cc;
     ThreadLocalContext& tlctx;
+    integration_strategy strategy;
     vector<HardFactorList*> hfgroups;
     vector<string> hfgnames;
     size_t _valid;
@@ -136,8 +131,9 @@ private:
 public:
     const bool trace;
     const bool minmax;
-    ResultsCalculator(ContextCollection& cc, ThreadLocalContext& tlctx, vector<HardFactorList*>& hfgroups, vector<string>& hfgnames, bool trace = false, bool minmax = false) :
-      cc(cc), tlctx(tlctx), hfgroups(hfgroups), hfgnames(hfgnames), _valid(0), trace(trace), minmax(minmax) {
+    
+    ResultsCalculator(ContextCollection& cc, ThreadLocalContext& tlctx, integration_strategy strategy, vector<HardFactorList*>& hfgroups, vector<string>& hfgnames, bool trace = false, bool minmax = false) :
+      cc(cc), tlctx(tlctx), strategy(strategy), hfgroups(hfgroups), hfgnames(hfgnames), _valid(0), trace(trace), minmax(minmax) {
         size_t hflen = hfgroups.size();
         size_t cclen = cc.size();
         real = new double[hflen * cclen];
@@ -270,6 +266,9 @@ public:
     ContextCollection& context_collection() {
         return cc;
     }
+    integration_strategy strategy() { // TODO: maybe this should go in the Context
+        return _strategy;
+    }
     vector<HardFactorList*>& hard_factor_groups() {
         return hfgroups;
     }
@@ -278,8 +277,7 @@ public:
     }
     
 private:
-    integration_strategy strategy;
-    string gdist_type;
+    integration_strategy _strategy;
     bool trace;
     bool minmax;
     bool separate;
@@ -291,14 +289,15 @@ private:
     void parse_hf_spec(const string& spec);
 };
 
-ProgramConfiguration::ProgramConfiguration(int argc, char** argv) {
+ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : _strategy(MC_VEGAS) {
+    string gdist_type;
     for (int i = 1; i < argc; i++) {
         string a = argv[i];
-        if (a == "--miser") {
-            strategy = MC_MISER;
+        if (a == "--miser") { // Miser is horribly inaccurate
+            _strategy = MC_MISER;
         }
         else if (a == "--vegas") {
-            strategy = MC_VEGAS;
+            _strategy = MC_VEGAS;
         }
         else if (a == "--trace") {
             trace = true;
@@ -476,7 +475,7 @@ int run(int argc, char** argv) {
 
     cout << cc << "------------" << endl;
 
-    ResultsCalculator rc(cc, tlctx, pc.hard_factor_groups(), pc.hard_factor_names());
+    ResultsCalculator rc(cc, tlctx, pc.strategy(), pc.hard_factor_groups(), pc.hard_factor_names());
     p_rc = &rc;
     
     struct sigaction siga;
@@ -497,6 +496,10 @@ int main(int argc, char** argv) {
     }
     catch (const exception& e) {
         cerr << e.what() << endl;
+        return 1;
+    }
+    catch (const char* c) {
+        cerr << c << endl;
         return 1;
     }
     catch (...) {

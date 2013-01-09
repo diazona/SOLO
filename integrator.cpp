@@ -201,11 +201,17 @@ void Integrator::integrate_impl(size_t core_dimensions, double* result, double* 
     
     gsl_rng* rng = gsl_rng_alloc(ictx.ctx->pseudorandom_generator_type);
     gsl_rng_set(rng, ictx.ctx->pseudorandom_generator_seed);
-    if (strategy == MC_VEGAS) {
-        vegas_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->vegas_initial_iterations, ictx.ctx->vegas_incremental_iterations, rng, vegas_callback);
-    }
-    else if (strategy == MC_MISER) {
-        miser_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->miser_iterations, rng, miser_callback);
+    switch (strategy) {
+        case MC_VEGAS:
+            vegas_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->vegas_initial_iterations, ictx.ctx->vegas_incremental_iterations, rng, vegas_callback);
+            break;
+        case MC_MISER:
+            miser_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->miser_iterations, rng, miser_callback);
+            break;
+        case MC_PLAIN:
+            throw "Unsupported integration method PLAIN";
+        default:
+            throw "Unknown integration method";
     }
     gsl_rng_free(rng);
     rng = NULL;
