@@ -9,7 +9,7 @@ If CMake is not installed, something like the following command should do it:
     g++ -o oneloopcalc oneloopcalc.cpp integrator.cpp hardfactors_position.cpp \
         hardfactors_momentum.cpp dss_pinlo.cpp mstwpdf.cc gluondist.cpp coupling.cpp \
         integrationcontext.cpp integrationtype.cpp context.cpp utils.cpp libinterp2d.a \
-        -lgsl -lgslcblas -lm
+        libquasimontecarlo.a -lgsl -lgslcblas -lm
 
 Running
 ---------------
@@ -80,6 +80,8 @@ where the <options> can include any number of the following, in any order:
         filename to read DSS FF data from
     gdist_type (default GBW)
         the type of the gluon distribution, "GBW" or "MV"
+    integration_strategy (default VEGAS)
+        the integration type to use, "MISER", "VEGAS" (best), or "QUASI"
     lambda (default 0.288)
         the exponent in the definition of the saturation scale
     lambdaMV (default 0.24)
@@ -102,6 +104,14 @@ where the <options> can include any number of the following, in any order:
         algorithm to use for generating random numbers; allowed values are in the GSL documentation
     pT (no default)
         comma-separated list of transverse momenta
+    quasirandom_generator_type (default halten)
+        algorithm to use for generating quasirandom numbers for QMC integration; allowed values are in the GSL documentation
+    quasi_abserr (default 1e-20)
+        the absolute error at which to stop quasi Monte Carlo integration
+    quasi_iterations (default 1000000)
+        the number of iterations at which to stop quasi Monte Carlo integration
+    quasi_relerr (default 0)
+        the relative error at which to stop quasi Monte Carlo integration
     Sperp (default 1)
         cross-sectional area of the hadron
     sqs (no default)
@@ -208,6 +218,10 @@ interp2d.h
 libinterp2d.a
     A 2D interpolation library compatible with the GSL
     Full source code at https://github.com/diazona/interp2d
+quasimontecarlo.h
+libquasimontecarlo.a
+    A library for quasi Monte Carlo integration compatible with the GSL
+    Source code to be posted at GitHub eventually
 
 Source code for other things used by the program, written by other people:
     

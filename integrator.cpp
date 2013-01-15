@@ -24,7 +24,9 @@
 #include <gsl/gsl_monte.h>
 #include <gsl/gsl_monte_miser.h>
 #include <gsl/gsl_monte_vegas.h>
+#include <gsl/gsl_qrng.h>
 #include "integrator.h"
+#include "quasimontecarlo.h"
 
 /*
  * Here's the overall "usage map" of the code in this file:
@@ -55,8 +57,8 @@
  */
 #define checkfinite(d) assert(gsl_finite(d))
 
-Integrator::Integrator(const Context* ctx, const ThreadLocalContext* tlctx, const integration_strategy strategy, const HardFactorList hflist) :
-  ictx(ctx, tlctx), strategy(strategy), current_type(DipoleIntegrationType::get_instance()),
+Integrator::Integrator(const Context* ctx, const ThreadLocalContext* tlctx, HardFactorList hflist) :
+  ictx(ctx, tlctx), current_type(DipoleIntegrationType::get_instance()),
   callback(NULL), miser_callback(NULL), vegas_callback(NULL) {
     assert(hflist.size() > 0);
 #ifndef NDEBUG
@@ -273,6 +275,40 @@ void vegas_integrate(double (*func)(double*, size_t, void*), size_t dim, void* c
     s = NULL;
 }
 
+/**
+ * A wrapper function that calls the integration routine for quasi Monte Carlo integration.
+ * 
+ * @param func the integrand
+ * @param dim the number of dimensions it's being integrated over
+ * @param closure something to be passed to the integrand as its last argument
+ * @param min the lower bounds of the integration region
+ * @param max the upper bounds of the integration region
+ * @param[out] p_result the result
+ * @param[out] p_abserr the error bound
+ * @param iterations the maximum number of function evaluations
+ * @param abserr the absolute error at which to stop
+ * @param relerr the relative error at which to stop
+ * @param rng the random number generator
+ * @param callback a callback to call when the integration is done
+ */
+void quasi_integrate(double (*func)(double*, size_t, void*), size_t dim, void* closure, double* min, double* max, double* p_result, double* p_abserr,
+               size_t iterations, double relerr, double abserr, gsl_qrng* qrng, void (*callback)(double*, double*, quasi_monte_state*)) {
+    gsl_monte_function f;
+    f.f = func;
+    f.dim = dim;
+    f.params = closure;
+
+    quasi_monte_state* s = quasi_monte_alloc(dim);
+    quasi_monte_integrate(&f, min, max, dim, iterations, relerr, abserr, qrng, s, p_result, p_abserr);
+    checkfinite(*p_result);
+    checkfinite(*p_abserr);
+    if (callback) {
+        (*callback)(p_result, p_abserr, s);
+    }
+    quasi_monte_free(s);
+    s = NULL;
+}
+
 void Integrator::integrate_impl(size_t core_dimensions, double* result, double* error) {
     // it should already have been checked that there is at least one term of the appropriate type
     // and the type should be set appropriately
@@ -289,23 +325,31 @@ void Integrator::integrate_impl(size_t core_dimensions, double* result, double* 
     }
     current_type->fill_min(ictx, core_dimensions, min);
     current_type->fill_max(ictx, core_dimensions, max);
-    
-    gsl_rng* rng = gsl_rng_alloc(ictx.ctx->pseudorandom_generator_type);
-    gsl_rng_set(rng, ictx.ctx->pseudorandom_generator_seed);
-    switch (strategy) {
-        case MC_VEGAS:
-            vegas_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->vegas_initial_iterations, ictx.ctx->vegas_incremental_iterations, rng, vegas_callback);
-            break;
-        case MC_MISER:
-            miser_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->miser_iterations, rng, miser_callback);
-            break;
-        case MC_PLAIN:
-            throw "Unsupported integration method PLAIN";
-        default:
-            throw "Unknown integration method";
+
+    if (ictx.ctx->strategy == MC_QUASI) {
+        gsl_qrng* qrng = gsl_qrng_alloc(ictx.ctx->quasirandom_generator_type, dimensions);
+        quasi_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->quasi_iterations, ictx.ctx->quasi_relerr, ictx.ctx->quasi_abserr, qrng, quasi_callback);
+        gsl_qrng_free(qrng);
+        qrng = NULL;
     }
-    gsl_rng_free(rng);
-    rng = NULL;
+    else {
+        gsl_rng* rng = gsl_rng_alloc(ictx.ctx->pseudorandom_generator_type);
+        gsl_rng_set(rng, ictx.ctx->pseudorandom_generator_seed);
+        switch (ictx.ctx->strategy) {
+            case MC_VEGAS:
+                vegas_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->vegas_initial_iterations, ictx.ctx->vegas_incremental_iterations, rng, vegas_callback);
+                break;
+            case MC_MISER:
+                miser_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->miser_iterations, rng, miser_callback);
+                break;
+            case MC_PLAIN:
+                throw "Unsupported integration method PLAIN";
+            default:
+                throw "Unknown integration method";
+        }
+        gsl_rng_free(rng);
+        rng = NULL;
+    }
     if (callback) {
         callback(NULL, 0, 0);
     }

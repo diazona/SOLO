@@ -26,10 +26,16 @@
 #include <string>
 #include <vector>
 #include <gsl/gsl_rng.h>
+#include <gsl/gsl_qrng.h>
 #include "mstwpdf.h"
 #include "dss_pinlo.h"
 #include "coupling.h"
 #include "gluondist.h"
+
+/**
+ * Enumerates the types of Monte Carlo integration available
+ */
+typedef enum {MC_PLAIN, MC_MISER, MC_VEGAS, MC_QUASI} integration_strategy;
 
 /**
  * Storage for all the assorted parameters that get used in the integration.
@@ -73,6 +79,8 @@ public:
     /** Name of the file FF data was read from */
     std::string ff_filename;
     
+    /** GSL quasirandom number generator algorithm */
+    const gsl_qrng_type* quasirandom_generator_type;
     /** GSL pseudorandom number generator algorithm */
     const gsl_rng_type* pseudorandom_generator_type;
     /** GSL pseudorandom number generator seed */
@@ -83,6 +91,9 @@ public:
     /** The coupling */
     Coupling* cpl;
     
+    /** The type of integration to be used */
+    integration_strategy strategy;
+    
     /** Number of MISER iterations
      * (unused unless integration strategy is MISER) */
     size_t miser_iterations;
@@ -92,6 +103,15 @@ public:
     /** Number of VEGAS iterations when actually integrating
      * (unused unless integration strategy is VEGAS) */
     size_t vegas_incremental_iterations;
+    /** Number of iterations in quasi Monte Carlo
+     * (unusued unless integration strategy is QUASI) */
+    size_t quasi_iterations;
+    /** Maximum allowed absolute error in quasi Monte Carlo
+     * (unusued unless integration strategy is QUASI) */
+    double quasi_abserr;
+    /** Maximum allowed relative error in quasi Monte Carlo
+     * (unusued unless integration strategy is QUASI) */
+    double quasi_relerr;
 
     /** The precomputed value of c A^(1/3) Q_0^2 x_0^(lambda) */
     double Q02x0lambda;
@@ -114,9 +134,14 @@ public:
         double Y,
         std::string pdf_filename,
         std::string ff_filename,
+        integration_strategy strategy,
         size_t miser_iterations,
         size_t vegas_initial_iterations,
         size_t vegas_incremental_iterations,
+        size_t quasi_iterations,
+        double quasi_abserr,
+        double quasi_relerr,
+        const gsl_qrng_type* quasirandom_generator_type,
         const gsl_rng_type* pseudorandom_generator_type,
         unsigned long int pseudorandom_generator_seed,
         GluonDistribution* gdist,
@@ -136,9 +161,14 @@ public:
      Y(Y),
      pdf_filename(pdf_filename),
      ff_filename(ff_filename),
+     strategy(strategy),
      miser_iterations(miser_iterations),
      vegas_initial_iterations(vegas_initial_iterations),
      vegas_incremental_iterations(vegas_incremental_iterations),
+     quasi_iterations(quasi_iterations),
+     quasi_abserr(quasi_abserr),
+     quasi_relerr(quasi_relerr),
+     quasirandom_generator_type(quasirandom_generator_type),
      pseudorandom_generator_type(pseudorandom_generator_type),
      pseudorandom_generator_seed(pseudorandom_generator_seed),
      gdist(gdist),
@@ -161,9 +191,14 @@ public:
      Y(other.Y),
      pdf_filename(other.pdf_filename),
      ff_filename(other.ff_filename),
+     strategy(other.strategy),
      miser_iterations(other.miser_iterations),
      vegas_initial_iterations(other.vegas_initial_iterations),
      vegas_incremental_iterations(other.vegas_incremental_iterations),
+     quasi_iterations(other.quasi_iterations),
+     quasi_abserr(other.quasi_abserr),
+     quasi_relerr(other.quasi_relerr),
+     quasirandom_generator_type(other.quasirandom_generator_type),
      pseudorandom_generator_type(other.pseudorandom_generator_type),
      pseudorandom_generator_seed(other.pseudorandom_generator_seed),
      gdist(other.gdist),

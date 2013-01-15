@@ -24,8 +24,10 @@
 #include <fstream>
 #include <iostream>
 #include <gsl/gsl_math.h>
+#include <gsl/gsl_qrng.h>
 #include <gsl/gsl_rng.h>
 #include "context.h"
+#include "integrator.h"
 #include "log.h"
 #include "utils.h"
 
@@ -82,11 +84,26 @@ const string canonicalize(const string& i_key) {
     else if (key == "gdist" || key == "gluon_distribution" || key == "gluon distribution" || key == "gluon dist") {
         return "gdist_type";
     }
+    else if (key == "quasirandom generator type" || key == "qrng type") {
+        return "quasirandom_generator_type";
+    }
     else if (key == "pseudorandom generator type" || key == "rng type") {
         return "pseudorandom_generator_type";
     }
     else if (key == "pseudorandom generator seed" || key == "rng seed" || key == "seed") {
         return "pseudorandom_generator_seed";
+    }
+    else if (key == "qmc iterations" || key == "quasi iterations") {
+        return "quasi_iterations";
+    }
+    else if (key == "qmc absolute error" || key == "quasi absolute error") {
+        return "quasi_abserr";
+    }
+    else if (key == "qmc relative error" || key == "quasi relative error") {
+        return "quasi_relerr";
+    }
+    else if (key == "integration strategy" || key == "strategy") {
+        return "integration_strategy";
     }
     else {
         return key;
@@ -117,6 +134,25 @@ string& parse_string(pair<multimap<string, string>::iterator, multimap<string, s
     return range.first->second;
 }
 
+integration_strategy parse_strategy(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
+    multimap<string, string>::iterator el = range.first;
+    assert(++el == range.second);
+    string val = range.first->second;
+    transform(val.begin(), val.end(), val.begin(), ::tolower);
+    if (val == "miser") {
+        return MC_MISER;
+    }
+    else if (val == "vegas") {
+        return MC_VEGAS;
+    }
+    else if (val == "quasi") {
+        return MC_QUASI;
+    }
+    else {
+        GSL_ERROR_VAL("unknown method", GSL_EINVAL, MC_VEGAS);
+    }
+}
+
 const gsl_rng_type* parse_rng_type(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
     multimap<string, string>::iterator el = range.first;
     assert(++el == range.second);
@@ -128,6 +164,26 @@ const gsl_rng_type* parse_rng_type(pair<multimap<string, string>::iterator, mult
         }
     }
     GSL_ERROR_VAL("unknown generator", GSL_EINVAL, NULL);
+}
+
+const gsl_qrng_type* parse_qrng_type(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
+    multimap<string, string>::iterator el = range.first;
+    assert(++el == range.second);
+    if (range.first->second == "niederreiter_2") {
+        return gsl_qrng_niederreiter_2;
+    }
+    else if (range.first->second == "sobol") {
+        return gsl_qrng_sobol;
+    }
+    else if (range.first->second == "halton") {
+        return gsl_qrng_halton;
+    }
+    else if (range.first->second == "reversehalton") {
+        return gsl_qrng_reversehalton;
+    }
+    else {
+        GSL_ERROR_VAL("unknown generator", GSL_EINVAL, NULL);
+    }
 }
 
 vector<double> parse_vector(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
@@ -156,9 +212,14 @@ void ContextCollection::create_contexts() {
     check_property(Y,            vector<double>, parse_vector)
     check_property(pdf_filename, string, parse_string)
     check_property(ff_filename,  string, parse_string)
+    check_property(integration_strategy, integration_strategy, parse_strategy)
     check_property(miser_iterations, size_t, parse_size)
     check_property(vegas_initial_iterations, size_t, parse_size)
     check_property(vegas_incremental_iterations, size_t, parse_size)
+    check_property(quasi_iterations, size_t, parse_size)
+    check_property(quasi_abserr, double, parse_double)
+    check_property(quasi_relerr, double, parse_double)
+    check_property(quasirandom_generator_type, const gsl_qrng_type*, parse_qrng_type)
     check_property(pseudorandom_generator_type, const gsl_rng_type*, parse_rng_type)
     check_property(pseudorandom_generator_seed, unsigned long int, parse_ulong)
     
@@ -231,9 +292,14 @@ void ContextCollection::create_contexts() {
                     *Yit,
                     pdf_filename,
                     ff_filename,
+                    integration_strategy,
                     miser_iterations,
                     vegas_initial_iterations,
                     vegas_incremental_iterations,
+                    quasi_iterations,
+                    quasi_abserr,
+                    quasi_relerr,
+                    quasirandom_generator_type,
                     pseudorandom_generator_type,
                     pseudorandom_generator_seed,
                     gdist,
@@ -304,10 +370,16 @@ void ContextCollection::setup_defaults() {
     options.insert(pair<string, string>("tr", "0.5"));
     options.insert(pair<string, string>("pdf_filename", "mstw2008nlo.00.dat"));
     options.insert(pair<string, string>("ff_filename", "PINLO.DAT"));
+    options.insert(pair<string, string>("integration_strategy", "VEGAS"));
     options.insert(pair<string, string>("miser_iterations", "10000000"));
     options.insert(pair<string, string>("vegas_initial_iterations", "100000"));
     options.insert(pair<string, string>("vegas_incremental_iterations", "1000000"));
+    options.insert(pair<string, string>("quasi_iterations", "1000000"));
+    options.insert(pair<string, string>("quasi_abserr", "1e-20"));
+    options.insert(pair<string, string>("quasi_relerr", "0"));
     // Adapted from the GSL source code - basically this reimplements gsl_rng_env_setup
+    const char* qtype = getenv("GSL_QRNG_TYPE");
+    options.insert(pair<string, string>("quasirandom_generator_type", qtype == NULL ? "halton" : qtype));
     const char* type = getenv("GSL_RNG_TYPE");
     options.insert(pair<string, string>("pseudorandom_generator_type", type == NULL ? "mt19937" : type));
     const char* seed = getenv("GSL_RNG_SEED");
@@ -349,11 +421,16 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "Y\t= "          << ctx.Y            << endl;
     out << "pdf_filename\t= " << ctx.pdf_filename << endl;
     out << "ff_filename\t= " << ctx.ff_filename  << endl;
+    out << "integration_strategy" << ctx.strategy << endl;
     out << "miser_iterations\t= " << ctx.miser_iterations << endl;
     out << "vegas_initial_iterations\t= " << ctx.vegas_initial_iterations << endl;
     out << "vegas_incremental_iterations\t= " << ctx.vegas_incremental_iterations << endl;
+    out << "quasi_iterations\t= " << ctx.quasi_iterations << endl;
+    out << "quasi_abserr\t= " << ctx.quasi_abserr << endl;
+    out << "quasi_relerr\t= " << ctx.quasi_relerr << endl;
     out << "gluon distribution\t = " << ctx.gdist << endl;
     out << "coupling\t = " << ctx.cpl << endl;
+    out << "quasirandom generator type: " <<  ctx.quasirandom_generator_type->name << endl;
     out << "pseudorandom generator type: " <<  ctx.pseudorandom_generator_type->name << endl;
     out << "pseudorandom generator seed: " << ctx.pseudorandom_generator_seed << endl;
     return out;

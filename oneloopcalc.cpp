@@ -151,6 +151,13 @@ void vegas_eprint_callback(double* p_result, double* p_abserr, gsl_monte_vegas_s
 void miser_eprint_callback(double* p_result, double* p_abserr, gsl_monte_miser_state* s) {
     cerr << "MISER output: " << *p_result << " err: " << *p_abserr << endl;
 }
+/**
+ * A callback for quasi Monte Carlo integration that prints out the result of the
+ * integration with its error bound.
+ */
+void quasi_eprint_callback(double* p_result, double* p_abserr, quasi_monte_state* s) {
+    cerr << "QUASI output: " << *p_result << " err: " << *p_abserr << endl;
+}
 
 /**
  * Stores the results of the integration and contains methods to run the calculation.
@@ -161,8 +168,6 @@ private:
     ContextCollection& cc;
     /** The thread-local context to be used for the calculation */
     ThreadLocalContext& tlctx;
-    /** The integration strategy to be used (e.g. MISER or VEGAS) */
-    integration_strategy strategy;
     /**
      * The list of groups of hard factors
      */
@@ -190,8 +195,8 @@ public:
     /** Whether to store minimum and maximum values */
     const bool minmax;
     
-    ResultsCalculator(ContextCollection& cc, ThreadLocalContext& tlctx, integration_strategy strategy, vector<HardFactorList*>& hfgroups, vector<string>& hfgnames, bool trace = false, bool minmax = false) :
-      cc(cc), tlctx(tlctx), strategy(strategy), hfgroups(hfgroups), hfgnames(hfgnames), _valid(0), trace(trace), minmax(minmax) {
+    ResultsCalculator(ContextCollection& cc, ThreadLocalContext& tlctx, vector<HardFactorList*>& hfgroups, vector<string>& hfgnames, bool trace = false, bool minmax = false) :
+      cc(cc), tlctx(tlctx), hfgroups(hfgroups), hfgnames(hfgnames), _valid(0), trace(trace), minmax(minmax) {
         size_t hflen = hfgroups.size();
         size_t cclen = cc.size();
         real = new double[hflen * cclen];
@@ -253,7 +258,7 @@ void ResultsCalculator::calculate() {
         cerr << "Beginning calculation at pT = " << sqrt(ctx.pT2) << ", Y = " << ctx.Y << endl;
         try {
             for (vector<HardFactorList*>::iterator hit = hfgroups.begin(); hit != hfgroups.end(); hit++) {
-                Integrator* integrator = new Integrator(&ctx, &tlctx, strategy, **hit);
+                Integrator* integrator = new Integrator(&ctx, &tlctx, **hit);
                 if (trace) {
                     integrator->set_callback(write_data_point);
                 }
@@ -262,6 +267,7 @@ void ResultsCalculator::calculate() {
                 }
                 integrator->set_miser_callback(miser_eprint_callback);
                 integrator->set_vegas_callback(vegas_eprint_callback);
+                integrator->set_quasi_callback(quasi_eprint_callback);
                 integrator->integrate(l_real++, l_imag++, l_error++);
                 _valid++;
                 delete integrator;
@@ -352,10 +358,6 @@ public:
     ContextCollection& context_collection() {
         return cc;
     }
-    /** Return the integration strategy to be used */
-    integration_strategy strategy() { // TODO: maybe this should go in the Context
-        return _strategy;
-    }
     /**
      * Return the list of hard factor groups specified in the command-line
      * arguments
@@ -372,8 +374,6 @@ public:
     }
     
 private:
-    /** The integration strategy */
-    integration_strategy _strategy;
     /** Indicates whether the --trace option was specified */
     bool trace;
     /** Indicates whether the --minmax option was specified */
@@ -406,17 +406,11 @@ private:
     void parse_hf_spec(const string& spec);
 };
 
-ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : _strategy(MC_VEGAS) {
+ProgramConfiguration::ProgramConfiguration(int argc, char** argv) {
     string gdist_type;
     for (int i = 1; i < argc; i++) {
         string a = argv[i];
-        if (a == "--miser") { // Miser is horribly inaccurate
-            _strategy = MC_MISER;
-        }
-        else if (a == "--vegas") {
-            _strategy = MC_VEGAS;
-        }
-        else if (a == "--trace") {
+        if (a == "--trace") {
             trace = true;
         }
         else if (a == "--minmax") {
@@ -637,7 +631,7 @@ int run(int argc, char** argv) {
      */
     cout << cc << "------------" << endl;
 
-    ResultsCalculator rc(cc, tlctx, pc.strategy(), pc.hard_factor_groups(), pc.hard_factor_names());
+    ResultsCalculator rc(cc, tlctx, pc.hard_factor_groups(), pc.hard_factor_names());
     p_rc = &rc;
 
     /* Set up a signal handler so that if the program receives a SIGINT (Ctrl+C)

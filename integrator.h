@@ -28,11 +28,7 @@
 #include "integrationcontext.h"
 #include "integrationtype.h"
 #include "hardfactor.h"
-
-/**
- * Enumerates the types of Monte Carlo integration available
- */
-typedef enum {MC_PLAIN, MC_MISER, MC_VEGAS} integration_strategy;
+#include "quasimontecarlo.h"
 
 typedef std::vector<const HardFactor*> HardFactorList;
 typedef std::vector<const HardFactorTerm*> HardFactorTermList;
@@ -77,16 +73,16 @@ private:
      * out by their type.
      */
     HardFactorTypeMap terms;
-    /** The integration strategy */
-    integration_strategy strategy;
     /** A callback function to call each time the function is evaluated */
     void (*callback)(const IntegrationContext*, double, double);
     /** A callback function to call each time a MISER integration finishes */
     void (*miser_callback)(double*, double*, gsl_monte_miser_state*);
     /** A callback function to call each time a step of the VEGAS integration finishes */
     void (*vegas_callback)(double*, double*, gsl_monte_vegas_state*);
+    /** A callback function to call each time a quasi Monte Carlo integration finishes */
+    void (*quasi_callback)(double*, double*, quasi_monte_state*);
 public:
-    Integrator(const Context* ctx, const ThreadLocalContext* tlctx, integration_strategy strategy, HardFactorList hflist);
+    Integrator(const Context* ctx, const ThreadLocalContext* tlctx, HardFactorList hflist);
     ~Integrator();
     /**
      * Updates the kinematic variables during a "1D" integration.
@@ -147,6 +143,12 @@ public:
      */
     void set_vegas_callback(void (*vegas_callback)(double*, double*, gsl_monte_vegas_state*)) {
         this->vegas_callback = vegas_callback;
+    }
+    /**
+     * Sets the callback to be invoked each time a quasi Monte Carlo integration finishes.
+     */
+    void set_quasi_callback(void (*quasi_callback)(double*, double*, quasi_monte_state*)) {
+        this->quasi_callback = quasi_callback;
     }
 private:
     /**
