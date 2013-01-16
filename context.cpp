@@ -38,6 +38,7 @@ using namespace std;
     typename p;\
     if (itit.first == itit.second) {\
         p = default;\
+        set(#p, format(p));\
     }\
     else {\
         p = parse(itit);\
@@ -108,6 +109,13 @@ const string canonicalize(const string& i_key) {
     else {
         return key;
     }
+}
+
+template<typename T>
+const string format(const T& v) {
+    ostringstream s;
+    s << v;
+    return s.str();
 }
 
 size_t parse_size(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {

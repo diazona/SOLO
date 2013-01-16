@@ -334,6 +334,11 @@ public:
     void add(std::string key, std::string value);
     
     /**
+     * Create the Context objects.
+     */
+    void create_contexts();
+
+    /**
      * The gluon distribution. NULL until contexts are created.
      */
     GluonDistribution* gdist;
@@ -364,10 +369,6 @@ private:
      * and add the settings to the ContextCollection.
      */
     void read_config(std::istream& in);
-    /**
-     * Create the Context objects.
-     */
-    void create_contexts();
 };
 
 /**

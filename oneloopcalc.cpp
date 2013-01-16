@@ -622,6 +622,7 @@ int run(int argc, char** argv) {
         logger << "No momenta or no rapidities specified!" << endl;
         return 1;
     }
+    cc.create_contexts();
     
     ThreadLocalContext tlctx(cc);
 
