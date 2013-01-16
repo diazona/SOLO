@@ -26,7 +26,7 @@
 
 class Coupling {
 public:
-    virtual double alphasbar(double kT2) = 0;
+    virtual double alphas(double kT2) = 0;
     virtual const char* name() = 0;
 };
 
@@ -35,20 +35,20 @@ private:
     double value;
     std::string _name;
 public:
-    FixedCoupling(double alphasbar);
-    double alphasbar(double kT2);
+    FixedCoupling(double alphas);
+    double alphas(double kT2);
     const char* name();
 };
 
 class LORunningCoupling : public Coupling {
 private:
     double log_LambdaQCD;
-    double inverse_beta_2pi;
+    double coefficient;
     double regulator; // position of the Landau pole
     std::string _name;
 public:
-    LORunningCoupling(double LambdaQCD, double beta, double regulator);
-    double alphasbar(double kT2);
+    LORunningCoupling(double LambdaQCD, double Ncbeta, double regulator);
+    double alphas(double kT2);
     const char* name();
 };
 

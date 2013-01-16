@@ -45,7 +45,8 @@ void IntegrationContext::update_parton_factors(double z, double y) {
     this->kT = sqrt(this->kT2);
     this->xg = kT / ctx->sqs * exp(-ctx->Y);
     this->Qs2 = ctx->Q02x0lambda / pow(this->xg, ctx->lambda); // Q_0^2 (x_0 / x)^lambda
-    this->alphasbar = ctx->cpl->alphasbar(this->kT2);
+    this->alphas = ctx->cpl->alphas(this->kT2);
+    this->alphas_2pi = this->alphas * 0.5 * M_1_PI;
 
     double qqfactor = 0.0d, ggfactor = 0.0d, gqfactor = 0.0d, qgfactor = 0.0d;
     c_mstwpdf* pdf_object = tlctx->pdf_object;

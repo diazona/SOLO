@@ -118,7 +118,7 @@ void store_minmax(const IntegrationContext* ictx, const double real, const doubl
     store(xg);
     store(xiprime);
     store(Qs2);
-    store(alphasbar);
+    store(alphas);
 }
 
 /**
@@ -339,7 +339,7 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
         out << "xp\t" << min_ictx.xp << "\t" << max_ictx.xp << "\t" << endl;
         out << "xg\t" << min_ictx.xg << "\t" << max_ictx.xg << "\t" << endl;
         out << "Qs2\t" << min_ictx.Qs2 << "\t" << max_ictx.Qs2 << "\t" << endl;
-        out << "alphasbar\t" << min_ictx.alphasbar << "\t" << max_ictx.alphasbar << "\t" << endl;
+        out << "alphas\t" << min_ictx.alphas << "\t" << max_ictx.alphas << "\t" << endl;
     }
 }
 

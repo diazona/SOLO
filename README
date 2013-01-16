@@ -68,8 +68,10 @@ where the <options> can include any number of the following, in any order:
     
     A (no default)
         the mass number
-    alphasbar (default 0.031830989 = 0.2/2pi)
-        alpha_s over 2pi
+    alphas (default 0.2)
+        value for the fixed coupling
+    beta (default 11 - 2*Nf/3)
+        coefficient for the LO running coupling
     c (no default)
         the centrality coefficient, 0-1
     CF (default 1.5)
@@ -112,6 +114,8 @@ where the <options> can include any number of the following, in any order:
         the number of iterations at which to stop quasi Monte Carlo integration
     quasi_relerr (default 0)
         the relative error at which to stop quasi Monte Carlo integration
+    regulator (default 1)
+        the position of the Landau pole for the regulated LO running coupling
     Sperp (default 1)
         cross-sectional area of the hadron
     sqs (no default)

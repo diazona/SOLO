@@ -46,7 +46,7 @@ public:
     double xiprime;
     double xiprime2;
     double Qs2;
-    double alphasbar;
+    double alphas, alphas_2pi; // αs/2π
     double qqfactor;
     double ggfactor;
     double gqfactor;
@@ -74,7 +74,8 @@ public:
       sx(0), sy(0), s2(0),
       tx(0), ty(0), t2(0),
       Qs2(0),
-      alphasbar(0),
+      alphas(0),
+      alphas_2pi(0),
       qqfactor(0),
       ggfactor(0),
       gqfactor(0),

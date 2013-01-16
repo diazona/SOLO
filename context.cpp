@@ -76,8 +76,8 @@ const string canonicalize(const string& i_key) {
     else if (key == "colorfactor") {
         return "cf";
     }
-    else if (key == "alphas_bar" || key == "alpha_s_bar") {
-        return "alphasbar";
+    else if (key == "alpha_s") {
+        return "alphas";
     }
     else if (key == "coupling" || key == "cpl") {
         return "coupling_type";
@@ -266,14 +266,14 @@ void ContextCollection::create_contexts() {
     if (cpl == NULL) {
         check_property(coupling_type, string, parse_string)
         if (coupling_type == "fixed") {
-            check_property(alphasbar, double, parse_double)
-            cpl = new FixedCoupling(alphasbar);
+            check_property(alphas, double, parse_double)
+            cpl = new FixedCoupling(alphas);
         }
         else if (coupling_type == "running") {
             check_property(lambdaQCD, double, parse_double)
-            check_property(beta,      double, parse_double)
             check_property(regulator, double, parse_double)
-            cpl = new LORunningCoupling(lambdaQCD, beta, regulator);
+            check_property_default(Ncbeta, double, parse_double, (11.0 * Nc - 2.0 * Nf) / 12.0)
+            cpl = new LORunningCoupling(lambdaQCD, Ncbeta, regulator);
         }
         else {
             throw InvalidPropertyValueException<string>("coupling_type", coupling_type);
@@ -367,15 +367,18 @@ void ContextCollection::add(string key, string value) {
 }
 
 void ContextCollection::setup_defaults() {
+    // This includes only those default values which are static
     options.insert(pair<string, string>("x0", "0.000304"));
     options.insert(pair<string, string>("lambda", "0.288"));
     options.insert(pair<string, string>("lambdamv", "0.24"));
     options.insert(pair<string, string>("lambdaqcd", "0.24248711")); // sqrt(0.0588)
+    options.insert(pair<string, string>("regulator", "1"));
     options.insert(pair<string, string>("mu2", "10"));
     options.insert(pair<string, string>("nc", "3"));
     options.insert(pair<string, string>("nf", "3"));
     options.insert(pair<string, string>("cf", "1.5"));
     options.insert(pair<string, string>("tr", "0.5"));
+    options.insert(pair<string, string>("alphas", "0.2"));
     options.insert(pair<string, string>("pdf_filename", "mstw2008nlo.00.dat"));
     options.insert(pair<string, string>("ff_filename", "PINLO.DAT"));
     options.insert(pair<string, string>("integration_strategy", "VEGAS"));

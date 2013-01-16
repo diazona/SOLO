@@ -37,7 +37,7 @@ void H12qqbar::Fd(const IntegrationContext* ictx, double* real, double* imag) co
     double Fg1 = ictx->ctx->gdist->F(ictx->q12, ictx->Qs2);
     double Fg2 = ictx->ctx->gdist->F(kB2, ictx->Qs2);
     double logfac = log(kA2 / ictx->kT2);
-    double value = -2 * ictx->ctx->Nf * ictx->ctx->TR * ictx->ctx->Sperp * ictx->alphasbar * ictx->ggfactor / ictx->z2
+    double value = -2 * ictx->ctx->Nf * ictx->ctx->TR * ictx->ctx->Sperp * ictx->alphas_2pi * ictx->ggfactor / ictx->z2
         * Pfac * Fg1 * Fg2 * logfac;
     checkfinite(value);
     *real = value;
@@ -52,7 +52,7 @@ void H16ggSingular::Fs(const IntegrationContext* ictx, double* real, double* ima
     double Fg1 = ictx->ctx->gdist->F(kA2, ictx->Qs2);
     double Fg2 = ictx->ctx->gdist->F(kB2, ictx->Qs2);
     double Fg3 = ictx->ctx->gdist->F(ictx->q32, ictx->Qs2);
-    double value = -4 * M_1_PI * ictx->alphasbar * ictx->ctx->Nc * ictx->ctx->Sperp * ictx->ggfactor / ictx->z2
+    double value = -4 * M_1_PI * ictx->alphas_2pi * ictx->ctx->Nc * ictx->ctx->Sperp * ictx->ggfactor / ictx->z2
          * Pfac * dotfac * Fg1 * Fg2 * Fg3;
     checkfinite(value);
     *real = value;
@@ -69,7 +69,7 @@ void H16ggDelta::Fd(const IntegrationContext* ictx, double* real, double* imag) 
     double Fg3 = ictx->ctx->gdist->F(kC2, ictx->Qs2);
     double log0 = log(kA02 / ictx->kT2);
     double log1 = log(kA12 / ictx->kT2);
-    double value = -4 * ictx->alphasbar * ictx->ctx->Nc * ictx->ctx->Sperp * ictx->ggfactor / ictx->z2 * Fg1 * Fg2 * Fg3
+    double value = -4 * ictx->alphas_2pi * ictx->ctx->Nc * ictx->ctx->Sperp * ictx->ggfactor / ictx->z2 * Fg1 * Fg2 * Fg3
                       * ((ictx->xiprime * log0 - log1) / (1 - ictx->xiprime)
                          + 0.5 * ictx->xiprime * (1 - ictx->xiprime) * log0);
     checkfinite(value);
@@ -84,7 +84,7 @@ void H14gq::Fn(const IntegrationContext* ictx, double* real, double* imag) const
     double kB2 = gsl_pow_2(ictx->kT * (ictx->xi - 1) / ictx->xi - ictx->q1x + ictx->q2x) + gsl_pow_2(-ictx->q1y + ictx->q2y);
     double Fg1 = ictx->ctx->gdist->F(kA2, ictx->Qs2);
     double Fg2 = ictx->ctx->gdist->F(kB2, ictx->Qs2);
-    double value = -ictx->alphasbar * ictx->ctx->Nc * M_1_PI * ictx->gqfactor / ictx->z2 * Pfac * Fg1 * Fg2 * dotfac;
+    double value = -ictx->alphas_2pi * ictx->ctx->Nc * M_1_PI * ictx->gqfactor / ictx->z2 * Pfac * Fg1 * Fg2 * dotfac;
     checkfinite(value);
     *real = value;
     *imag = 0;
@@ -97,7 +97,7 @@ void H14qg::Fn(const IntegrationContext* ictx, double* real, double* imag) const
     double kB2 = gsl_pow_2(ictx->kT * (ictx->xi - 1) / ictx->xi - ictx->q1x + ictx->q2x) + gsl_pow_2(-ictx->q1y + ictx->q2y);
     double Fg1 = ictx->ctx->gdist->F(kA2, ictx->Qs2);
     double Fg2 = ictx->ctx->gdist->F(kB2, ictx->Qs2);
-    double value = -ictx->alphasbar * M_1_PI * ictx->qgfactor / ictx->z2 * Pfac * Fg1 * Fg2 * dotfac;
+    double value = -ictx->alphas_2pi * M_1_PI * ictx->qgfactor / ictx->z2 * Pfac * Fg1 * Fg2 * dotfac;
     checkfinite(value);
     *real = value;
     *imag = 0;
