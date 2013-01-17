@@ -37,15 +37,15 @@ where the <options> can include any number of the following, in any order:
     of names that can be used with an "m:" prefix are the return values from
     get_name() methods in hardfactors_momentum.h. Here's a near-complete list:
     
-        p:h02qq p:h02gg p:h12qq p:h14qq p:h12gg p:h12qqbar m:h12qqbar
-        p:h16gg m:h16gg p:h112qg p:h122qg p:h14qg m:h14qg
+        p:h02qq m:h02qq p:h02gg m:h02gg p:h12qq p:h14qq p:h12gg p:h12qqbar
+        m:h12qqbar p:h16gg m:h16gg p:h112qg p:h122qg p:h14qg m:h14qg
         p:h112gq p:h122gq p:h14gq m:h14gq
         
     The names are case-insensitive.
 
     It's also possible to specify the group of all leading order terms,
     
-        p:h02qq,p:h02gg
+        m:h02qq,m:h02gg
         
     using the shortcut "lo", and the group of all next-to-leading order terms,
     

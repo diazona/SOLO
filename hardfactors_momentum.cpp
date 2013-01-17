@@ -30,6 +30,25 @@
 
 using namespace momentum;
 
+void H02qq::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
+    double Fg = ictx->ctx->gdist->F(ictx->kT2, ictx->Qs2);
+    double value = ictx->ctx->Sperp * ictx->qqfactor / ictx->z2 * Fg;
+    checkfinite(value);
+    *real = value;
+    *imag = 0;
+}
+
+void H02gg::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
+    double kA2 = gsl_pow_2(ictx->q1x - ictx->kT) + gsl_pow_2(ictx->q1y); // (q - k)^2
+    double Fg1 = ictx->ctx->gdist->F(ictx->q12, ictx->Qs2);
+    double Fg2 = ictx->ctx->gdist->F(kA2, ictx->Qs2);
+    double value = ictx->ctx->Sperp * ictx->ggfactor / ictx->z2 * Fg1 * Fg2;
+    checkfinite(value);
+    *real = value;
+    *imag = 0;
+}
+
+
 void H12qqbar::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
     double Pfac = 1 - 2 * ictx->xiprime + 2 * ictx->xiprime2;
     double kA2 = gsl_pow_2(ictx->q1x - ictx->xiprime * ictx->kT) + gsl_pow_2(ictx->q1y); // (q - xi' k)^2

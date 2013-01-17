@@ -26,17 +26,17 @@
 
 namespace momentum {
 
-// class H02qq : public HardFactorTerm {
-// public:
-//     const char* get_name() {
-//         return "H02qq";
-//     }
-//     IntegrationType* get_type() {
-//         return dipole;
-//     }
-//     void Fd(const IntegrationContext* ictx, double* real, double* imag);
-// };
-// 
+class H02qq : public HardFactorTerm {
+public:
+    const char* get_name() const {
+        return "H02qq";
+    }
+    const IntegrationType* get_type() const {
+        return NoIntegrationType::get_instance();
+    }
+    void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
+};
+
 // class H12qq : public HardFactorTerm {
 // public:
 //     const char* get_name() {
@@ -71,18 +71,18 @@ namespace momentum {
 //     }
 //     void Fd(const IntegrationContext* ictx, double* real, double* imag);
 // };
-// 
-// class H02gg : public HardFactorTerm {
-// public:
-//     const char* get_name() {
-//         return "H02gg";
-//     }
-//     IntegrationType* get_type() {
-//         return dipole;
-//     }
-//     void Fd(const IntegrationContext* ictx, double* real, double* imag);
-// };
-// 
+
+class H02gg : public HardFactorTerm {
+public:
+    const char* get_name() const {
+        return "H02gg";
+    }
+    const IntegrationType* get_type() const {
+        return Momentum1IntegrationType::get_instance();
+    }
+    void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
+};
+
 // class H12gg : public HardFactorTerm {
 // public:
 //     const char* get_name() {
@@ -228,10 +228,10 @@ public:
     }
 private:
     registry() {
-//         add_hard_factor(new H02qq(), true);
+        add_hard_factor(new H02qq(), true);
 //         add_hard_factor(new H12qq(), true);
 //         add_hard_factor(new H14qq(), true);
-//         add_hard_factor(new H02gg(), true);
+        add_hard_factor(new H02gg(), true);
 //         add_hard_factor(new H12gg(), true);
         add_hard_factor(new H12qqbar(), true);
         add_hard_factor(new H16gg(), true);
