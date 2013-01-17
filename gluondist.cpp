@@ -71,7 +71,7 @@ MVGluonDistribution::MVGluonDistribution(double LambdaMV, double q2min, double q
  F_dist_leading_q2(NULL), F_dist_subleading_q2(NULL), F_dist(NULL),
  interp_dist_leading_q2(NULL), interp_dist_subleading_q2(NULL), interp_dist(NULL),
  q2_accel(NULL), Qs2_accel(NULL) {
-    double step = 1.2;
+    double step = 1.05;
     MVIntegrationParameters params(this);
     gsl_function func;
     func.params = &params;
@@ -237,9 +237,10 @@ int main(int argc, char** argv) {
     }
     else {
         double q2, Qs2;
+        std::cin >> q2 >> Qs2;
         while (!std::cin.eof()) {
-            std::cin >> q2 >> Qs2;
             std::cout << q2 << "\t"<< Qs2 << "\t" << gdist.F(q2, Qs2) << std::endl;
+            std::cin >> q2 >> Qs2;
         }
     }
 }
