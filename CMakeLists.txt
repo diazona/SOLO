@@ -19,3 +19,7 @@ set_target_properties(utils_test PROPERTIES COMPILE_DEFINITIONS UTILS_TEST)
 
 add_executable(dss_pinlo_test dss_pinlo_test.cpp dss_pinlo.cpp)
 target_link_libraries(dss_pinlo_test ${CMAKE_SOURCE_DIR}/libinterp2d.a ${LIBS})
+
+add_executable(mvgluondist gluondist.cpp)
+target_link_libraries(mvgluondist ${CMAKE_SOURCE_DIR}/libinterp2d.a ${LIBS})
+set_target_properties(mvgluondist PROPERTIES COMPILE_DEFINITIONS GLUON_DIST_DRIVER)
