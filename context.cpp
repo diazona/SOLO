@@ -241,9 +241,9 @@ void ContextCollection::create_contexts() {
             double Ymin = min(Y);
             double Ymax = max(Y);
             double pTmin = min(pT);
-            double pTmax = max(pT);
             double Q02x0lambda = c * pow(A, 1./3.) * pow(x0, lambda);
-            check_property(lambdaMV, double, parse_double)
+            check_property_default(lambdaMV, double, parse_double, 0.241)
+            check_property_default(gammaMV,  double, parse_double, 1)
             check_property_default(q2min,  double, parse_double, 1e-6)
             // q2max = (2 qxmax + sqrt(smax) / exp(Ymin))^2 + (2 qymax)^2
             check_property_default(q2max,  double, parse_double, gsl_pow_2(2 * inf + sqs / exp(Ymin)) + gsl_pow_2(2 * inf))
@@ -254,8 +254,21 @@ void ContextCollection::create_contexts() {
             logger << "Creating MV gluon distribution with " << q2min << " < k2 < " << q2max << ", " << Qs2min << " < Qs2 < " << Qs2max << endl;
             assert(q2min < q2max);
             assert(Qs2min < Qs2max);
-            check_property_default(mv_subinterval_limit, size_t, parse_size, 10000)
-            gdist = new MVGluonDistribution(lambdaMV, q2min, q2max, Qs2min, Qs2max, mv_subinterval_limit);
+            check_property_default(gdist_subinterval_limit, size_t, parse_size, 10000)
+            gdist = new MVGluonDistribution(lambdaMV, gammaMV, q2min, q2max, Qs2min, Qs2max, gdist_subinterval_limit);
+        }
+        else if (gdist_type == "fMV") {
+            double Ymin = min(Y);
+            check_property_default(lambdaMV, double, parse_double, 0.241)
+            check_property_default(gammaMV,  double, parse_double, 1)
+            check_property_default(q2min,  double, parse_double, 1e-6)
+            // q2max = (2 qxmax + sqrt(smax) / exp(Ymin))^2 + (2 qymax)^2
+            check_property_default(q2max,  double, parse_double, gsl_pow_2(2 * inf + sqs / exp(Ymin)) + gsl_pow_2(2 * inf))
+            check_property_default(Qs02MV, double, parse_double, 1)
+            logger << "Creating fMV gluon distribution with " << q2min << " < k2 < " << q2max << ", Qs02 = " << Qs02MV << endl;
+            assert(q2min < q2max);
+            check_property_default(gdist_subinterval_limit, size_t, parse_size, 10000)
+            gdist = new MVGluonDistribution(lambdaMV, gammaMV, q2min, q2max, Qs02MV, gdist_subinterval_limit);
         }
         else {
             throw InvalidPropertyValueException<string>("gdist_type", gdist_type);
@@ -370,7 +383,6 @@ void ContextCollection::setup_defaults() {
     // This includes only those default values which are static
     options.insert(pair<string, string>("x0", "0.000304"));
     options.insert(pair<string, string>("lambda", "0.288"));
-    options.insert(pair<string, string>("lambdamv", "0.24"));
     options.insert(pair<string, string>("lambdaqcd", "0.24248711")); // sqrt(0.0588)
     options.insert(pair<string, string>("regulator", "1"));
     options.insert(pair<string, string>("mu2", "10"));

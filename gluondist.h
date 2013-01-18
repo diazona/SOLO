@@ -80,15 +80,17 @@ public:
 };
 
 /**
- * The MV gluon distribution (aka "modified").
+ * An abstract gluon distribution which has only a position space
+ * definition, and the values in momentum space are computed
+ * automatically.
  * 
- * The position space dipole distribution takes the form
- * exp(-r2 Qs2 ln(e + 1 / (LambdaMV r)) / 4)
- * and the position space quadrupole distribution is computed
- * as a product of two factors of that form.
+ * This is a base class for gluon distributions which have no
+ * analytic expression or other direct definition in momentum
+ * space. Only the position space data is available - that is,
+ * for when you have S(r, Qs) but not F(k, Qs). This means the
+ * value of the distribution in momentum space has to be determined
+ * numerically.
  * 
- * In momentum space, there is no analytic expression, so the
- * value of the distribution has to be determined numerically.
  * This implementation establishes a 2D grid in ln(q2) and ln(Qs2)
  * and computes the value of the distribution at the grid points
  * via a numerical integral. When F(q2, Qs2) is called, if the
@@ -99,10 +101,10 @@ public:
  * expansion around q2 = 0. The series coefficients are
  * interpolated in Qs2 only.
  */
-class MVGluonDistribution: public GluonDistribution {
+class AbstractPositionGluonDistribution : public GluonDistribution {
 public:
     /**
-     * Constructs a new MV gluon distribution object.
+     * Constructs a new position gluon distribution object.
      * 
      * `q2min`, `q2max`, `Qs2min`, and `Qs2max` specify the boundaries
      * of the region in which to interpolate the momentum space
@@ -118,33 +120,35 @@ public:
      * extreme parameters if the program crashes with a subdivision
      * error.
      */
-    MVGluonDistribution(double LambdaMV, double q2min, double q2max, double Qs2min, double Qs2max, size_t subinterval_limit = 10000);
-    ~MVGluonDistribution();
+    AbstractPositionGluonDistribution(double q2min, double q2max, double Qs2min, double Qs2max, size_t subinterval_limit = 10000);
+    ~AbstractPositionGluonDistribution();
+
+    /**
+     * Handles the actual calculation of the points to use for interpolation.
+     * This should be called from the constructor of each subclass that
+     * implements S2.
+     */
+    void calculate_interpolation_grid();
     
     /**
-     * Returns the value of the MV dipole gluon distribution,
-     * exp(-r2 Qs2 ln(e + 1 / (LambdaMV r)) / 4)
-     */
-    double S2(double r2, double Qs2);
-    /**
-     * Returns the value of the MV quadrupole gluon distribution,
-     * computed as the product of two dipole gluon distributions,
-     * S2(s2, Qs2) * S2 (t2, Qs2). This is valid in the large-Nc
+     * Returns the value of the position space quadrupole gluon distribution,
+     * by default computed as the product of two dipole gluon distributions,
+     * S2(s2, Qs2) * S2 (t2, Qs2). This is usually valid in the large-Nc
      * limit.
      */
-    double S4(double r2, double s2, double t2, double Qs2);
+    virtual double S4(double r2, double s2, double t2, double Qs2);
     /**
      * Returns the value of the MV momentum space dipole gluon
      * distribution.
      */
     double F(double q2, double Qs2);
     /**
-     * Returns the name of the distribution, which incorporates
+     * Returns the name of the distribution, which should incorporate
      * the values of the parameters.
      */
-    const char* name();
+    virtual const char* name() = 0;
+
 private:
-    double LambdaMV;
     double q2min, q2max;
     double Qs2min, Qs2max;
     /** Values of ln(q2) for the interpolation. */
@@ -161,11 +165,19 @@ private:
     // Structures used to do the interpolation
     gsl_interp* interp_dist_leading_q2;
     gsl_interp* interp_dist_subleading_q2;
-    interp2d* interp_dist;
+    // one of interp_dist_1D or interp_dist_2D will be NULL and the other one
+    // will be used, depending on whether there is a range of Qs2 values or
+    // just a single one
+    gsl_interp* interp_dist_1D;
+    interp2d* interp_dist_2D;
+    
     gsl_interp_accel* q2_accel;
     gsl_interp_accel* Qs2_accel;
     
-    std::string _name;
+    size_t q2_dimension;
+    size_t Qs2_dimension;
+    
+    size_t subinterval_limit;
 #ifdef GLUON_DIST_DRIVER
 public:
     /**
@@ -175,6 +187,61 @@ public:
      */
     void write_grid();
 #endif
+};
+
+/**
+ * The MV gluon distribution.
+ * 
+ * The position space dipole distribution takes the form
+ * exp(-(r2 Qs02MV)^gammaMV ln(e + 1 / (LambdaMV r)) / 4)
+ * and the position space quadrupole distribution is computed
+ * as a product of two factors of that form.
+ */
+class MVGluonDistribution: public AbstractPositionGluonDistribution {
+public:
+    /**
+     * Constructs a new MV gluon distribution object.
+     */
+    MVGluonDistribution(double LambdaMV, double gammaMV, double q2min, double q2max, double Qs2min, double Qs2max, size_t subinterval_limit = 10000);
+    ~MVGluonDistribution() {};
+    
+    /**
+     * Returns the value of the MV dipole gluon distribution,
+     * exp(-(r2 Qs02MV)^gammaMV ln(e + 1 / (LambdaMV r)) / 4)
+     */
+    double S2(double r2, double Qs2);
+    /**
+     * Returns the name of the distribution, which incorporates
+     * the values of the parameters.
+     */
+    const char* name();
+protected:
+    double LambdaMV;
+    double Qs02MV;
+    double gammaMV;
+    
+    std::string _name;
+};
+
+/**
+ * A modified version of the MV gluon distribution which ignores the actual
+ * saturation scale and uses a fixed value instead.
+ */
+class FixedSaturationMVGluonDistribution : public MVGluonDistribution {
+public:
+    /**
+     * Constructs a new modified gluon distribution object.
+     */
+    FixedSaturationMVGluonDistribution(double LambdaMV, double gammaMV, double q2min, double q2max, double Qs02MV, size_t subinterval_limit = 10000);
+    ~FixedSaturationMVGluonDistribution() {};
+    
+    /**
+     * Returns the value of the dipole gluon distribution,
+     * exp(-(r2 Qs02)^gammaMV ln(e + 1 / (LambdaMV r)) / 4)
+     * 
+     * The parameter Qs2 is not used.
+     */
+    double S2(double r2, double Qs2);
 };
 
 /** Prints the name of the gluon distribution to the given output stream. */

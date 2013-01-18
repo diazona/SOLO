@@ -80,13 +80,17 @@ where the <options> can include any number of the following, in any order:
         "fixed" or "running"
     ff_filename (default PINLO.DAT)
         filename to read DSS FF data from
+    gammaMV
+        the anomalous dimension in the MV gluon distribution
+    gdist_subinterval_limit (default 10000)
+        number of subdivisions to use when integrating a position gluon distribution
     gdist_type (default GBW)
-        the type of the gluon distribution, "GBW" or "MV"
+        the type of the gluon distribution, "GBW", "MV", or "fMV"
     integration_strategy (default VEGAS)
         the integration type to use, "MISER", "VEGAS" (best), or "QUASI"
     lambda (default 0.288)
         the exponent in the definition of the saturation scale
-    lambdaMV (default 0.24)
+    lambdaMV (default 0.241)
         the parameter in the MV gluon distribution, in GeV
     lambdaQCD (default 0.2428711 = sqrt(0.0588))
         QCD lambda in GeV, used in the running coupling
