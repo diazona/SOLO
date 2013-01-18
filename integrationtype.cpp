@@ -49,6 +49,15 @@ void PlainIntegrationType::fill_max(IntegrationContext& ictx, const size_t core_
     while (i < core_dimensions + extra_dimensions) { max[i++] = inf; }
 }
 
+void NoIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
+    if (core_dimensions == 1) {
+        ictx.update_parton_factors(values[0], 1);
+    }
+    else {
+        ictx.update_parton_factors(values[0], values[1]);
+    }
+}
+
 void DipoleIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     if (core_dimensions == 1) {
         ictx.update_parton_factors(values[0], 1);

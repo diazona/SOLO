@@ -62,6 +62,21 @@ protected:
 };
 
 /**
+ * An integration type for integration over z and/or y only
+ */
+class NoIntegrationType : public PlainIntegrationType {
+public:
+    static const NoIntegrationType* get_instance() {
+        static NoIntegrationType instance;
+        return &instance;
+    }
+private:
+    NoIntegrationType() : PlainIntegrationType(0) {}
+    NoIntegrationType(NoIntegrationType const&);
+    void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
+};
+
+/**
  * An integration type for integration over rx, ry, z and/or y
  */
 class DipoleIntegrationType : public PlainIntegrationType {
