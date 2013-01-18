@@ -24,10 +24,12 @@
 #include <csignal>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <iostream>
 #include <sstream>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_rng.h>
+#include "git_revision.h"
 #include "mstwpdf.h"
 #include "dss_pinlo.h"
 #include "coupling.h"
@@ -603,6 +605,10 @@ void termination_handler(int signal) {
     if (!terminated) {
         terminated = true;
         cout << *p_rc;
+        
+        time_t rawtime;
+        time(&rawtime);
+        logger << "Terminating at " << ctime(&rawtime) << endl;
     }
     _exit(2);
 }
@@ -614,8 +620,13 @@ void termination_handler(int signal) {
  * be caught in the real main().
  */
 int run(int argc, char** argv) {
-    gsl_set_error_handler(&gsl_error_throw);
+    time_t rawtime;
 
+    time(&rawtime);
+    logger << "Starting at " << ctime(&rawtime) << endl;
+
+    gsl_set_error_handler(&gsl_error_throw);
+    
     ProgramConfiguration pc(argc, argv);
     ContextCollection cc = pc.context_collection();
     if (cc.empty()) {
@@ -630,6 +641,9 @@ int run(int argc, char** argv) {
      * out as part of the output file makes it easy to tell what parameters were used in
      * and given run, and is also useful in case we want to reproduce a run.
      */
+#ifdef GIT_REVISION
+    cout << "# git revision " << GIT_REVISION << endl;
+#endif
     cout << cc << "------------" << endl;
 
     ResultsCalculator rc(cc, tlctx, pc.hard_factor_groups(), pc.hard_factor_names());
@@ -651,6 +665,10 @@ int run(int argc, char** argv) {
     sigaction(SIGINT, &oldsiga, NULL);
     // And print out results
     cout << rc;
+    
+    time(&rawtime);
+    logger << "Ending at " << ctime(&rawtime) << endl;
+    
     return 0;
 }
 
