@@ -475,7 +475,7 @@ ProgramConfiguration::~ProgramConfiguration() {
  * This defines the hard factor group that is used when "lo" is given
  * on the command line
  */
-static const char* default_lo_spec = "p:h02qq,p:h02gg";
+static const char* default_lo_spec = "m:h02qq,m:h02gg";
 /**
  * This defines the hard factor group that is used when "nlo" is given
  * on the command line
