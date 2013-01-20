@@ -68,6 +68,8 @@ where the <options> can include any number of the following, in any order:
     
     A (no default)
         the mass number
+    abserr (default 1e-20)
+        the absolute error at which to stop an integration, for strategies which use this termination condition
     alphas (default 0.2)
         value for the fixed coupling
     beta (default 11 - 2*Nf/3)
@@ -78,6 +80,8 @@ where the <options> can include any number of the following, in any order:
         the color factor
     coupling_type (default fixed)
         "fixed" or "running"
+    cubature_iterations
+        number of calls to use for cubature integration
     ff_filename (default PINLO.DAT)
         filename to read DSS FF data from
     gammaMV
@@ -112,14 +116,12 @@ where the <options> can include any number of the following, in any order:
         comma-separated list of transverse momenta
     quasirandom_generator_type (default halten)
         algorithm to use for generating quasirandom numbers for QMC integration; allowed values are in the GSL documentation
-    quasi_abserr (default 1e-20)
-        the absolute error at which to stop quasi Monte Carlo integration
     quasi_iterations (default 1000000)
         the number of iterations at which to stop quasi Monte Carlo integration
-    quasi_relerr (default 0)
-        the relative error at which to stop quasi Monte Carlo integration
     regulator (default 1)
         the position of the Landau pole for the regulated LO running coupling
+    relerr (default 0)
+        the relative error at which to stop an integration, for strategies which use this termination condition
     Sperp (default 1)
         cross-sectional area of the hadron
     sqs (no default)

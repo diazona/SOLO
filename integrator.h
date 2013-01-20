@@ -75,6 +75,8 @@ private:
     HardFactorTypeMap terms;
     /** A callback function to call each time the function is evaluated */
     void (*callback)(const IntegrationContext*, double, double);
+    /** A callback function to call each time a cubature integration finishes */
+    void (*cubature_callback)(double*, double*);
     /** A callback function to call each time a MISER integration finishes */
     void (*miser_callback)(double*, double*, gsl_monte_miser_state*);
     /** A callback function to call each time a step of the VEGAS integration finishes */
@@ -131,6 +133,12 @@ public:
      */
     void set_callback(void (*callback)(const IntegrationContext*, double, double)) {
         this->callback = callback;
+    }
+    /**
+     * Sets the callback to be invoked each time a MISER integration finishes.
+     */
+    void set_cubature_callback(void (*cubature_callback)(double*, double*)) {
+        this->cubature_callback = cubature_callback;
     }
     /**
      * Sets the callback to be invoked each time a MISER integration finishes.

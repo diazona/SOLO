@@ -134,11 +134,18 @@ void write_nonzero(const IntegrationContext* ictx, const double real, const doub
 }
 
 /* The following functions are callback functions to be used with
- * Integrator.set_miser_callback() or Integrator.set_vegas_callback().
- * These would be invoked when the Monte Carlo routine returns a
- * final value, not every time it evaluates the function.
+ * Integrator.set_*_callback(). These would be invoked when the
+ * integration routine returns a final value, or an intermediate
+ * value in the case of VEGAS, not every time it evaluates the function.
  */
 
+/**
+ * A callback for cubature integration that prints out the result of the
+ * integration with its error bound.
+ */
+void cubature_eprint_callback(double* p_result, double* p_abserr) {
+    cerr << "cubature output: " << *p_result << " err: " << *p_abserr << endl;
+}
 /**
  * A callback for VEGAS integration that prints out the result of the
  * integration with its error bound and chi-squared value.
@@ -267,6 +274,7 @@ void ResultsCalculator::calculate() {
                 else if (minmax) {
                     integrator->set_callback(store_minmax);
                 }
+                integrator->set_cubature_callback(cubature_eprint_callback);
                 integrator->set_miser_callback(miser_eprint_callback);
                 integrator->set_vegas_callback(vegas_eprint_callback);
                 integrator->set_quasi_callback(quasi_eprint_callback);
@@ -421,7 +429,7 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) {
         else if (a == "--separate") {
             separate = true;
         }
-        else if (a == "MV" || a == "GBW") {
+        else if (a == "MV" || a == "fMV" ||  a == "GBW") {
             gdist_type = a;
         }
         else if (a[0] == 'h' || a[1] == ':' || a == "lo" || a == "nlo") {

@@ -27,6 +27,7 @@
 #include <gsl/gsl_qrng.h>
 #include "integrator.h"
 #include "quasimontecarlo.h"
+#include "cubature.h"
 
 /*
  * Here's the overall "usage map" of the code in this file:
@@ -59,7 +60,7 @@
 
 Integrator::Integrator(const Context* ctx, const ThreadLocalContext* tlctx, HardFactorList hflist) :
   ictx(ctx, tlctx), current_type(DipoleIntegrationType::get_instance()),
-  callback(NULL), miser_callback(NULL), vegas_callback(NULL) {
+  callback(NULL), cubature_callback(NULL), miser_callback(NULL), vegas_callback(NULL), quasi_callback(NULL) {
     assert(hflist.size() > 0);
 #ifndef NDEBUG
     size_t total1 = 0;
@@ -162,6 +163,52 @@ void Integrator::evaluate_2D_integrand(double* real, double* imag) {
     }
     *real = jacobian * l_real;
     *imag = jacobian * l_imag;
+}
+
+/**
+ * A wrapper function that can be passed to the cubature integration code
+ * to do the 1D integrand.
+ * 
+ * This updates the IntegrationContext using the values in `coordinates`
+ * and then evaluates the current list of hard factors. The `coordinates`
+ * are interpreted as z, (xiprime if applicable), rx, ry, etc.
+ */
+void cubature_wrapper_1D(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nresults, double* results) {
+    double real;
+    double imag;
+    Integrator* integrator = (Integrator*)closure;
+    integrator->update1D(coordinates);
+    integrator->evaluate_1D_integrand(&real, &imag);
+    checkfinite(real);
+    checkfinite(imag);
+    assert(nresults == 1 || nresults == 2);
+    results[0] = real;
+    if (nresults == 2) {
+        results[1] = imag;
+    }
+}
+
+/**
+ * A wrapper function that can be passed to the cubature integration code
+ * to do the 2D integrand.
+ * 
+ * This updates the IntegrationContext using the values in `coordinates`
+ * and then evaluates the current list of hard factors. The `coordinates`
+ * are interpreted as z, y, (xiprime if applicable), rx, ry, etc.
+ */
+void cubature_wrapper_2D(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nresults, double* results) {
+    double real;
+    double imag;
+    Integrator* integrator = (Integrator*)closure;
+    integrator->update2D(coordinates);
+    integrator->evaluate_2D_integrand(&real, &imag);
+    checkfinite(real);
+    checkfinite(imag);
+    assert(nresults == 1 || nresults == 2);
+    results[0] = real;
+    if (nresults == 2) {
+        results[1] = imag;
+    }
 }
 
 /**
@@ -309,46 +356,70 @@ void quasi_integrate(double (*func)(double*, size_t, void*), size_t dim, void* c
     s = NULL;
 }
 
+void cubature_integrate(integrand func, size_t dim, void* closure, double* min, double* max, double* p_result, double* p_abserr,
+                        size_t iterations, double relerr, double abserr, void (*callback)(double*, double*)) {
+    adapt_integrate(1, func, closure, dim, min, max, iterations, abserr, relerr, p_result, p_abserr);
+    checkfinite(*p_result);
+    checkfinite(*p_abserr);
+    if (callback) {
+        (*callback)(p_result, p_abserr);
+    }
+}
+
 void Integrator::integrate_impl(size_t core_dimensions, double* result, double* error) {
     // it should already have been checked that there is at least one term of the appropriate type
     // and the type should be set appropriately
     assert(core_dimensions == 1 || core_dimensions == 2);
     size_t dimensions = core_dimensions + current_type->extra_dimensions;
-    double (*monte_wrapper)(double*, size_t, void*);
     double min[10];
     double max[10];
-    if (core_dimensions == 2) {
-        monte_wrapper = gsl_monte_wrapper_2D;
-    }
-    else {
-        monte_wrapper = gsl_monte_wrapper_1D;
-    }
     current_type->fill_min(ictx, core_dimensions, min);
     current_type->fill_max(ictx, core_dimensions, max);
+    switch (dimensions) {
+        case 1:
+        case 2:
+            integrand cubature_wrapper;
+            if (core_dimensions == 2) {
+                cubature_wrapper = cubature_wrapper_2D;
+            }
+            else {
+                cubature_wrapper = cubature_wrapper_1D;
+            }
+            cubature_integrate(cubature_wrapper, dimensions, this, min, max, result, error, ictx.ctx->cubature_iterations, ictx.ctx->relerr, ictx.ctx->abserr, cubature_callback);
+            break;
+        default:
+            double (*monte_wrapper)(double*, size_t, void*);
+            if (core_dimensions == 2) {
+                monte_wrapper = gsl_monte_wrapper_2D;
+            }
+            else {
+                monte_wrapper = gsl_monte_wrapper_1D;
+            }
 
-    if (ictx.ctx->strategy == MC_QUASI) {
-        gsl_qrng* qrng = gsl_qrng_alloc(ictx.ctx->quasirandom_generator_type, dimensions);
-        quasi_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->quasi_iterations, ictx.ctx->quasi_relerr, ictx.ctx->quasi_abserr, qrng, quasi_callback);
-        gsl_qrng_free(qrng);
-        qrng = NULL;
-    }
-    else {
-        gsl_rng* rng = gsl_rng_alloc(ictx.ctx->pseudorandom_generator_type);
-        gsl_rng_set(rng, ictx.ctx->pseudorandom_generator_seed);
-        switch (ictx.ctx->strategy) {
-            case MC_VEGAS:
-                vegas_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->vegas_initial_iterations, ictx.ctx->vegas_incremental_iterations, rng, vegas_callback);
-                break;
-            case MC_MISER:
-                miser_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->miser_iterations, rng, miser_callback);
-                break;
-            case MC_PLAIN:
-                throw "Unsupported integration method PLAIN";
-            default:
-                throw "Unknown integration method";
-        }
-        gsl_rng_free(rng);
-        rng = NULL;
+            if (ictx.ctx->strategy == MC_QUASI) {
+                gsl_qrng* qrng = gsl_qrng_alloc(ictx.ctx->quasirandom_generator_type, dimensions);
+                quasi_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->quasi_iterations, ictx.ctx->relerr, ictx.ctx->abserr, qrng, quasi_callback);
+                gsl_qrng_free(qrng);
+                qrng = NULL;
+            }
+            else {
+                gsl_rng* rng = gsl_rng_alloc(ictx.ctx->pseudorandom_generator_type);
+                gsl_rng_set(rng, ictx.ctx->pseudorandom_generator_seed);
+                switch (ictx.ctx->strategy) {
+                    case MC_VEGAS:
+                        vegas_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->vegas_initial_iterations, ictx.ctx->vegas_incremental_iterations, rng, vegas_callback);
+                        break;
+                    case MC_MISER:
+                        miser_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->miser_iterations, rng, miser_callback);
+                        break;
+                    case MC_PLAIN:
+                        throw "Unsupported integration method PLAIN";
+                    default:
+                        throw "Unknown integration method";
+                }
+                gsl_rng_free(rng);
+                rng = NULL;
+            }
     }
     if (callback) {
         callback(NULL, 0, 0);

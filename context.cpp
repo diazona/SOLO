@@ -97,11 +97,11 @@ const string canonicalize(const string& i_key) {
     else if (key == "qmc iterations" || key == "quasi iterations") {
         return "quasi_iterations";
     }
-    else if (key == "qmc absolute error" || key == "quasi absolute error") {
-        return "quasi_abserr";
+    else if (key == "qmc absolute error" || key == "quasi absolute error" || key == "absolute error") {
+        return "abserr";
     }
-    else if (key == "qmc relative error" || key == "quasi relative error") {
-        return "quasi_relerr";
+    else if (key == "qmc relative error" || key == "quasi relative error" || key == "relative error") {
+        return "relerr";
     }
     else if (key == "integration strategy" || key == "strategy") {
         return "integration_strategy";
@@ -221,12 +221,13 @@ void ContextCollection::create_contexts() {
     check_property(pdf_filename, string, parse_string)
     check_property(ff_filename,  string, parse_string)
     check_property(integration_strategy, integration_strategy, parse_strategy)
+    check_property(cubature_iterations, size_t, parse_size)
     check_property(miser_iterations, size_t, parse_size)
     check_property(vegas_initial_iterations, size_t, parse_size)
     check_property(vegas_incremental_iterations, size_t, parse_size)
     check_property(quasi_iterations, size_t, parse_size)
-    check_property(quasi_abserr, double, parse_double)
-    check_property(quasi_relerr, double, parse_double)
+    check_property(abserr, double, parse_double)
+    check_property(relerr, double, parse_double)
     check_property(quasirandom_generator_type, const gsl_qrng_type*, parse_qrng_type)
     check_property(pseudorandom_generator_type, const gsl_rng_type*, parse_rng_type)
     check_property(pseudorandom_generator_seed, unsigned long int, parse_ulong)
@@ -314,12 +315,13 @@ void ContextCollection::create_contexts() {
                     pdf_filename,
                     ff_filename,
                     integration_strategy,
+                    cubature_iterations,
                     miser_iterations,
                     vegas_initial_iterations,
                     vegas_incremental_iterations,
                     quasi_iterations,
-                    quasi_abserr,
-                    quasi_relerr,
+                    abserr,
+                    relerr,
                     quasirandom_generator_type,
                     pseudorandom_generator_type,
                     pseudorandom_generator_seed,
@@ -394,12 +396,13 @@ void ContextCollection::setup_defaults() {
     options.insert(pair<string, string>("pdf_filename", "mstw2008nlo.00.dat"));
     options.insert(pair<string, string>("ff_filename", "PINLO.DAT"));
     options.insert(pair<string, string>("integration_strategy", "VEGAS"));
+    options.insert(pair<string, string>("cubature_iterations", "1000000"));
     options.insert(pair<string, string>("miser_iterations", "10000000"));
     options.insert(pair<string, string>("vegas_initial_iterations", "100000"));
     options.insert(pair<string, string>("vegas_incremental_iterations", "1000000"));
     options.insert(pair<string, string>("quasi_iterations", "1000000"));
-    options.insert(pair<string, string>("quasi_abserr", "1e-20"));
-    options.insert(pair<string, string>("quasi_relerr", "0"));
+    options.insert(pair<string, string>("abserr", "1e-20"));
+    options.insert(pair<string, string>("relerr", "0"));
     // Adapted from the GSL source code - basically this reimplements gsl_rng_env_setup
     const char* qtype = getenv("GSL_QRNG_TYPE");
     options.insert(pair<string, string>("quasirandom_generator_type", qtype == NULL ? "halton" : qtype));
@@ -445,12 +448,13 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "pdf_filename\t= " << ctx.pdf_filename << endl;
     out << "ff_filename\t= " << ctx.ff_filename  << endl;
     out << "integration_strategy" << ctx.strategy << endl;
+    out << "cubature_iterations\t= " << ctx.cubature_iterations << endl;
     out << "miser_iterations\t= " << ctx.miser_iterations << endl;
     out << "vegas_initial_iterations\t= " << ctx.vegas_initial_iterations << endl;
     out << "vegas_incremental_iterations\t= " << ctx.vegas_incremental_iterations << endl;
     out << "quasi_iterations\t= " << ctx.quasi_iterations << endl;
-    out << "quasi_abserr\t= " << ctx.quasi_abserr << endl;
-    out << "quasi_relerr\t= " << ctx.quasi_relerr << endl;
+    out << "abserr\t= " << ctx.abserr << endl;
+    out << "relerr\t= " << ctx.relerr << endl;
     out << "gluon distribution\t = " << ctx.gdist << endl;
     out << "coupling\t = " << ctx.cpl << endl;
     out << "quasirandom generator type: " <<  ctx.quasirandom_generator_type->name << endl;

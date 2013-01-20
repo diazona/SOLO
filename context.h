@@ -94,6 +94,13 @@ public:
     /** The type of integration to be used */
     integration_strategy strategy;
     
+    /** Maximum allowed absolute error, for integration strategies that use it */
+    double abserr;
+    /** Maximum allowed relative error, for integration strategies that use it */
+    double relerr;
+    
+    /** Number of iterations for cubature */
+    size_t cubature_iterations;
     /** Number of MISER iterations
      * (unused unless integration strategy is MISER) */
     size_t miser_iterations;
@@ -106,12 +113,6 @@ public:
     /** Number of iterations in quasi Monte Carlo
      * (unusued unless integration strategy is QUASI) */
     size_t quasi_iterations;
-    /** Maximum allowed absolute error in quasi Monte Carlo
-     * (unusued unless integration strategy is QUASI) */
-    double quasi_abserr;
-    /** Maximum allowed relative error in quasi Monte Carlo
-     * (unusued unless integration strategy is QUASI) */
-    double quasi_relerr;
 
     /** The precomputed value of c A^(1/3) Q_0^2 x_0^(lambda) */
     double Q02x0lambda;
@@ -135,12 +136,13 @@ public:
         std::string pdf_filename,
         std::string ff_filename,
         integration_strategy strategy,
+        size_t cubature_iterations,
         size_t miser_iterations,
         size_t vegas_initial_iterations,
         size_t vegas_incremental_iterations,
         size_t quasi_iterations,
-        double quasi_abserr,
-        double quasi_relerr,
+        double abserr,
+        double relerr,
         const gsl_qrng_type* quasirandom_generator_type,
         const gsl_rng_type* pseudorandom_generator_type,
         unsigned long int pseudorandom_generator_seed,
@@ -162,12 +164,13 @@ public:
      pdf_filename(pdf_filename),
      ff_filename(ff_filename),
      strategy(strategy),
+     cubature_iterations(cubature_iterations),
      miser_iterations(miser_iterations),
      vegas_initial_iterations(vegas_initial_iterations),
      vegas_incremental_iterations(vegas_incremental_iterations),
      quasi_iterations(quasi_iterations),
-     quasi_abserr(quasi_abserr),
-     quasi_relerr(quasi_relerr),
+     abserr(abserr),
+     relerr(relerr),
      quasirandom_generator_type(quasirandom_generator_type),
      pseudorandom_generator_type(pseudorandom_generator_type),
      pseudorandom_generator_seed(pseudorandom_generator_seed),
@@ -192,12 +195,13 @@ public:
      pdf_filename(other.pdf_filename),
      ff_filename(other.ff_filename),
      strategy(other.strategy),
+     cubature_iterations(other.cubature_iterations),
      miser_iterations(other.miser_iterations),
      vegas_initial_iterations(other.vegas_initial_iterations),
      vegas_incremental_iterations(other.vegas_incremental_iterations),
      quasi_iterations(other.quasi_iterations),
-     quasi_abserr(other.quasi_abserr),
-     quasi_relerr(other.quasi_relerr),
+     abserr(other.abserr),
+     relerr(other.relerr),
      quasirandom_generator_type(other.quasirandom_generator_type),
      pseudorandom_generator_type(other.pseudorandom_generator_type),
      pseudorandom_generator_seed(other.pseudorandom_generator_seed),
