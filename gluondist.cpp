@@ -245,33 +245,17 @@ std::ostream& operator<<(std::ostream& out, GluonDistribution& gdist) {
 #include <iostream>
 
 void AbstractPositionGluonDistribution::write_grid() {
-    size_t q2_dimension = interp_dist_2D->xsize; // shouldn't really access these properties directly
-    size_t Qs2_dimension = interp_dist_2D->ysize;
     std::cout << "q2\tQs2\tF" << std::endl;
     for (size_t i_q2 = 0; i_q2 < q2_dimension; i_q2++) {
         for (size_t i_Qs2 = 0; i_Qs2 < Qs2_dimension; i_Qs2++) {
             std::cout << exp(log_q2_values[i_q2]) << "\t"
-                      << exp(log_Qs2_values[i_Qs2]) << "\t"
-                      << F_dist[INDEX_2D(i_q2, i_Qs2, q2_dimension, Qs2_dimension)] << std::endl;
+                    << exp(log_Qs2_values[i_Qs2]) << "\t"
+                    << F_dist[INDEX_2D(i_q2, i_Qs2, q2_dimension, Qs2_dimension)] << std::endl;
         }
     }
 }
 
-/**
- * A driver program that constructs an MV gluon distribution object
- * and prints its grid to standard output.
- */
-int main(int argc, char** argv) {
-    if (argc < 6) {
-        std::cerr << "Needs 5 arguments: LambdaMV, q2min, q2max, Qs2min, Qs2max" << std::endl;
-        exit(1);
-    }
-    double LambdaMV = strtod(argv[1], NULL);
-    double q2min = strtod(argv[2], NULL);
-    double q2max = strtod(argv[3], NULL);
-    double Qs2min = strtod(argv[4], NULL);
-    double Qs2max = strtod(argv[5], NULL);
-    MVGluonDistribution gdist(LambdaMV, 1, q2min, q2max, Qs2min, Qs2max);
+void handle_input(AbstractPositionGluonDistribution& gdist) {
     std::cin.peek();
     if (std::cin.eof()) {
         // write out the grid
@@ -285,5 +269,36 @@ int main(int argc, char** argv) {
             std::cin >> q2 >> Qs2;
         }
     }
+}
+
+/**
+ * A driver program that constructs a gluon distribution object
+ * and prints its grid to standard output.
+ */
+int main(int argc, char** argv) {
+    if (argc < 8) {
+        std::cerr << "Needs 7 arguments: gdist_type, LambdaMV, gammaMV, q2min, q2max, Qs2min, Qs2max" << std::endl;
+        return 1;
+    }
+    std::string gdist_type = argv[1];
+    double LambdaMV = strtod(argv[2], NULL);
+    double gammaMV = strtod(argv[3], NULL);
+    double q2min = strtod(argv[4], NULL);
+    double q2max = strtod(argv[5], NULL);
+    double Qs2min = strtod(argv[6], NULL);
+    double Qs2max = strtod(argv[7], NULL);
+    if (gdist_type == "MV") {
+        MVGluonDistribution gdist(LambdaMV, gammaMV, q2min, q2max, Qs2min, Qs2max);
+        handle_input(gdist);
+    }
+    else if (gdist_type == "fMV") {
+        FixedSaturationMVGluonDistribution gdist(LambdaMV, gammaMV, q2min, q2max, Qs2min);
+        handle_input(gdist);
+    }
+    else {
+        std::cerr << "Unrecognized gluon distribution type " << gdist_type << std::endl;
+        return 1;
+    }
+    return 0;
 }
 #endif
