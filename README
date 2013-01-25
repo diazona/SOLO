@@ -86,6 +86,10 @@ where the <options> can include any number of the following, in any order:
         filename to read DSS FF data from
     gammaMV
         the anomalous dimension in the MV gluon distribution
+    gdist_momentum_filename
+        file to read the momentum data for a gluon distribution from
+    gdist_position_filename
+        file to read the position data for a gluon distribution from
     gdist_subinterval_limit (default 10000)
         number of subdivisions to use when integrating a position gluon distribution
     gdist_type (default GBW)

@@ -124,13 +124,6 @@ public:
     ~AbstractPositionGluonDistribution();
 
     /**
-     * Handles the actual calculation of the points to use for interpolation.
-     * This should be called from the constructor of each subclass that
-     * implements S2.
-     */
-    void calculate_interpolation_grid();
-    
-    /**
      * Returns the value of the position space quadrupole gluon distribution,
      * by default computed as the product of two dipole gluon distributions,
      * S2(s2, Qs2) * S2 (t2, Qs2). This is usually valid in the large-Nc
@@ -148,6 +141,14 @@ public:
      */
     virtual const char* name() = 0;
 
+protected:
+    /**
+     * Handles the actual calculation of the points to use for interpolation.
+     * This should be called from the constructor of each subclass that
+     * implements S2.
+     */
+    void setup();
+    
 private:
     double q2min, q2max;
     double Qs2min, Qs2max;
@@ -165,11 +166,11 @@ private:
     // Structures used to do the interpolation
     gsl_interp* interp_dist_leading_q2;
     gsl_interp* interp_dist_subleading_q2;
-    // one of interp_dist_1D or interp_dist_2D will be NULL and the other one
+    // one of interp_dist_momentum_1D or interp_dist_momentum_2D will be NULL and the other one
     // will be used, depending on whether there is a range of Qs2 values or
     // just a single one
-    gsl_interp* interp_dist_1D;
-    interp2d* interp_dist_2D;
+    gsl_interp* interp_dist_momentum_1D;
+    interp2d* interp_dist_momentum_2D;
     
     gsl_interp_accel* q2_accel;
     gsl_interp_accel* Qs2_accel;
@@ -178,6 +179,8 @@ private:
     size_t Qs2_dimension;
     
     size_t subinterval_limit;
+    
+    friend class FileDataGluonDistribution;
 #ifdef GLUON_DIST_DRIVER
 public:
     /**
@@ -242,6 +245,70 @@ public:
      * The parameter Qs2 is not used.
      */
     double S2(double r2, double Qs2);
+};
+
+class FileDataGluonDistribution : public GluonDistribution {
+public:
+    /**
+     * Constructs a new gluon distribution reading from the specified file.
+     */
+    FileDataGluonDistribution(std::string pos_filename, std::string mom_filename);
+    ~FileDataGluonDistribution();
+    
+    /**
+     * Returns the interpolated value of the gluon distribution at the specified values.
+     */
+    double S2(double r2, double Qs2);
+    
+    double S4(double r2, double s2, double t2, double Qs2);
+    
+    double F(double q2, double Qs2);
+    
+    /**
+     * Returns the name of the gluon distribution.
+     */
+    const char* name();
+
+protected:
+    /**
+     * Calculates the interpolation in position space.
+     */
+    void calculate_position_interpolation();
+private:
+    
+    double r2min, r2max;
+    double q2min, q2max;
+    double Qs2min, Qs2max;
+    /** Values of ln(r2) for the interpolation. */
+    double* r2_values;
+    /** Values of ln(q2) for the interpolation. */
+    double* q2_values;
+    /** Values of ln(Qs2) for the interpolation. */
+    double* Qs2_values;
+    /** Values of the position space gluon distribution for interpolation. */
+    double* S_dist;
+    /** Values of the momentum space gluon distribution for interpolation. */
+    double* F_dist;
+    
+    // one of interp_dist_momentum_1D or interp_dist_momentum_2D will be NULL and the other one
+    // will be used, depending on whether there is a range of Qs2 values or just a single one
+    gsl_interp* interp_dist_momentum_1D;
+    interp2d* interp_dist_momentum_2D;
+    // same for position
+    gsl_interp* interp_dist_position_1D;
+    interp2d* interp_dist_position_2D;
+    
+    gsl_interp_accel* r2_accel;
+    gsl_interp_accel* q2_accel;
+    gsl_interp_accel* Qs2_accel;
+    
+    size_t r2_dimension;
+    size_t q2_dimension;
+    size_t Qs2_dimension;
+    
+    size_t subinterval_limit;
+    
+    std::string _name;
 };
 
 /** Prints the name of the gluon distribution to the given output stream. */

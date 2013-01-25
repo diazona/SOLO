@@ -19,12 +19,19 @@
 
 #include <cassert>
 #include <cmath>
+#include <algorithm>
+#include <fstream>
 #include <sstream>
+#include <set>
+#include <vector>
+#include <gsl/gsl_errno.h>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_sf_bessel.h>
 #include "gluondist.h"
 #include "interp2d.h"
+
+using namespace std;
 
 double GBWGluonDistribution::S2(double r2, double Qs2) {
     return exp(-0.25 * r2 * Qs2);
@@ -69,13 +76,13 @@ static double position_gdist_series_term_integrand(double r, void* closure) {
 AbstractPositionGluonDistribution::AbstractPositionGluonDistribution(double q2min, double q2max, double Qs2min, double Qs2max, size_t subinterval_limit) :
  q2min(q2min), q2max(q2max), Qs2min(Qs2min), Qs2max(Qs2max),
  F_dist_leading_q2(NULL), F_dist_subleading_q2(NULL), F_dist(NULL),
- interp_dist_leading_q2(NULL), interp_dist_subleading_q2(NULL), interp_dist_1D(NULL), interp_dist_2D(NULL),
+ interp_dist_leading_q2(NULL), interp_dist_subleading_q2(NULL), interp_dist_momentum_1D(NULL), interp_dist_momentum_2D(NULL),
  q2_accel(NULL), Qs2_accel(NULL),
  q2_dimension(1), Qs2_dimension(1),
  subinterval_limit(subinterval_limit) {
  }
  
-void AbstractPositionGluonDistribution::calculate_interpolation_grid() {
+void AbstractPositionGluonDistribution::setup() {
     double step = 1.05;
     PositionGDistIntegrationParameters params(this);
     gsl_function func;
@@ -145,8 +152,8 @@ void AbstractPositionGluonDistribution::calculate_interpolation_grid() {
     q2_accel = gsl_interp_accel_alloc();
 
     if (Qs2_dimension == 1) {
-        interp_dist_1D = gsl_interp_alloc(gsl_interp_cspline, q2_dimension);
-        gsl_interp_init(interp_dist_1D, log_q2_values, F_dist, q2_dimension);
+        interp_dist_momentum_1D = gsl_interp_alloc(gsl_interp_cspline, q2_dimension);
+        gsl_interp_init(interp_dist_momentum_1D, log_q2_values, F_dist, q2_dimension);
     }
     else {
         Qs2_accel = gsl_interp_accel_alloc();
@@ -157,8 +164,8 @@ void AbstractPositionGluonDistribution::calculate_interpolation_grid() {
         interp_dist_subleading_q2 = gsl_interp_alloc(gsl_interp_cspline, Qs2_dimension);
         gsl_interp_init(interp_dist_subleading_q2, log_Qs2_values, F_dist_subleading_q2, Qs2_dimension);
         
-        interp_dist_2D = interp2d_alloc(interp2d_bilinear, q2_dimension, Qs2_dimension);
-        interp2d_init(interp_dist_2D, log_q2_values, log_Qs2_values, F_dist, q2_dimension, Qs2_dimension);
+        interp_dist_momentum_2D = interp2d_alloc(interp2d_bilinear, q2_dimension, Qs2_dimension);
+        interp2d_init(interp_dist_momentum_2D, log_q2_values, log_Qs2_values, F_dist, q2_dimension, Qs2_dimension);
     }
 }
 
@@ -169,12 +176,12 @@ AbstractPositionGluonDistribution::~AbstractPositionGluonDistribution() {
     F_dist_leading_q2 = NULL;
     delete[] F_dist_subleading_q2;
     F_dist_subleading_q2 = NULL;
-    interp2d_free(interp_dist_2D);
-    interp_dist_2D = NULL;
+    interp2d_free(interp_dist_momentum_2D);
+    interp_dist_momentum_2D = NULL;
     gsl_interp_free(interp_dist_leading_q2);
-    interp_dist_2D = NULL;
+    interp_dist_momentum_2D = NULL;
     gsl_interp_free(interp_dist_subleading_q2);
-    interp_dist_2D = NULL;
+    interp_dist_momentum_2D = NULL;
     gsl_interp_accel_free(q2_accel);
     q2_accel = NULL;
     gsl_interp_accel_free(Qs2_accel);
@@ -187,7 +194,7 @@ double AbstractPositionGluonDistribution::S4(double r2, double s2, double t2, do
 double AbstractPositionGluonDistribution::F(double q2, double Qs2) {
     if (Qs2_dimension == 1) {
         if (q2 > q2min) {
-            return gsl_interp_eval(interp_dist_1D, log_q2_values, F_dist, log(q2), q2_accel);
+            return gsl_interp_eval(interp_dist_momentum_1D, log_q2_values, F_dist, log(q2), q2_accel);
         }
         else {
             double c0 = F_dist_leading_q2[0];
@@ -197,7 +204,7 @@ double AbstractPositionGluonDistribution::F(double q2, double Qs2) {
     }
     else {
         if (q2 > q2min) {
-            return interp2d_eval(interp_dist_2D, log_q2_values, log_Qs2_values, F_dist, log(q2), log(Qs2), q2_accel, Qs2_accel);
+            return interp2d_eval(interp_dist_momentum_2D, log_q2_values, log_Qs2_values, F_dist, log(q2), log(Qs2), q2_accel, Qs2_accel);
         }
         else {
             double c0 = gsl_interp_eval(interp_dist_leading_q2, log_Qs2_values, F_dist_leading_q2, log(Qs2), Qs2_accel);
@@ -209,10 +216,10 @@ double AbstractPositionGluonDistribution::F(double q2, double Qs2) {
 
 MVGluonDistribution::MVGluonDistribution(double LambdaMV, double gammaMV, double q2min, double q2max, double Qs2min, double Qs2max, size_t subinterval_limit) :
   AbstractPositionGluonDistribution(q2min, q2max, Qs2min, Qs2max, subinterval_limit), LambdaMV(LambdaMV), gammaMV(gammaMV) {
-    std::ostringstream s;
+    ostringstream s;
     s << "MV(LambdaMV = " << LambdaMV << ", gammaMV = " << gammaMV << ", q2min = " << q2min << ", q2max = " << q2max << ", Qs2min = " << Qs2min << ", Qs2max = " << Qs2max << ")";
     _name = s.str();
-    calculate_interpolation_grid();
+    setup();
 }
 
 double MVGluonDistribution::S2(double r2, double Qs2) {
@@ -226,7 +233,7 @@ const char* MVGluonDistribution::name() {
 FixedSaturationMVGluonDistribution::FixedSaturationMVGluonDistribution(double LambdaMV, double gammaMV, double q2min, double q2max, double Qs02MV, size_t subinterval_limit) :
   MVGluonDistribution(LambdaMV, gammaMV, q2min, q2max, Qs02MV, Qs02MV, subinterval_limit) {
     // calculate_interpolation_grid runs in the superclass constructor
-    std::ostringstream s;
+    ostringstream s;
     s << "fMV(LambdaMV = " << LambdaMV << ", gammaMV = " << gammaMV << ", q2min = " << q2min << ", q2max = " << q2max << ", Qs02MV = " << Qs02MV << ")";
     _name = s.str();
 }
@@ -235,7 +242,146 @@ double FixedSaturationMVGluonDistribution::S2(double r2, double Qs2) {
     return MVGluonDistribution::S2(r2, Qs02MV);
 }
 
-std::ostream& operator<<(std::ostream& out, GluonDistribution& gdist) {
+struct double_triplet {
+    double x, y, z;
+    bool processed;
+};
+
+bool index_comparator(const double_triplet& a, const double_triplet& b) {
+    // be generic in case it changes
+    const static size_t row_major = 1, col_major = 2;
+    // row index <-> x index
+    // col index <-> y index
+    switch (INDEX_2D(row_major, col_major, 0, 0)) {
+        case row_major:
+            return a.y < b.y || (a.y == b.y && a.x < b.x);
+        case col_major:
+            return a.x < b.x || (a.x == b.x && a.y < b.y);
+    }
+}
+
+void read_from_file(const string filename, size_t& x_dimension, size_t& y_dimension, double*& x_values, double*& y_values, double*& z_values) {
+    vector<double_triplet> file_data;
+    set<double> xvals, yvals;
+
+    ifstream in(filename.c_str());
+    double_triplet point;
+    point.processed = false;
+    while (in >> point.x >> point.y >> point.z) {
+        if (gsl_isnan(point.z)) {
+            GSL_ERROR_VOID("NaN in data file", GSL_EINVAL);
+        }
+        file_data.push_back(point);
+        xvals.insert(point.x);
+        yvals.insert(point.y);
+    }
+    in.close();
+    
+    x_dimension = xvals.size();
+    y_dimension = yvals.size();
+    if (x_dimension * y_dimension != file_data.size()) {
+        GSL_ERROR_VOID("Points not on a grid", GSL_EINVAL);
+    }
+    x_values = new double[x_dimension];
+    y_values = new double[y_dimension];
+    z_values = new double[x_dimension * y_dimension];
+    
+    sort(file_data.begin(), file_data.end(), index_comparator);
+    
+    copy(xvals.begin(), xvals.end(), x_values);
+    copy(yvals.begin(), yvals.end(), y_values);
+    for (size_t ix = 0; ix < x_dimension; ix++) {
+        for (size_t iy = 0; iy < y_dimension; iy++) {
+            size_t index = INDEX_2D(ix, iy, x_dimension, y_dimension);
+            if (file_data[index].processed) {
+                GSL_ERROR_VOID("Duplicate x, y in file", GSL_EINVAL);
+            }
+            if (x_values[ix] != file_data[index].x) {
+                GSL_ERROR_VOID("Points out of order in gdist file", GSL_EINVAL);
+            }
+            if (y_values[iy] != file_data[index].y) {
+                GSL_ERROR_VOID("Points out of order in gdist file", GSL_EINVAL);
+            }
+            z_values[index] = file_data[index].z;
+            file_data[index].processed = true;
+        }
+    }
+}
+
+FileDataGluonDistribution::FileDataGluonDistribution(string pos_filename, string mom_filename) {
+    size_t Qs2_dimension_2;
+    double* Qs2_values_2;
+    read_from_file(pos_filename, r2_dimension, Qs2_dimension, r2_values, Qs2_values, S_dist);
+    read_from_file(mom_filename, q2_dimension, Qs2_dimension_2, q2_values, Qs2_values_2, F_dist);
+    if (Qs2_dimension != Qs2_dimension_2) {
+        delete[] r2_values, Qs2_values, S_dist, q2_values, Qs2_values_2, F_dist;
+        GSL_ERROR_VOID("Qs2 dimensions don't match", GSL_EINVAL);
+    }
+    for (size_t i = 0; i < Qs2_dimension; i++) {
+        if (Qs2_values[i] != Qs2_values_2[i]) {
+            delete[] r2_values, Qs2_values, S_dist, q2_values, Qs2_values_2, F_dist;
+            GSL_ERROR_VOID("Qs2 data points don't match", GSL_EINVAL);
+        }
+    }
+    delete[] Qs2_values_2;
+    Qs2_values_2 = NULL;
+    
+    r2_accel = gsl_interp_accel_alloc();
+    q2_accel = gsl_interp_accel_alloc();
+
+    if (Qs2_dimension == 1) {
+        interp_dist_position_1D = gsl_interp_alloc(gsl_interp_cspline, r2_dimension);
+        gsl_interp_init(interp_dist_position_1D, r2_values, S_dist, r2_dimension);
+        interp_dist_momentum_1D = gsl_interp_alloc(gsl_interp_cspline, q2_dimension);
+        gsl_interp_init(interp_dist_momentum_1D, q2_values, S_dist, q2_dimension);
+    }
+    else {
+        Qs2_accel = gsl_interp_accel_alloc();
+
+        interp_dist_position_2D = interp2d_alloc(interp2d_bilinear, r2_dimension, Qs2_dimension);
+        interp2d_init(interp_dist_position_2D, r2_values, Qs2_values, S_dist, r2_dimension, Qs2_dimension);
+        
+        interp_dist_momentum_2D = interp2d_alloc(interp2d_bilinear, q2_dimension, Qs2_dimension);
+        interp2d_init(interp_dist_momentum_2D, q2_values, Qs2_values, F_dist, q2_dimension, Qs2_dimension);
+    }
+    
+    ostringstream s;
+    s << "file(pos_filename = " << pos_filename << ", mom_filename = " << mom_filename << ")";
+    _name = s.str();
+}
+
+FileDataGluonDistribution::~FileDataGluonDistribution() {
+    delete[] r2_values, q2_values, Qs2_values, S_dist, F_dist;
+}
+
+double FileDataGluonDistribution::S2(double r2, double Qs2) {
+    if (Qs2_dimension == 1) {
+        return gsl_interp_eval(interp_dist_position_1D, r2_values, F_dist, r2, r2_accel);
+    }
+    else {
+        return interp2d_eval(interp_dist_position_2D, r2_values, Qs2_values, F_dist, r2, Qs2, r2_accel, Qs2_accel);
+    }
+}
+
+double FileDataGluonDistribution::S4(double r2, double s2, double t2, double Qs2) {
+    return S2(s2, Qs2) * S2(t2, Qs2);
+}
+
+double FileDataGluonDistribution::F(double q2, double Qs2) {
+    if (Qs2_dimension == 1) {
+        return gsl_interp_eval(interp_dist_momentum_1D, q2_values, F_dist, q2, q2_accel);
+    }
+    else {
+        return interp2d_eval(interp_dist_momentum_2D, q2_values, Qs2_values, F_dist, q2, Qs2, q2_accel, Qs2_accel);
+    }
+}
+
+const char* FileDataGluonDistribution::name() {
+    return _name.c_str();
+}
+
+
+ostream& operator<<(ostream& out, GluonDistribution& gdist) {
     out << gdist.name();
     return out;
 }
@@ -245,28 +391,28 @@ std::ostream& operator<<(std::ostream& out, GluonDistribution& gdist) {
 #include <iostream>
 
 void AbstractPositionGluonDistribution::write_grid() {
-    std::cout << "q2\tQs2\tF" << std::endl;
+    cout << "q2\tQs2\tF" << endl;
     for (size_t i_q2 = 0; i_q2 < q2_dimension; i_q2++) {
         for (size_t i_Qs2 = 0; i_Qs2 < Qs2_dimension; i_Qs2++) {
-            std::cout << exp(log_q2_values[i_q2]) << "\t"
+            cout << exp(log_q2_values[i_q2]) << "\t"
                     << exp(log_Qs2_values[i_Qs2]) << "\t"
-                    << F_dist[INDEX_2D(i_q2, i_Qs2, q2_dimension, Qs2_dimension)] << std::endl;
+                    << F_dist[INDEX_2D(i_q2, i_Qs2, q2_dimension, Qs2_dimension)] << endl;
         }
     }
 }
 
 void handle_input(AbstractPositionGluonDistribution& gdist) {
-    std::cin.peek();
-    if (std::cin.eof()) {
+    cin.peek();
+    if (cin.eof()) {
         // write out the grid
         gdist.write_grid();
     }
     else {
         double q2, Qs2;
-        std::cin >> q2 >> Qs2;
-        while (!std::cin.eof()) {
-            std::cout << q2 << "\t"<< Qs2 << "\t" << gdist.F(q2, Qs2) << std::endl;
-            std::cin >> q2 >> Qs2;
+        cin >> q2 >> Qs2;
+        while (!cin.eof()) {
+            cout << q2 << "\t"<< Qs2 << "\t" << gdist.F(q2, Qs2) << endl;
+            cin >> q2 >> Qs2;
         }
     }
 }
@@ -277,10 +423,10 @@ void handle_input(AbstractPositionGluonDistribution& gdist) {
  */
 int main(int argc, char** argv) {
     if (argc < 8) {
-        std::cerr << "Needs 7 arguments: gdist_type, LambdaMV, gammaMV, q2min, q2max, Qs2min, Qs2max" << std::endl;
+        cerr << "Needs 7 arguments: gdist_type, LambdaMV, gammaMV, q2min, q2max, Qs2min, Qs2max" << endl;
         return 1;
     }
-    std::string gdist_type = argv[1];
+    string gdist_type = argv[1];
     double LambdaMV = strtod(argv[2], NULL);
     double gammaMV = strtod(argv[3], NULL);
     double q2min = strtod(argv[4], NULL);
@@ -296,7 +442,7 @@ int main(int argc, char** argv) {
         handle_input(gdist);
     }
     else {
-        std::cerr << "Unrecognized gluon distribution type " << gdist_type << std::endl;
+        cerr << "Unrecognized gluon distribution type " << gdist_type << endl;
         return 1;
     }
     return 0;

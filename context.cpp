@@ -271,6 +271,12 @@ void ContextCollection::create_contexts() {
             check_property_default(gdist_subinterval_limit, size_t, parse_size, 10000)
             gdist = new MVGluonDistribution(lambdaMV, gammaMV, q2min, q2max, Qs02MV, gdist_subinterval_limit);
         }
+        else if (gdist_type == "file") {
+            check_property(gdist_position_filename, string, parse_string)
+            check_property(gdist_momentum_filename, string, parse_string)
+            logger << "Reading gluon distribution from " << gdist_position_filename << " (pos) and " << gdist_momentum_filename << " (mom)" << endl;
+            gdist = new FileDataGluonDistribution(gdist_position_filename, gdist_momentum_filename);
+        }
         else {
             throw InvalidPropertyValueException<string>("gdist_type", gdist_type);
         }
