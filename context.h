@@ -38,6 +38,11 @@
 typedef enum {MC_PLAIN, MC_MISER, MC_VEGAS, MC_QUASI} integration_strategy;
 
 /**
+ * Enumerates the types of projectile available
+ */
+typedef enum {proton, deuteron} projectile_type;
+
+/**
  * Storage for all the assorted parameters that get used in the integration.
  * 
  * There is a different Context object for each distinct set of parameters
@@ -91,6 +96,8 @@ public:
     /** The coupling */
     Coupling* cpl;
     
+    /** Projectile type */
+    projectile_type projectile;
     /** The type of integration to be used */
     integration_strategy strategy;
     
@@ -135,6 +142,7 @@ public:
         double Y,
         std::string pdf_filename,
         std::string ff_filename,
+        projectile_type projectile,
         integration_strategy strategy,
         size_t cubature_iterations,
         size_t miser_iterations,
@@ -163,6 +171,7 @@ public:
      Y(Y),
      pdf_filename(pdf_filename),
      ff_filename(ff_filename),
+     projectile(projectile),
      strategy(strategy),
      cubature_iterations(cubature_iterations),
      miser_iterations(miser_iterations),
@@ -194,6 +203,7 @@ public:
      Y(other.Y),
      pdf_filename(other.pdf_filename),
      ff_filename(other.ff_filename),
+     projectile(other.projectile),
      strategy(other.strategy),
      cubature_iterations(other.cubature_iterations),
      miser_iterations(other.miser_iterations),

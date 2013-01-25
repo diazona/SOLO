@@ -142,6 +142,22 @@ string& parse_string(pair<multimap<string, string>::iterator, multimap<string, s
     return range.first->second;
 }
 
+projectile_type parse_projectile_type(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
+    multimap<string, string>::iterator el = range.first;
+    assert(++el == range.second);
+    string val = range.first->second;
+    transform(val.begin(), val.end(), val.begin(), ::tolower);
+    if (val == "proton") {
+        return proton;
+    }
+    else if (val == "deuteron") {
+        return deuteron;
+    }
+    else {
+        GSL_ERROR_VAL("unknown method", GSL_EINVAL, proton);
+    }
+}
+
 integration_strategy parse_strategy(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
     multimap<string, string>::iterator el = range.first;
     assert(++el == range.second);
@@ -218,6 +234,7 @@ void ContextCollection::create_contexts() {
     check_property(sqs,          double, parse_double)
     check_property(pT,           vector<double>, parse_vector)
     check_property(Y,            vector<double>, parse_vector)
+    check_property(projectile,   projectile_type, parse_projectile_type)
     check_property(pdf_filename, string, parse_string)
     check_property(ff_filename,  string, parse_string)
     check_property(integration_strategy, integration_strategy, parse_strategy)
@@ -320,6 +337,7 @@ void ContextCollection::create_contexts() {
                     *Yit,
                     pdf_filename,
                     ff_filename,
+                    projectile,
                     integration_strategy,
                     cubature_iterations,
                     miser_iterations,
@@ -437,6 +455,17 @@ void ContextCollection::read_config(istream& in) {
     } while (!in.eof());
 }
 
+std::ostream& operator<<(std::ostream& out, const projectile_type& proj) {
+    switch (proj) {
+        case proton:
+            out << "proton";
+            break;
+        case deuteron:
+            out << "deuteron";
+            break;
+    }
+}
+
 std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "x0\t= "         << ctx.x0           << endl;
     out << "A\t= "          << ctx.A            << endl;
@@ -453,6 +482,7 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "Y\t= "          << ctx.Y            << endl;
     out << "pdf_filename\t= " << ctx.pdf_filename << endl;
     out << "ff_filename\t= " << ctx.ff_filename  << endl;
+    out << "projectile\t= " << ctx.projectile << endl;
     out << "integration_strategy" << ctx.strategy << endl;
     out << "cubature_iterations\t= " << ctx.cubature_iterations << endl;
     out << "miser_iterations\t= " << ctx.miser_iterations << endl;
