@@ -48,29 +48,53 @@ public:
 //     void Fs(const IntegrationContext* ictx, double* real, double* imag);
 //     void Fd(const IntegrationContext* ictx, double* real, double* imag);
 // };
-// 
-// class H14qq : public HardFactorTerm {
-// public:
-//     const char* get_name() {
-//         return "H14qq";
-//     }
-//     IntegrationType* get_type() {
-//         return quadrupole;
-//     }
-//     void Fs(const IntegrationContext* ictx, double* real, double* imag);
-//     void Fd(const IntegrationContext* ictx, double* real, double* imag);
-// };
-// 
-// class H14qqResidual : public HardFactorTerm {
-// public:
-//     const char* get_name() {
-//         return "H14qqResidual";
-//     }
-//     IntegrationType* get_type() {
-//         return dipole;
-//     }
-//     void Fd(const IntegrationContext* ictx, double* real, double* imag);
-// };
+
+class H14qqSingular : public HardFactorTerm {
+public:
+    const char* get_name() const {
+        return "H14qqSingular";
+    }
+    const IntegrationType* get_type() const {
+        return Momentum2IntegrationType::get_instance();
+    }
+    void Fs(const IntegrationContext* ictx, double* real, double* imag) const;
+};
+
+class H14qqDelta : public HardFactorTerm {
+public:
+    const char* get_name() const {
+        return "H14qqDelta";
+    }
+    const IntegrationType* get_type() const {
+        return Momentum1XiPIntegrationType::get_instance();
+    }
+    void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
+};
+
+class H14qq : public HardFactor {
+public:
+    H14qq() {
+        terms[0] = new H14qqSingular();
+        terms[1] = new H14qqDelta();
+    }
+    ~H14qq() {
+        delete terms[0];
+        terms[0] = NULL;
+        delete terms[1];
+        terms[1] = NULL;
+    }
+    const char* get_name() const {
+        return "H14qq";
+    }
+    const size_t get_term_count() const {
+        return 2;
+    }
+    const HardFactorTerm* const* get_terms() const {
+        return terms;
+    }
+private:
+    const HardFactorTerm* terms[2];
+};
 
 class H02gg : public HardFactorTerm {
 public:
@@ -230,7 +254,7 @@ private:
     registry() {
         add_hard_factor(new H02qq(), true);
 //         add_hard_factor(new H12qq(), true);
-//         add_hard_factor(new H14qq(), true);
+        add_hard_factor(new H14qq(), true);
         add_hard_factor(new H02gg(), true);
 //         add_hard_factor(new H12gg(), true);
         add_hard_factor(new H12qqbar(), true);
