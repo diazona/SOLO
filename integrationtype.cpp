@@ -156,3 +156,41 @@ void Momentum2XiPIntegrationType::update(IntegrationContext& ictx, const size_t 
         ictx.update_momenta(values[3], values[4], values[5], values[6], 0, 0);
     }
 }
+
+/*
+ * For these integration types, values[2] and beyond are interpreted as magnitudes
+ * of radius, with integration ranges 0 to infinity
+ */
+void RadialIntegrationType::fill_min(IntegrationContext& ictx, const size_t core_dimensions, double* min) const {
+    size_t i = 0;
+    while (i < core_dimensions) { min[i++] = ictx.ctx->tau; }
+    while (i < core_dimensions + extra_dimensions) { min[i++] = 0; }
+}
+void RadialIntegrationType::fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const {
+    size_t i = 0;
+    while (i < core_dimensions) { max[i++] = 1; }
+    while (i < core_dimensions + extra_dimensions) { max[i++] = inf; }
+}
+
+void RadialDipoleIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
+    if (core_dimensions == 1) {
+        ictx.update_parton_factors(values[0], 1);
+        ictx.update_positions(values[1], 0, 0, 0, 0, 0);
+    }
+    else {
+        ictx.update_parton_factors(values[0], values[1]);
+        ictx.update_positions(values[2], 0, 0, 0, 0, 0);
+    }
+}
+
+void RadialQuadrupoleIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
+    if (core_dimensions == 1) {
+        ictx.update_parton_factors(values[0], 1);
+        ictx.update_positions(values[1], 0, values[2], 0, 0, 0);
+    }
+    else {
+        ictx.update_parton_factors(values[0], values[1]);
+        ictx.update_positions(values[2], 0, values[4], 0, 0, 0);
+    }
+}
+

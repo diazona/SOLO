@@ -52,6 +52,7 @@ public:
     double gqfactor;
     double qgfactor;
     double S2r, S4rst;
+    double Fk;
     double Fq1, Fq2, Fq3;
     double Fkq1, Fkq2, Fkq3;
     
@@ -81,6 +82,7 @@ public:
       gqfactor(0),
       qgfactor(0),
       S2r(0), S4rst(0),
+      Fk(0),
       Fq1(0), Fq2(0), Fq3(0),
       Fkq1(0), Fkq2(0), Fkq3(0) {
     };

@@ -193,6 +193,48 @@ private:
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };
 
+/**
+ * Base class for integration types which have one or two dimensions (z and/or y)
+ * with limits of tau and 1, and any number of other dimensions with limits
+ * zero and infinity
+ */
+class RadialIntegrationType : public IntegrationType {
+protected:
+    RadialIntegrationType(const size_t extra_dimensions) : IntegrationType(extra_dimensions) {}
+    void fill_min(IntegrationContext& ictx, const size_t core_dimensions, double* min) const;
+    void fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const;
+};
+
+/**
+ * An integration type for integration over r, z and/or y
+ */
+class RadialDipoleIntegrationType : public RadialIntegrationType {
+public:
+    static const RadialDipoleIntegrationType* get_instance() {
+        static RadialDipoleIntegrationType instance;
+        return &instance;
+    }
+private:
+    RadialDipoleIntegrationType() : RadialIntegrationType(1) {}
+    RadialDipoleIntegrationType(RadialDipoleIntegrationType const&);
+    void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
+};
+
+/**
+ * An integration type for integration over s, t, z and/or y
+ */
+class RadialQuadrupoleIntegrationType : public RadialIntegrationType {
+public:
+    static const RadialQuadrupoleIntegrationType* get_instance() {
+        static RadialQuadrupoleIntegrationType instance;
+        return &instance;
+    }
+private:
+    RadialQuadrupoleIntegrationType() : RadialIntegrationType(2) {}
+    RadialQuadrupoleIntegrationType(RadialQuadrupoleIntegrationType const&);
+    void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
+};
+
 extern const double inf;
 
 #endif

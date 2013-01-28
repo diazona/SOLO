@@ -41,6 +41,7 @@
 #include "integrator.h"
 #include "utils.h"
 #include "log.h"
+#include "hardfactors_radial.h"
 
 using namespace std;
 
@@ -512,17 +513,16 @@ void ProgramConfiguration::parse_hf_spec(const string& spec) {
         if (s[1] == ':') {
             switch (s[0]) {
                 case 'm':
-                    // If the hard factor name starts with "m:", create
-                    // a momentum-space hard factor
                     registry = momentum::registry::get_instance();
                     break;
+                case 'r':
+                    registry = radial::registry::get_instance();
+                    break;
                 case 'p':
-                    // If the hard factor name starts with "p:", explicitly create
-                    // a position-space hard factor
                     registry = position::registry::get_instance();
                     break;
             }
-            // chop off "m:" or "p:"
+            // chop off prefix
             s = s.substr(2);
         }
         // Pass the remaining name (e.g. "h02qq") to the hard factor registry
