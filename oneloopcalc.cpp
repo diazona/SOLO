@@ -507,7 +507,8 @@ void ProgramConfiguration::parse_hf_spec(const string& spec) {
     assert(hfobjs != NULL);
     // Iterate over the individual hard factor names
     for (vector<string>::iterator it = hfnames.begin(); it != hfnames.end(); it++) {
-        string s = *it;
+        string orig_s = *it;
+        string s = orig_s;
         // The default is to create a position-space hard factor
         const HardFactorRegistry* registry = position::registry::get_instance();
         if (s[1] == ':') {
@@ -529,13 +530,16 @@ void ProgramConfiguration::parse_hf_spec(const string& spec) {
         // to get the actual hard factor object
         const HardFactor* hf = registry->get_hard_factor(s);
         if (hf == NULL) {
-            logger << "No such hard factor " << s << endl;
+            logger << "No such hard factor " << orig_s << endl;
         }
         else {
             hfobjs->push_back(hf);
         }
     }
-    assert(hfobjs->size() > 0);
+    if (hfobjs->size() == 0) {
+        logger << "No valid hard factors in spec " << spec << endl;
+        throw "Error parsing hard factors";
+    }
     // This constitutes one group. Add it to the list and add the
     // specification to the list of names.
     hfgroups.push_back(hfobjs);
