@@ -593,6 +593,13 @@ int main(int argc, char** argv) {
         return 1;
     }
     ContextCollection cc(argv[1]);
+    try {
+        cc.create_contexts();
+    }
+    catch (const exception& e) {
+        cout << "Error in parsing: " << e.what() << endl;
+        return 1;
+    }
     cout << "Successfully parsed " << argv[1];
     if (cc.empty()) {
         cout << endl << cc << "No contexts defined!" << endl;
@@ -601,6 +608,7 @@ int main(int argc, char** argv) {
         cout << " into " << cc.size() << " contexts" << endl;
         cout << cc;
     }
+    return 0;
 }
 #endif
 
