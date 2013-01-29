@@ -489,7 +489,7 @@ static const char* default_lo_spec = "m:h02qq,m:h02gg";
  * This defines the hard factor group that is used when "nlo" is given
  * on the command line
  */
-static const char* default_nlo_spec = "p:h12qq,p:h14qq,p:h12gg,m:h12qqbar,m:h16gg,p:h112gq,p:h122gq,m:h14gq,p:h112qg,p:h122qg,m:h14qg";
+static const char* default_nlo_spec = "r:h12qq,m:h14qq,r:h12gg,m:h12qqbar,m:h16gg,r:h112gq,r:h122gq,m:h14gq,r:h112qg,r:h122qg,m:h14qg";
 
 void ProgramConfiguration::parse_hf_spec(const string& spec) {
     vector<string> hfnames;

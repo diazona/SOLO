@@ -27,19 +27,22 @@ where the <options> can include any number of the following, in any order:
     
     An _individual_ hard factor specification is a string like "p:h02qq" or
     "m:h16gg". The "p:" at the beginning specifies the position space
-    implementation, and the "m:" specifies the momentum space implementation.
-    That prefix can be omitted, in which case position space is taken as the
-    default.
+    implementation, "r:" specifies a position space implementation with the
+    angular integral already done, and the "m:" specifies the momentum space
+    implementation. The prefix can be omitted, in which case position space
+    is taken as the default. (Not recommended, as position space is highly
+    inaccurate for some terms.)
     
     The rest of the string gives the name of a hard factor. The canonical set
     of possible names that can be used with a "p:" prefix are all the return
-    values from the get_name() methods in hardfactors_position.h, and the set
-    of names that can be used with an "m:" prefix are the return values from
-    get_name() methods in hardfactors_momentum.h. Here's a near-complete list:
+    values from the get_name() methods in hardfactors_position.h, and similarly
+    for "r:" with hardfactors_radial.h and "m:" with hardfactors_momentum.h.
+    Here's a near-complete list:
     
-        p:h02qq m:h02qq p:h02gg m:h02gg p:h12qq p:h14qq p:h12gg p:h12qqbar
-        m:h12qqbar p:h16gg m:h16gg p:h112qg p:h122qg p:h14qg m:h14qg
-        p:h112gq p:h122gq p:h14gq m:h14gq
+        p:h02qq m:h02qq p:h12qq r:h12qq p:h14qq m:h14qq
+        p:h02gg m:h02gg p:h12gg r:h12gg p:h12qqbar m:h12qqbar p:h16gg m:h16gg
+        p:h112qg r:h112qg p:h122qg r:h122qg p:h14qg m:h14qg
+        p:h112gq r:h112gq p:h122gq r:h122gq p:h14gq m:h14gq
         
     The names are case-insensitive.
 
@@ -49,7 +52,7 @@ where the <options> can include any number of the following, in any order:
         
     using the shortcut "lo", and the group of all next-to-leading order terms,
     
-        p:h12qq,p:h14qq,p:h12gg,m:h12qqbar,m:h16gg,p:h112gq,p:h122gq,m:h14gq,p:h112qg,p:h122qg,m:h14qg
+        r:h12qq,m:h14qq,r:h12gg,m:h12qqbar,m:h16gg,r:h112gq,r:h122gq,m:h14gq,r:h112qg,r:h122qg,m:h14qg
         
     using the shortcut "nlo". These are defined in oneloopcalc.cpp. The default if
     no hard factor groups are specified on the command line is
@@ -94,6 +97,8 @@ where the <options> can include any number of the following, in any order:
         number of subdivisions to use when integrating a position gluon distribution
     gdist_type (default GBW)
         the type of the gluon distribution, "GBW", "MV", or "fMV"
+    hadron (no default)
+        the type of hadron detected, "pi-", "pi0", or "pi+"
     integration_strategy (default VEGAS)
         the integration type to use, "MISER", "VEGAS" (best), or "QUASI"
     lambda (default 0.288)
@@ -112,6 +117,8 @@ where the <options> can include any number of the following, in any order:
         number of flavors
     pdf_filename (default mstw2008nlo.00.dat)
         filename to read MSTW PDF from
+    projectile (no default)
+        the type of projectile, "deuteron" or "proton"
     pseudorandom_generator_seed (default 0)
         seed for the GSL random number generator
     pseudorandom_generator_type (default mt19937)
