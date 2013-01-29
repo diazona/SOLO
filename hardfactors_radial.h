@@ -37,19 +37,19 @@ namespace radial {
 //     }
 //     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 // };
-// 
-// class H12qq : public HardFactorTerm {
-// public:
-//     const char* get_name() const {
-//         return "H12qq";
-//     }
-//     const IntegrationType* get_type() const {
-//         return DipoleIntegrationType::get_instance();
-//     }
-//     void Fs(const IntegrationContext* ictx, double* real, double* imag) const;
-//     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
-// };
-// 
+
+class H12qq : public HardFactorTerm {
+public:
+    const char* get_name() const {
+        return "H12qq";
+    }
+    const IntegrationType* get_type() const {
+        return RadialDipoleIntegrationType::get_instance();
+    }
+    void Fs(const IntegrationContext* ictx, double* real, double* imag) const;
+    void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
+};
+
 // class H14qqPrimary : public HardFactorTerm {
 // public:
 //     const char* get_name() const {
@@ -292,7 +292,7 @@ public:
 private:
     registry() {
 //         add_hard_factor(new H02qq(), true);
-//         add_hard_factor(new H12qq(), true);
+        add_hard_factor(new H12qq(), true);
 //         add_hard_factor(new H14qq(), true);
 //         add_hard_factor(new H02gg(), true);
         add_hard_factor(new H12gg(), true);
