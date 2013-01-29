@@ -158,6 +158,25 @@ projectile_type parse_projectile_type(pair<multimap<string, string>::iterator, m
     }
 }
 
+DSSpiNLO::hadron parse_hadron(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
+    multimap<string, string>::iterator el = range.first;
+    assert(++el == range.second);
+    string val = range.first->second;
+    transform(val.begin(), val.end(), val.begin(), ::tolower);
+    if (val == "pim" || val == "pi-" || val == "pi minus") {
+        return DSSpiNLO::pi_minus;
+    }
+    else if (val == "piz" || val == "pi0" || val == "pi zero") {
+        return DSSpiNLO::pi_zero;
+    }
+    else if (val == "pip" || val == "pi+" || val == "pi plus") {
+        return DSSpiNLO::pi_plus;
+    }
+    else {
+        GSL_ERROR_VAL("unknown hadron", GSL_EINVAL, DSSpiNLO::pi_minus);
+    }
+}
+
 integration_strategy parse_strategy(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
     multimap<string, string>::iterator el = range.first;
     assert(++el == range.second);
@@ -235,6 +254,7 @@ void ContextCollection::create_contexts() {
     check_property(pT,           vector<double>, parse_vector)
     check_property(Y,            vector<double>, parse_vector)
     check_property(projectile,   projectile_type, parse_projectile_type)
+    check_property(hadron,       DSSpiNLO::hadron, parse_hadron)
     check_property(pdf_filename, string, parse_string)
     check_property(ff_filename,  string, parse_string)
     check_property(integration_strategy, integration_strategy, parse_strategy)
@@ -338,6 +358,7 @@ void ContextCollection::create_contexts() {
                     pdf_filename,
                     ff_filename,
                     projectile,
+                    hadron,
                     integration_strategy,
                     cubature_iterations,
                     miser_iterations,
@@ -466,6 +487,20 @@ std::ostream& operator<<(std::ostream& out, const projectile_type& proj) {
     }
 }
 
+std::ostream& operator<<(std::ostream& out, const DSSpiNLO::hadron& hadron) {
+    switch (hadron) {
+        case DSSpiNLO::pi_minus:
+            out << "pi-";
+            break;
+        case DSSpiNLO::pi_zero:
+            out << "pi0";
+            break;
+        case DSSpiNLO::pi_plus:
+            out << "pi+";
+            break;
+    }
+}
+
 std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "x0\t= "         << ctx.x0           << endl;
     out << "A\t= "          << ctx.A            << endl;
@@ -483,6 +518,7 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "pdf_filename\t= " << ctx.pdf_filename << endl;
     out << "ff_filename\t= " << ctx.ff_filename  << endl;
     out << "projectile\t= " << ctx.projectile << endl;
+    out << "hadron\t= " << ctx.hadron << endl;
     out << "integration_strategy" << ctx.strategy << endl;
     out << "cubature_iterations\t= " << ctx.cubature_iterations << endl;
     out << "miser_iterations\t= " << ctx.miser_iterations << endl;

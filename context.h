@@ -98,6 +98,8 @@ public:
     
     /** Projectile type */
     projectile_type projectile;
+    /** Product hadron */
+    DSSpiNLO::hadron hadron;
     /** The type of integration to be used */
     integration_strategy strategy;
     
@@ -143,6 +145,7 @@ public:
         std::string pdf_filename,
         std::string ff_filename,
         projectile_type projectile,
+        DSSpiNLO::hadron hadron,
         integration_strategy strategy,
         size_t cubature_iterations,
         size_t miser_iterations,
@@ -172,6 +175,7 @@ public:
      pdf_filename(pdf_filename),
      ff_filename(ff_filename),
      projectile(projectile),
+     hadron(hadron),
      strategy(strategy),
      cubature_iterations(cubature_iterations),
      miser_iterations(miser_iterations),
@@ -204,6 +208,7 @@ public:
      pdf_filename(other.pdf_filename),
      ff_filename(other.ff_filename),
      projectile(other.projectile),
+     hadron(other.hadron),
      strategy(other.strategy),
      cubature_iterations(other.cubature_iterations),
      miser_iterations(other.miser_iterations),

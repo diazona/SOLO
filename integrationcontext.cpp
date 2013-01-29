@@ -52,7 +52,7 @@ void IntegrationContext::update_parton_factors(double z, double y) {
     c_mstwpdf* pdf_object = tlctx->pdf_object;
     DSSpiNLO* ff_object = tlctx->ff_object;
     
-    DSSpiNLO::hadron hadron = DSSpiNLO::pi_minus; // TODO: read from context
+    DSSpiNLO::hadron hadron = ctx->hadron;
     
     // Calculate the new quark/gluon factors
     pdf_object->update(xp, sqrt(ctx->mu2));
