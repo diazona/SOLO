@@ -310,14 +310,16 @@ void vegas_integrate(double (*func)(double*, size_t, void*), size_t dim, void* c
     if (callback) {
         (*callback)(p_result, p_abserr, s);
     }
-    do {
-        gsl_monte_vegas_integrate(&f, min, max, dim, incremental_iterations, rng, s, p_result, p_abserr);
-        checkfinite(*p_result);
-        checkfinite(*p_abserr);
-        if (callback) {
-            (*callback)(p_result, p_abserr, s);
-        }
-    } while (*p_abserr > 0 && fabs(gsl_monte_vegas_chisq(s) - 1.0) > 0.2);
+    if (*p_abserr != 0) {
+        do {
+            gsl_monte_vegas_integrate(&f, min, max, dim, incremental_iterations, rng, s, p_result, p_abserr);
+            checkfinite(*p_result);
+            checkfinite(*p_abserr);
+            if (callback) {
+                (*callback)(p_result, p_abserr, s);
+            }
+        } while (*p_abserr > 0 && fabs(gsl_monte_vegas_chisq(s) - 1.0) > 0.2);
+    }
     gsl_monte_vegas_free(s);
     s = NULL;
 }
