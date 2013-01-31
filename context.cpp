@@ -239,6 +239,8 @@ vector<double> parse_vector(pair<multimap<string, string>::iterator, multimap<st
 }
 
 void ContextCollection::create_contexts() {
+    contexts_created = true;
+    
     pair<multimap<string, string>::iterator, multimap<string, string>::iterator> itit;
 
     check_property(x0,           double, parse_double)
@@ -319,6 +321,7 @@ void ContextCollection::create_contexts() {
             throw InvalidPropertyValueException<string>("gdist_type", gdist_type);
         }
     }
+    assert(gdist != NULL);
 
     // create coupling
     if (cpl == NULL) {
@@ -337,55 +340,61 @@ void ContextCollection::create_contexts() {
             throw InvalidPropertyValueException<string>("coupling_type", coupling_type);
         }
     }
+    assert(cpl != NULL);
     
     // create contexts
     for (vector<double>::iterator pTit = pT.begin(); pTit != pT.end(); pTit++) {
         for (vector<double>::iterator Yit = Y.begin(); Yit != Y.end(); Yit++) {
-            contexts.push_back(
-                Context(
-                    x0,
-                    A,
-                    c,
-                    lambda,
-                    mu2,
-                    Nc,
-                    Nf,
-                    CF,
-                    TR,
-                    Sperp,
-                    gsl_pow_2(*pTit),
-                    sqs,
-                    *Yit,
-                    pdf_filename,
-                    ff_filename,
-                    projectile,
-                    hadron,
-                    integration_strategy,
-                    cubature_iterations,
-                    miser_iterations,
-                    vegas_initial_iterations,
-                    vegas_incremental_iterations,
-                    quasi_iterations,
-                    abserr,
-                    relerr,
-                    quasirandom_generator_type,
-                    pseudorandom_generator_type,
-                    pseudorandom_generator_seed,
-                    gdist,
-                    cpl));
+            try {
+                contexts.push_back(
+                    Context(
+                        x0,
+                        A,
+                        c,
+                        lambda,
+                        mu2,
+                        Nc,
+                        Nf,
+                        CF,
+                        TR,
+                        Sperp,
+                        gsl_pow_2(*pTit),
+                        sqs,
+                        *Yit,
+                        pdf_filename,
+                        ff_filename,
+                        projectile,
+                        hadron,
+                        integration_strategy,
+                        cubature_iterations,
+                        miser_iterations,
+                        vegas_initial_iterations,
+                        vegas_incremental_iterations,
+                        quasi_iterations,
+                        abserr,
+                        relerr,
+                        quasirandom_generator_type,
+                        pseudorandom_generator_type,
+                        pseudorandom_generator_seed,
+                        gdist,
+                        cpl));
+            }
+            catch (const InvalidKinematicsException& e) {
+                logger << "Failed to create context at pT = " << *pTit << ", Y = " << *Yit << ": " << e.what() << endl;
+            }
         }
     }
 }
 
 Context& ContextCollection::get_context(size_t n) {
-    if (contexts.empty()) {
+    if (!contexts_created) {
         create_contexts();
     }
     return contexts[n];
 }
 
 Context& ContextCollection::operator[](size_t n) {
-    if (contexts.empty()) {
+    if (!contexts_created) {
         create_contexts();
     }
     return get_context(n);
@@ -396,7 +405,7 @@ bool ContextCollection::empty() {
 }
 
 size_t ContextCollection::size() {
-    if (contexts.empty()) {
+    if (!contexts_created) {
         return options.count("pt") * options.count("y");
     }
     else {
@@ -405,20 +414,20 @@ size_t ContextCollection::size() {
 }
 
 void ContextCollection::set(string key, string value) {
-    assert(contexts.empty());
+    assert(!contexts_created); // TODO throw a proper exception here
     key = canonicalize(key);
     options.erase(key);
     options.insert(pair<string, string>(key, value));
 }
 
 void ContextCollection::erase(string key) {
-    assert(contexts.empty());
+    assert(!contexts_created);
     key = canonicalize(key);
     options.erase(key);
 }
 
 void ContextCollection::add(string key, string value) {
-    assert(contexts.empty());
+    assert(!contexts_created);
     key = canonicalize(key);
     // these are the keys that allow multiple values
     if (!(key == "pt" || key == "y")) {

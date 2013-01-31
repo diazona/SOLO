@@ -17,6 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <cassert>
 #include "integrationtype.h"
 
 /**
@@ -39,6 +40,7 @@ const double inf = 10;
  */
 
 void PlainIntegrationType::fill_min(IntegrationContext& ictx, const size_t core_dimensions, double* min) const {
+    assert(ictx.ctx->tau < 1);
     size_t i = 0;
     while (i < core_dimensions) { min[i++] = ictx.ctx->tau; }
     while (i < core_dimensions + extra_dimensions) { min[i++] = -inf; }
@@ -119,6 +121,7 @@ void Momentum3IntegrationType::update(IntegrationContext& ictx, const size_t cor
  */
 
 void XiPIntegrationType::fill_min(IntegrationContext& ictx, const size_t core_dimensions, double* min) const {
+    assert(ictx.ctx->tau < 1);
     size_t i = 0;
     while (i < core_dimensions) { min[i++] = ictx.ctx->tau; }
     min[i++] = 0;
@@ -162,6 +165,7 @@ void Momentum2XiPIntegrationType::update(IntegrationContext& ictx, const size_t 
  * of radius, with integration ranges 0 to infinity
  */
 void RadialIntegrationType::fill_min(IntegrationContext& ictx, const size_t core_dimensions, double* min) const {
+    assert(ictx.ctx->tau < 1);
     size_t i = 0;
     while (i < core_dimensions) { min[i++] = ictx.ctx->tau; }
     while (i < core_dimensions + extra_dimensions) { min[i++] = 0; }

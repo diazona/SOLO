@@ -711,6 +711,10 @@ int run(int argc, char** argv) {
         return 1;
     }
     cc.create_contexts();
+    if (cc.empty()) {
+        logger << "No valid momentum/rapidity combinations specified!" << endl;
+        return 1;
+    }
     
     ThreadLocalContext tlctx(cc);
 

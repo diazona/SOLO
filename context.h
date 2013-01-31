@@ -43,6 +43,80 @@ typedef enum {MC_PLAIN, MC_MISER, MC_VEGAS, MC_QUASI} integration_strategy;
 typedef enum {proton, deuteron} projectile_type;
 
 /**
+ * An exception to throw when creating a Context, if the Context constructor
+ * requires a property that hasn't been added to the ContextCollection and
+ * has no default value.
+ */
+class MissingPropertyException : public exception {
+private:
+    string _property;
+    string _message;
+public:
+    MissingPropertyException(const char* property) throw() : _property(property) {
+        std::ostringstream s;
+        s << "No value for " << property << "!" << std::endl;
+        _message = s.str();
+    }
+    MissingPropertyException(const MissingPropertyException& other) throw() : _property(other._property), _message(other._message) {}
+    ~MissingPropertyException() throw() {}
+    void operator=(const MissingPropertyException& other) {
+        _property = other._property;
+        _message = other._message;
+    }
+    const char* what() const throw() {
+        return _message.c_str();
+    }
+};
+
+/**
+ * An exception to throw when creating a Context, if the value can't be
+ * parsed into the correct type of object to pass to the Context constructor.
+ */
+template<typename T>
+class InvalidPropertyValueException : public exception {
+private:
+    string _property;
+    T _value;
+    string _message;
+public:
+    InvalidPropertyValueException(const char* property, T& value) throw() : _property(property), _value(value) {
+        std::ostringstream s;
+        s << "Invalid value '" << value << "' for " << property << "!" << std::endl;
+        _message = s.str();
+    }
+    InvalidPropertyValueException(const InvalidPropertyValueException& other) throw() : _property(other._property), _value(other._value), _message(other._message) {}
+    ~InvalidPropertyValueException() throw() {}
+    void operator=(const InvalidPropertyValueException& other) throw() {
+        _property = other._property;
+        _value = other._value;
+        _message = other._message;
+    }
+    const char* what() const throw() {
+        return _message.c_str();
+    }
+};
+
+/**
+ * An exception to throw when creating a Context, if the values of the kinematic
+ * variables are physically invalid or inconsistent.
+ */
+class InvalidKinematicsException : public exception {
+private:
+    string _message;
+public:
+    InvalidKinematicsException(const char* message) throw() : _message(message) {
+    }
+    InvalidKinematicsException(const InvalidKinematicsException& other) throw() : _message(other._message) {}
+    ~InvalidKinematicsException() throw() {}
+    void operator=(const InvalidKinematicsException& other) {
+        _message = other._message;
+    }
+    const char* what() const throw() {
+        return _message.c_str();
+    }
+};
+
+/**
  * Storage for all the assorted parameters that get used in the integration.
  * 
  * There is a different Context object for each distinct set of parameters
@@ -190,7 +264,11 @@ public:
      gdist(gdist),
      cpl(cpl),
      Q02x0lambda(c * pow(A, 1.0d/3.0d) * pow(x0, lambda)),
-     tau(sqrt(pT2)/sqs*exp(Y)) {}
+     tau(sqrt(pT2)/sqs*exp(Y)) {
+        if (tau > 1) {
+            throw InvalidKinematicsException("τ > 1: empty phase space");
+        }
+    }
     Context(const Context& other) :
      x0(other.x0),
      A(other.A),
@@ -252,7 +330,8 @@ public:
 
     ContextCollection() :
       gdist(NULL),
-      cpl(NULL) {
+      cpl(NULL),
+      contexts_created(false) {
         setup_defaults();
     }
     /**
@@ -261,7 +340,8 @@ public:
      */
     ContextCollection(const std::string& filename) :
       gdist(NULL),
-      cpl(NULL) {
+      cpl(NULL),
+      contexts_created(false) {
         setup_defaults();
         ifstream in(filename.c_str());
         read_config(in);
@@ -373,6 +453,10 @@ private:
      */
     std::vector<Context> contexts;
     /**
+     * Whether contexts have been created.
+     */
+    bool contexts_created;
+    /**
      * Called from the constructor to set default values.
      */
     void setup_defaults();
@@ -440,58 +524,5 @@ public:
     }
 };
 
-/**
- * An exception to throw when creating a Context, if the Context constructor
- * requires a property that hasn't been added to the ContextCollection and
- * has no default value.
- */
-class MissingPropertyException : public exception {
-private:
-    string _property;
-    string _message;
-public:
-    MissingPropertyException(const char* property) throw() : _property(property) {
-        std::ostringstream s;
-        s << "No value for " << property << "!" << std::endl;
-        _message = s.str();
-    }
-    MissingPropertyException(const MissingPropertyException& other) throw() : _property(other._property), _message(other._message) {}
-    ~MissingPropertyException() throw() {}
-    void operator=(const MissingPropertyException& other) {
-        _property = other._property;
-        _message = other._message;
-    }
-    const char* what() const throw() {
-        return _message.c_str();
-    }
-};
-
-/**
- * An exception to throw when creating a Context, if the value can't be
- * parsed into the correct type of object to pass to the Context constructor.
- */
-template<typename T>
-class InvalidPropertyValueException : public exception {
-private:
-    string _property;
-    T _value;
-    string _message;
-public:
-    InvalidPropertyValueException(const char* property, T& value) throw() : _property(property), _value(value) {
-        std::ostringstream s;
-        s << "Invalid value '" << value << "' for " << property << "!" << std::endl;
-        _message = s.str();
-    }
-    InvalidPropertyValueException(const InvalidPropertyValueException& other) throw() : _property(other._property), _value(other._value), _message(other._message) {}
-    ~InvalidPropertyValueException() throw() {}
-    void operator=(const InvalidPropertyValueException& other) throw() {
-        _property = other._property;
-        _value = other._value;
-        _message = other._message;
-    }
-    const char* what() const throw() {
-        return _message.c_str();
-    }
-};
 
 #endif // _CONTEXT_H_
