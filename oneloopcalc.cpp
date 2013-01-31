@@ -26,6 +26,7 @@
 #include <cstring>
 #include <ctime>
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_rng.h>
@@ -169,6 +170,8 @@ void quasi_eprint_callback(double* p_result, double* p_abserr, quasi_monte_state
     cerr << "QUASI output: " << *p_result << " err: " << *p_abserr << endl;
 }
 
+class ProgramConfiguration;
+
 /**
  * Stores the results of the integration and contains methods to run the calculation.
  */
@@ -188,8 +191,16 @@ private:
      */
     vector<string> hfgnames;
     /**
-     * The number of results that have been computed so far
+     * The list of names of the hard factors. They are stored according to the
+     * group they were given in, then by order within the group.
      */
+    vector<string> hfnames;
+
+    /** The number of hard factor groups */
+    size_t _hfglen;
+    /** The number of hard factors */
+    size_t _hflen;
+    /** The number of results that have been computed so far */
     size_t _valid;
     /** Array to hold the real parts of the results */
     double* real;
@@ -204,35 +215,22 @@ public:
     const bool trace;
     /** Whether to store minimum and maximum values */
     const bool minmax;
+    /** Whether to calculate individual hard factors separately */
+    const bool separate;
     
-    ResultsCalculator(ContextCollection& cc, ThreadLocalContext& tlctx, vector<HardFactorList*>& hfgroups, vector<string>& hfgnames, bool trace = false, bool minmax = false) :
-      cc(cc), tlctx(tlctx), hfgroups(hfgroups), hfgnames(hfgnames), _valid(0), trace(trace), minmax(minmax) {
-        size_t hflen = hfgroups.size();
-        size_t cclen = cc.size();
-        real = new double[hflen * cclen];
-        imag = new double[hflen * cclen];
-        error = new double[hflen * cclen];
-    };
-    ~ResultsCalculator() {
-        delete[] real;
-        delete[] imag;
-        delete[] error;
-    };
+    ResultsCalculator(ContextCollection& cc, ThreadLocalContext& tlctx, ProgramConfiguration& pc);
+    ~ResultsCalculator();
     /**
      * Turns a context index and a hard factor group index into an index into a
      * 1D row-major array
      */
-    size_t index_from(size_t ccindex, size_t hfindex) {
-        return ccindex * hfgroups.size() + hfindex;
-    };
+    size_t index_from(size_t ccindex, size_t hfindex);
     /**
      * Return whether the given combination of context index and hard factor
      * group index is valid - that is, whether a result has been computed
      * for that combination
      */
-    bool valid(size_t ccindex, size_t hfindex) {
-        return index_from(ccindex, hfindex) < _valid;
-    }
+    bool valid(size_t ccindex, size_t hfindex);
     /**
      * Places the result at the given context index and hard factor group
      * index into the variables real, imag, and error. This should only
@@ -243,116 +241,12 @@ public:
      * Runs the calculation.
      */
     void calculate();
+private:
+    /**
+     * Construct an Integrator and use it
+     */
+    void integrate_hard_factor(const Context& ctx, const ThreadLocalContext& tlctx, HardFactorList& hflist, double* l_real, double* l_imag, double* l_error);
 };
-
-void ResultsCalculator::result(size_t ccindex, size_t hfindex, double* real, double* imag, double* error) {
-    size_t index = index_from(ccindex, hfindex);
-    if (valid(ccindex, hfindex)) {
-        *real = this->real[index];
-        *imag = this->imag[index];
-        *error = this->error[index];
-    }
-    else {
-        ostringstream s;
-        s << "Invalid index: " << index << " out of " << _valid << " results computed" << endl;
-        throw s.str().c_str();
-    }
-}
-
-void ResultsCalculator::calculate() {
-    double* l_real = real;
-    double* l_imag = imag;
-    double* l_error = error;
-    for (ContextCollection::iterator it = cc.begin(); it != cc.end(); it++) {
-        Context ctx = *it;
-        cerr << "Beginning calculation at pT = " << sqrt(ctx.pT2) << ", Y = " << ctx.Y << endl;
-        try {
-            for (vector<HardFactorList*>::iterator hit = hfgroups.begin(); hit != hfgroups.end(); hit++) {
-                Integrator* integrator = new Integrator(&ctx, &tlctx, **hit);
-                if (trace) {
-                    integrator->set_callback(write_data_point);
-                }
-                else if (minmax) {
-                    integrator->set_callback(store_minmax);
-                }
-                integrator->set_cubature_callback(cubature_eprint_callback);
-                integrator->set_miser_callback(miser_eprint_callback);
-                integrator->set_vegas_callback(vegas_eprint_callback);
-                integrator->set_quasi_callback(quasi_eprint_callback);
-                integrator->integrate(l_real++, l_imag++, l_error++);
-                _valid++;
-                delete integrator;
-            }
-            cerr << "...done" << endl;
-        }
-        catch (const exception& e) {
-            cerr << e.what() << endl;
-        }
-    }
-}
-
-/**
- * Write the list of results in a ResultsCalculator to the given output stream.
- */
-ostream& operator<<(ostream& out, ResultsCalculator& rc) {
-    bool all_valid = true;
-    out << "pT\tY\t";
-    for (vector<string>::iterator it = rc.hfgnames.begin(); it != rc.hfgnames.end(); it++) {
-        out << *it << "\t";
-    }
-    out << "total" << endl;
-    double l_real, l_imag, l_error;
-    for (size_t ccindex = 0; ccindex < rc.cc.size(); ccindex++) {
-        out << sqrt(rc.cc[ccindex].pT2) << "\t";
-        out << rc.cc[ccindex].Y << "\t";
-
-        double total = 0;
-        for (size_t hfgindex = 0; hfgindex < rc.hfgroups.size(); hfgindex++) {
-            if (rc.valid(ccindex, hfgindex)) {
-                rc.result(ccindex, hfgindex, &l_real, &l_imag, &l_error);
-                out << l_real << "±" << l_error << "\t";
-                total += l_real;
-            }
-            else {
-                out << "---\t";
-                all_valid = false;
-            }
-        }
-        if (!all_valid) {
-            out << "---" << endl;
-        }
-        else {
-            out << total << endl;
-        }
-    }
-    if (!all_valid) {
-        out << "WARNING: some results were not computed" << endl;
-    }
-
-    if (rc.minmax) {
-        out << "xx\t" << min_ictx.xx << "\t" << max_ictx.xx << "\t" << endl;
-        out << "xy\t" << min_ictx.xy << "\t" << max_ictx.xy << "\t" << endl;
-        out << "yx\t" << min_ictx.yx << "\t" << max_ictx.yx << "\t" << endl;
-        out << "yy\t" << min_ictx.yy << "\t" << max_ictx.yy << "\t" << endl;
-        out << "bx\t" << min_ictx.bx << "\t" << max_ictx.bx << "\t" << endl;
-        out << "by\t" << min_ictx.by << "\t" << max_ictx.by << "\t" << endl;
-        out << "q1x\t" << min_ictx.q1x << "\t" << max_ictx.q1x << "\t" << endl;
-        out << "q1y\t" << min_ictx.q1y << "\t" << max_ictx.q1y << "\t" << endl;
-        out << "q2x\t" << min_ictx.q2x << "\t" << max_ictx.q2x << "\t" << endl;
-        out << "q2y\t" << min_ictx.q2y << "\t" << max_ictx.q2y << "\t" << endl;
-        out << "q3x\t" << min_ictx.q3x << "\t" << max_ictx.q3x << "\t" << endl;
-        out << "q3y\t" << min_ictx.q3y << "\t" << max_ictx.q3y << "\t" << endl;
-        out << "z\t" << min_ictx.z << "\t" << max_ictx.z << "\t" << endl;
-        out << "xi\t" << min_ictx.xi << "\t" << max_ictx.xi << "\t" << endl;
-        out << "xip\t" << min_ictx.xiprime << "\t" << max_ictx.xiprime << "\t" << endl;
-        out << "kT\t" << min_ictx.kT << "\t" << max_ictx.kT << "\t" << endl;
-        out << "kT2\t" << min_ictx.kT2 << "\t" << max_ictx.kT2 << "\t" << endl;
-        out << "xp\t" << min_ictx.xp << "\t" << max_ictx.xp << "\t" << endl;
-        out << "xg\t" << min_ictx.xg << "\t" << max_ictx.xg << "\t" << endl;
-        out << "Qs2\t" << min_ictx.Qs2 << "\t" << max_ictx.Qs2 << "\t" << endl;
-        out << "alphas\t" << min_ictx.alphas << "\t" << max_ictx.alphas << "\t" << endl;
-    }
-}
 
 /**
  * Stores high-level program configuration variables, e.g. information
@@ -369,21 +263,8 @@ public:
     ContextCollection& context_collection() {
         return cc;
     }
-    /**
-     * Return the list of hard factor groups specified in the command-line
-     * arguments
-     */
-    vector<HardFactorList*>& hard_factor_groups() {
-        return hfgroups;
-    }
-    /**
-     * Return the list of names of the hard factor groups that were specified
-     * in the command-line arguments
-     */
-    vector<string>& hard_factor_names() {
-        return hfgnames;
-    }
-    
+
+    friend class ResultsCalculator;
 private:
     /** Indicates whether the --trace option was specified */
     bool trace;
@@ -409,6 +290,10 @@ private:
      * The list of names of hard factor groups given on the command line
      */
     vector<string> hfgnames;
+    /**
+     * The list of names of hard factors from the groups given on the command line
+     */
+    vector<string> hfnames;
     
     /**
      * Parse a string specification of a hard factor group and add the
@@ -417,7 +302,7 @@ private:
     void parse_hf_spec(const string& spec);
 };
 
-ProgramConfiguration::ProgramConfiguration(int argc, char** argv) {
+ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false), minmax(false), separate(false) {
     string gdist_type;
     for (int i = 1; i < argc; i++) {
         string a = argv[i];
@@ -472,6 +357,7 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) {
     }
     assert(!hfgroups.empty());
     assert(hfgroups.size() == hfgnames.size());
+    assert(hfnames.size() >= hfgnames.size());
 }
 
 ProgramConfiguration::~ProgramConfiguration() {
@@ -492,21 +378,21 @@ static const char* default_lo_spec = "m:h02qq,m:h02gg";
 static const char* default_nlo_spec = "r:h12qq,m:h14qq,r:h12gg,m:h12qqbar,m:h16gg,r:h112gq,r:h122gq,m:h14gq,r:h112qg,r:h122qg,m:h14qg";
 
 void ProgramConfiguration::parse_hf_spec(const string& spec) {
-    vector<string> hfnames;
+    vector<string> splitspec;
     // Split the specification string on commas to get individual hard factor names
     if (spec == "lo") {
-        hfnames = split(default_lo_spec, ", ");
+        splitspec = split(default_lo_spec, ", ");
     }
     else if (spec == "nlo") {
-        hfnames = split(default_nlo_spec, ", ");
+        splitspec = split(default_nlo_spec, ", ");
     }
     else {
-        hfnames = split(spec, ", ");
+        splitspec = split(spec, ", ");
     }
     HardFactorList* hfobjs = new HardFactorList();
     assert(hfobjs != NULL);
     // Iterate over the individual hard factor names
-    for (vector<string>::iterator it = hfnames.begin(); it != hfnames.end(); it++) {
+    for (vector<string>::iterator it = splitspec.begin(); it != splitspec.end(); it++) {
         string orig_s = *it;
         string s = orig_s;
         // The default is to create a position-space hard factor
@@ -541,9 +427,188 @@ void ProgramConfiguration::parse_hf_spec(const string& spec) {
         throw "Error parsing hard factors";
     }
     // This constitutes one group. Add it to the list and add the
-    // specification to the list of names.
+    // specification to the lists of names.
     hfgroups.push_back(hfobjs);
     hfgnames.push_back(spec);
+    hfnames.insert(hfnames.end(), splitspec.begin(), splitspec.end());
+}
+
+ResultsCalculator::ResultsCalculator(ContextCollection& cc, ThreadLocalContext& tlctx, ProgramConfiguration& pc) :
+    cc(cc), tlctx(tlctx), hfgroups(pc.hfgroups), hfgnames(pc.hfgnames), hfnames(pc.hfnames), _hfglen(0), _hflen(0), _valid(0), trace(pc.trace), minmax(pc.minmax), separate(pc.separate) {
+    _hfglen = hfgroups.size();
+    size_t cclen = cc.size();
+    real = new double[_hfglen * cclen];
+    imag = new double[_hfglen * cclen];
+    error = new double[_hfglen * cclen];
+    if (separate) {
+        for (vector<HardFactorList*>::iterator hflit = hfgroups.begin(); hflit != hfgroups.end(); hflit++) {
+            _hflen += (*hflit)->size();
+        }
+    }
+}
+ResultsCalculator::~ResultsCalculator() {
+    delete[] real;
+    delete[] imag;
+    delete[] error;
+}
+size_t ResultsCalculator::index_from(size_t ccindex, size_t hfindex) {
+    return ccindex * (separate ? _hflen : _hfglen) + hfindex;
+}
+bool ResultsCalculator::valid(size_t ccindex, size_t hfindex) {
+    return index_from(ccindex, hfindex) < _valid;
+}
+
+void ResultsCalculator::result(size_t ccindex, size_t hfindex, double* real, double* imag, double* error) {
+    size_t index = index_from(ccindex, hfindex);
+    if (valid(ccindex, hfindex)) {
+        *real = this->real[index];
+        *imag = this->imag[index];
+        *error = this->error[index];
+    }
+    else {
+        ostringstream s;
+        s << "Invalid index: " << index << " out of " << _valid << " results computed" << endl;
+        throw s.str().c_str();
+    }
+}
+
+void ResultsCalculator::calculate() {
+    double* l_real = real;
+    double* l_imag = imag;
+    double* l_error = error;
+    for (ContextCollection::iterator it = cc.begin(); it != cc.end(); it++) {
+        Context ctx = *it;
+        cerr << "Beginning calculation at pT = " << sqrt(ctx.pT2) << ", Y = " << ctx.Y << endl;
+        try {
+            // recall the definition
+            // typedef HardFactorList std::vector<const HardFactor*>
+            for (vector<HardFactorList*>::iterator hit = hfgroups.begin(); hit != hfgroups.end(); hit++) {
+                if (separate) {
+                    // go through the hard factors in each group one at a time
+                    HardFactorList one_hf;
+                    one_hf.resize(1);
+                    for (HardFactorList::iterator hfit = (*hit)->begin(); hfit != (*hit)->end(); hfit++) {
+                        one_hf[0] = *hfit;
+                        integrate_hard_factor(ctx, tlctx, one_hf, l_real++, l_imag++, l_error++);
+                    }
+                }
+                else {
+                    integrate_hard_factor(ctx, tlctx, **hit, l_real++, l_imag++, l_error++);
+                }
+            }
+            cerr << "...done" << endl;
+        }
+        catch (const exception& e) {
+            cerr << e.what() << endl;
+        }
+    }
+}
+
+void ResultsCalculator::integrate_hard_factor(const Context& ctx, const ThreadLocalContext& tlctx, HardFactorList& hflist, double* l_real, double* l_imag, double* l_error) {
+    Integrator* integrator = new Integrator(&ctx, &tlctx, hflist);
+    if (trace) {
+        integrator->set_callback(write_data_point);
+    }
+    else if (minmax) {
+        integrator->set_callback(store_minmax);
+    }
+    integrator->set_cubature_callback(cubature_eprint_callback);
+    integrator->set_miser_callback(miser_eprint_callback);
+    integrator->set_vegas_callback(vegas_eprint_callback);
+    integrator->set_quasi_callback(quasi_eprint_callback);
+    integrator->integrate(l_real, l_imag, l_error);
+    _valid++;
+    delete integrator;
+}
+
+/**
+ * Write the list of results in a ResultsCalculator to the given output stream.
+ */
+ostream& operator<<(ostream& out, ResultsCalculator& rc) {
+    bool all_valid = true;
+    _Setw lw = setw(6), rw = setw(26); // "label width" and "result width"
+    // write headers
+    if (rc.separate) {
+        out << lw << left << "pT" << lw << "Y";
+        for (size_t hfgindex = 0; hfgindex < rc._hfglen; hfgindex++) {
+            out << rw << rc.hfgnames[hfgindex];
+            size_t hflen = rc.hfgroups[hfgindex]->size();
+            for (size_t hfindex = 1; hfindex < hflen; hfindex++) {
+                out << rw << " ";
+            }
+        }
+        out << rw << "total" << endl;
+        out << lw << " " << lw << " ";
+        for (vector<string>::iterator termname_iterator = rc.hfnames.begin(); termname_iterator != rc.hfnames.end(); termname_iterator++) {
+            out << rw << *termname_iterator;
+        }
+        out << endl;
+    }
+    else {
+        out << lw << left << "pT" << lw << "Y";
+        for (vector<string>::iterator it = rc.hfgnames.begin(); it != rc.hfgnames.end(); it++) {
+            out << rw << *it;
+        }
+        out << rw << "total" << endl;
+    }
+    
+    // write data
+    double l_real, l_imag, l_error;
+    for (size_t ccindex = 0; ccindex < rc.cc.size(); ccindex++) {
+        out << lw << sqrt(rc.cc[ccindex].pT2);
+        out << lw << rc.cc[ccindex].Y;
+
+        double total = 0;
+        size_t hfglen = rc.separate ? rc._hflen : rc._hfglen;
+        for (size_t hfgindex = 0; hfgindex < hfglen; hfgindex++) {
+            if (rc.valid(ccindex, hfgindex)) {
+                rc.result(ccindex, hfgindex, &l_real, &l_imag, &l_error);
+                ostringstream s;
+                s << l_real << "±" << l_error;
+                /* needs an extra space because the "±" counts as two chars for computing the
+                 * field width, but only displays as one character */
+                out << rw << s.str() << " ";
+                total += l_real;
+            }
+            else {
+                out << rw << "---";
+                all_valid = false;
+            }
+        }
+        if (all_valid) {
+            out << rw << total << endl;
+        }
+        else {
+            out << rw << "---" << endl;
+        }
+    }
+    if (!all_valid) {
+        out << "WARNING: some results were not computed" << endl;
+    }
+
+    if (rc.minmax) {
+        out << "xx\t" << min_ictx.xx << "\t" << max_ictx.xx << "\t" << endl;
+        out << "xy\t" << min_ictx.xy << "\t" << max_ictx.xy << "\t" << endl;
+        out << "yx\t" << min_ictx.yx << "\t" << max_ictx.yx << "\t" << endl;
+        out << "yy\t" << min_ictx.yy << "\t" << max_ictx.yy << "\t" << endl;
+        out << "bx\t" << min_ictx.bx << "\t" << max_ictx.bx << "\t" << endl;
+        out << "by\t" << min_ictx.by << "\t" << max_ictx.by << "\t" << endl;
+        out << "q1x\t" << min_ictx.q1x << "\t" << max_ictx.q1x << "\t" << endl;
+        out << "q1y\t" << min_ictx.q1y << "\t" << max_ictx.q1y << "\t" << endl;
+        out << "q2x\t" << min_ictx.q2x << "\t" << max_ictx.q2x << "\t" << endl;
+        out << "q2y\t" << min_ictx.q2y << "\t" << max_ictx.q2y << "\t" << endl;
+        out << "q3x\t" << min_ictx.q3x << "\t" << max_ictx.q3x << "\t" << endl;
+        out << "q3y\t" << min_ictx.q3y << "\t" << max_ictx.q3y << "\t" << endl;
+        out << "z\t" << min_ictx.z << "\t" << max_ictx.z << "\t" << endl;
+        out << "xi\t" << min_ictx.xi << "\t" << max_ictx.xi << "\t" << endl;
+        out << "xip\t" << min_ictx.xiprime << "\t" << max_ictx.xiprime << "\t" << endl;
+        out << "kT\t" << min_ictx.kT << "\t" << max_ictx.kT << "\t" << endl;
+        out << "kT2\t" << min_ictx.kT2 << "\t" << max_ictx.kT2 << "\t" << endl;
+        out << "xp\t" << min_ictx.xp << "\t" << max_ictx.xp << "\t" << endl;
+        out << "xg\t" << min_ictx.xg << "\t" << max_ictx.xg << "\t" << endl;
+        out << "Qs2\t" << min_ictx.Qs2 << "\t" << max_ictx.Qs2 << "\t" << endl;
+        out << "alphas\t" << min_ictx.alphas << "\t" << max_ictx.alphas << "\t" << endl;
+    }
 }
 
 /**
@@ -658,7 +723,7 @@ int run(int argc, char** argv) {
 #endif
     cout << cc << "------------" << endl;
 
-    ResultsCalculator rc(cc, tlctx, pc.hard_factor_groups(), pc.hard_factor_names());
+    ResultsCalculator rc(cc, tlctx, pc);
     p_rc = &rc;
 
     /* Set up a signal handler so that if the program receives a SIGINT (Ctrl+C)
