@@ -27,6 +27,7 @@
 #include <gsl/gsl_qrng.h>
 #include <gsl/gsl_rng.h>
 #include "context.h"
+#include "gluondist.h"
 #include "integrator.h"
 #include "log.h"
 #include "utils.h"
@@ -519,7 +520,7 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "ff_filename\t= " << ctx.ff_filename  << endl;
     out << "projectile\t= " << ctx.projectile << endl;
     out << "hadron\t= " << ctx.hadron << endl;
-    out << "integration_strategy" << ctx.strategy << endl;
+    out << "integration_strategy\t= " << ctx.strategy << endl;
     out << "cubature_iterations\t= " << ctx.cubature_iterations << endl;
     out << "miser_iterations\t= " << ctx.miser_iterations << endl;
     out << "vegas_initial_iterations\t= " << ctx.vegas_initial_iterations << endl;

@@ -227,13 +227,6 @@ public:
 };
 
 /**
- * Write the Context out to the given output stream as a set of 
- *  key = value
- * lines. This is meant to be human-readable output.
- */
-std::ostream operator<<(std::ostream out, Context& ctx);
-
-/**
  * The "context factory" and a repository for all settings.
  * 
  * A ContextCollection is able to read a configuration file in
@@ -401,6 +394,14 @@ std::istream& operator>>(std::istream& in, ContextCollection& cc);
  * could be read in to reconstruct the ContextCollection.
  */
 std::ostream& operator<<(std::ostream& out, ContextCollection& cc);
+
+/**
+ * Allows writing a Context out to a stream using << notation.
+ * 
+ * This is a human-readable representation and cannot necessarily
+ * be used to reconstruct the Context programmatically.
+ */
+std::ostream& operator<<(std::ostream& out, Context& ctx);
 
 /**
  * Another Context-like class that holds objects which should not be shared
