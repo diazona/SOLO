@@ -435,16 +435,20 @@ void ProgramConfiguration::parse_hf_spec(const string& spec) {
 
 ResultsCalculator::ResultsCalculator(ContextCollection& cc, ThreadLocalContext& tlctx, ProgramConfiguration& pc) :
     cc(cc), tlctx(tlctx), hfgroups(pc.hfgroups), hfgnames(pc.hfgnames), hfnames(pc.hfnames), _hfglen(0), _hflen(0), _valid(0), trace(pc.trace), minmax(pc.minmax), separate(pc.separate) {
+    size_t result_array_len = cc.size();
     _hfglen = hfgroups.size();
-    size_t cclen = cc.size();
-    real = new double[_hfglen * cclen];
-    imag = new double[_hfglen * cclen];
-    error = new double[_hfglen * cclen];
     if (separate) {
         for (vector<HardFactorList*>::iterator hflit = hfgroups.begin(); hflit != hfgroups.end(); hflit++) {
             _hflen += (*hflit)->size();
         }
+        result_array_len *= _hflen;
     }
+    else {
+        result_array_len *= _hfglen;
+    }
+    real = new double[result_array_len];
+    imag = new double[result_array_len];
+    error = new double[result_array_len];
 }
 ResultsCalculator::~ResultsCalculator() {
     delete[] real;
