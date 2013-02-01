@@ -509,20 +509,19 @@ void ResultsCalculator::calculate() {
 }
 
 void ResultsCalculator::integrate_hard_factor(const Context& ctx, const ThreadLocalContext& tlctx, HardFactorList& hflist, double* l_real, double* l_imag, double* l_error) {
-    Integrator* integrator = new Integrator(&ctx, &tlctx, hflist);
+    Integrator integrator(&ctx, &tlctx, hflist);
     if (trace) {
-        integrator->set_callback(write_data_point);
+        integrator.set_callback(write_data_point);
     }
     else if (minmax) {
-        integrator->set_callback(store_minmax);
+        integrator.set_callback(store_minmax);
     }
-    integrator->set_cubature_callback(cubature_eprint_callback);
-    integrator->set_miser_callback(miser_eprint_callback);
-    integrator->set_vegas_callback(vegas_eprint_callback);
-    integrator->set_quasi_callback(quasi_eprint_callback);
-    integrator->integrate(l_real, l_imag, l_error);
+    integrator.set_cubature_callback(cubature_eprint_callback);
+    integrator.set_miser_callback(miser_eprint_callback);
+    integrator.set_vegas_callback(vegas_eprint_callback);
+    integrator.set_quasi_callback(quasi_eprint_callback);
+    integrator.integrate(l_real, l_imag, l_error);
     _valid++;
-    delete integrator;
 }
 
 /**
