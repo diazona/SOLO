@@ -84,7 +84,7 @@ private:
     /** A callback function to call each time a quasi Monte Carlo integration finishes */
     void (*quasi_callback)(double*, double*, quasi_monte_state*);
 public:
-    Integrator(const Context* ctx, const ThreadLocalContext* tlctx, HardFactorList hflist);
+    Integrator(const Context* ctx, const ThreadLocalContext* tlctx, HardFactorList& hflist);
     ~Integrator();
     /**
      * Updates the kinematic variables during a "1D" integration.
