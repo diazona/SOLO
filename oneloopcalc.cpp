@@ -490,9 +490,8 @@ void ResultsCalculator::calculate() {
                 if (separate) {
                     // go through the hard factors in each group one at a time
                     HardFactorList one_hf;
-                    one_hf.resize(1);
                     for (HardFactorList::iterator hfit = (*hit)->begin(); hfit != (*hit)->end(); hfit++) {
-                        one_hf[0] = *hfit;
+                        one_hf.assign(1, *hfit);
                         integrate_hard_factor(ctx, tlctx, one_hf, l_real++, l_imag++, l_error++);
                     }
                 }
