@@ -308,7 +308,12 @@ void read_from_file(const string filename, size_t& x_dimension, size_t& y_dimens
     }
 }
 
-FileDataGluonDistribution::FileDataGluonDistribution(string pos_filename, string mom_filename) {
+FileDataGluonDistribution::FileDataGluonDistribution(string pos_filename, string mom_filename, double Q02, double x0, double lambda) {
+    /* Read the values into the arrays, but note that what actually gets read
+     * into the Qs2 arrays is rapidity values at this point. So the variable
+     * name is misleading, for now. The Y values will be converted into Qs2 later.
+     */
+    double Q02x0lambda = Q02 * pow(x0, lambda);
     size_t Qs2_dimension_2;
     double* Qs2_values_2;
     read_from_file(pos_filename, r2_dimension, Qs2_dimension, r2_values, Qs2_values, S_dist);
@@ -322,6 +327,8 @@ FileDataGluonDistribution::FileDataGluonDistribution(string pos_filename, string
             delete[] r2_values, Qs2_values, S_dist, q2_values, Qs2_values_2, F_dist;
             GSL_ERROR_VOID("Qs2 data points don't match", GSL_EINVAL);
         }
+        // Here is where we convert the Y value into a Qs2 value
+        Qs2_values[i] = Q02x0lambda * exp(lambda * Qs2_values[i] /* Y */);
     }
     delete[] Qs2_values_2;
     Qs2_values_2 = NULL;

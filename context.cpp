@@ -315,7 +315,7 @@ void ContextCollection::create_contexts() {
             check_property(gdist_position_filename, string, parse_string)
             check_property(gdist_momentum_filename, string, parse_string)
             logger << "Reading gluon distribution from " << gdist_position_filename << " (pos) and " << gdist_momentum_filename << " (mom)" << endl;
-            gdist = new FileDataGluonDistribution(gdist_position_filename, gdist_momentum_filename);
+            gdist = new FileDataGluonDistribution(gdist_position_filename, gdist_momentum_filename, c * pow(A, 1./3.), x0, lambda);
         }
         else {
             throw InvalidPropertyValueException<string>("gdist_type", gdist_type);

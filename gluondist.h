@@ -252,7 +252,7 @@ public:
     /**
      * Constructs a new gluon distribution reading from the specified file.
      */
-    FileDataGluonDistribution(std::string pos_filename, std::string mom_filename);
+    FileDataGluonDistribution(std::string pos_filename, std::string mom_filename, double Q02, double x0, double lambda);
     ~FileDataGluonDistribution();
     
     /**
