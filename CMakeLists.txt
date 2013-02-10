@@ -26,3 +26,6 @@ target_link_libraries(dss_pinlo_test ${CMAKE_SOURCE_DIR}/libinterp2d.a ${LIBS})
 add_executable(gluondist gluondist.cpp)
 target_link_libraries(gluondist ${CMAKE_SOURCE_DIR}/libinterp2d.a ${LIBS})
 set_target_properties(gluondist PROPERTIES COMPILE_DEFINITIONS GLUON_DIST_DRIVER)
+
+add_executable(kovr kov/gauleg.cpp kov/interr.cpp kov/kovr.cpp)
+target_link_libraries(kovr m)
