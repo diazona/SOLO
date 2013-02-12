@@ -238,6 +238,19 @@ vector<double> parse_vector(pair<multimap<string, string>::iterator, multimap<st
     return v;
 }
 
+struct Mu2Strategy {
+    double _mu2;
+    Mu2Strategy(double mu2) : _mu2(mu2) {}
+    virtual double mu2(double pT2) {
+        return _mu2;
+    }
+};
+struct PT2x4Mu2Strategy {
+    virtual double mu2(double pT2) {
+        return 4*pT2;
+    }
+};
+
 void ContextCollection::create_contexts() {
     contexts_created = true;
     
@@ -248,6 +261,12 @@ void ContextCollection::create_contexts() {
     check_property(c,            double, parse_double)
     check_property(lambda,       double, parse_double)
     check_property(mu2,          double, parse_double)
+    bool mu24pT2 = false;
+    // special case: check for mu2=4pT2. This could be done with an object if more complicated schemes are needed.
+    itit = options.equal_range(canonicalize("mu2"));
+    if (itit.first->second == "4pT2") {
+        mu24pT2 = true;
+    }
     check_property(Nc,           double, parse_double)
     check_property(Nf,           double, parse_double)
     check_property(CF,           double, parse_double)
@@ -352,7 +371,7 @@ void ContextCollection::create_contexts() {
                         A,
                         c,
                         lambda,
-                        mu2,
+                        mu24pT2 ? 4*gsl_pow_2(*pTit) : mu2,
                         Nc,
                         Nf,
                         CF,
@@ -617,6 +636,9 @@ int main(int argc, char** argv) {
     else {
         cout << " into " << cc.size() << " contexts" << endl;
         cout << cc;
+        for (ContextCollection::iterator it = cc.begin(); it != cc.end(); it++) {
+            cout << "-----------------------------------" << endl << "Context:" << endl << *it;
+        }
     }
     return 0;
 }
