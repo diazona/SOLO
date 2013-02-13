@@ -27,5 +27,5 @@ add_executable(gluondist gluondist.cpp)
 target_link_libraries(gluondist ${CMAKE_SOURCE_DIR}/libinterp2d.a ${LIBS})
 set_target_properties(gluondist PROPERTIES COMPILE_DEFINITIONS GLUON_DIST_DRIVER)
 
-add_executable(kovr kov/gauleg.cpp kov/interr.cpp kov/kovr.cpp)
+add_executable(kovr kov-position/gauleg.cpp kov-position/interr.cpp kov-position/kovr.cpp)
 target_link_libraries(kovr m)
