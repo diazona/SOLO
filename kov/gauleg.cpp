@@ -6,6 +6,8 @@ using namespace std;
 void gauleg(double x1, double x2, double * x, double *  w, int n);
 #define EPS 3.0e-11
 
+// constructs abcissas and weights for Gauss-Legendre integration
+// reference: NR3 section 4.6.1
 void gauleg(double x1, double x2, double * x, double *  w, int n)
 {
 	int m,j,i;
