@@ -200,8 +200,10 @@ private:
     size_t _hfglen;
     /** The number of hard factors */
     size_t _hflen;
-    /** The number of results that have been computed so far */
-    size_t _valid;
+    /** The length of the results arrays */
+    size_t result_array_len;
+    /** Flags the indices of results which have been successfully computed so far */
+    bool* _valid;
     /** Array to hold the real parts of the results */
     double* real;
     /** Array to hold the imaginary parts of the results */
@@ -245,7 +247,7 @@ private:
     /**
      * Construct an Integrator and use it
      */
-    void integrate_hard_factor(const Context& ctx, const ThreadLocalContext& tlctx, HardFactorList& hflist, double* l_real, double* l_imag, double* l_error);
+    void integrate_hard_factor(const Context& ctx, const ThreadLocalContext& tlctx, HardFactorList& hflist, size_t index);
 };
 
 /**
@@ -434,8 +436,7 @@ void ProgramConfiguration::parse_hf_spec(const string& spec) {
 }
 
 ResultsCalculator::ResultsCalculator(ContextCollection& cc, ThreadLocalContext& tlctx, ProgramConfiguration& pc) :
-    cc(cc), tlctx(tlctx), hfgroups(pc.hfgroups), hfgnames(pc.hfgnames), hfnames(pc.hfnames), _hfglen(0), _hflen(0), _valid(0), trace(pc.trace), minmax(pc.minmax), separate(pc.separate) {
-    size_t result_array_len = cc.size();
+    cc(cc), tlctx(tlctx), hfgroups(pc.hfgroups), hfgnames(pc.hfgnames), hfnames(pc.hfnames), result_array_len(cc.size()), _hfglen(0), _hflen(0), trace(pc.trace), minmax(pc.minmax), separate(pc.separate) {
     _hfglen = hfgroups.size();
     if (separate) {
         for (vector<HardFactorList*>::iterator hflit = hfgroups.begin(); hflit != hfgroups.end(); hflit++) {
@@ -446,20 +447,25 @@ ResultsCalculator::ResultsCalculator(ContextCollection& cc, ThreadLocalContext& 
     else {
         result_array_len *= _hfglen;
     }
+    _valid = new bool[result_array_len];
     real = new double[result_array_len];
     imag = new double[result_array_len];
     error = new double[result_array_len];
+    fill(_valid, _valid + result_array_len, false);
 }
 ResultsCalculator::~ResultsCalculator() {
+    delete[] _valid;
     delete[] real;
     delete[] imag;
     delete[] error;
 }
 size_t ResultsCalculator::index_from(size_t ccindex, size_t hfindex) {
-    return ccindex * (separate ? _hflen : _hfglen) + hfindex;
+    size_t index = ccindex * (separate ? _hflen : _hfglen) + hfindex;
+    assert(index < result_array_len);
+    return index;
 }
 bool ResultsCalculator::valid(size_t ccindex, size_t hfindex) {
-    return index_from(ccindex, hfindex) < _valid;
+    return _valid[index_from(ccindex, hfindex)];
 }
 
 void ResultsCalculator::result(size_t ccindex, size_t hfindex, double* real, double* imag, double* error) {
@@ -471,19 +477,18 @@ void ResultsCalculator::result(size_t ccindex, size_t hfindex, double* real, dou
     }
     else {
         ostringstream s;
-        s << "Invalid index: " << index << " out of " << _valid << " results computed" << endl;
+        s << "Invalid results at ccindex " << ccindex << ", hfindex " << hfindex << endl;
         throw s.str().c_str();
     }
 }
 
 void ResultsCalculator::calculate() {
-    double* l_real = real;
-    double* l_imag = imag;
-    double* l_error = error;
+    size_t cc_index = 0, hf_index = 0;
     for (ContextCollection::iterator it = cc.begin(); it != cc.end(); it++) {
         Context ctx = *it;
         cerr << "Beginning calculation at pT = " << sqrt(ctx.pT2) << ", Y = " << ctx.Y << endl;
         try {
+            hf_index = 0;
             // recall the definition
             // typedef HardFactorList std::vector<const HardFactor*>
             for (vector<HardFactorList*>::iterator hit = hfgroups.begin(); hit != hfgroups.end(); hit++) {
@@ -492,11 +497,13 @@ void ResultsCalculator::calculate() {
                     HardFactorList one_hf;
                     for (HardFactorList::iterator hfit = (*hit)->begin(); hfit != (*hit)->end(); hfit++) {
                         one_hf.assign(1, *hfit);
-                        integrate_hard_factor(ctx, tlctx, one_hf, l_real++, l_imag++, l_error++);
+                        integrate_hard_factor(ctx, tlctx, one_hf, index_from(cc_index, hf_index));
+                        hf_index++;
                     }
                 }
                 else {
-                    integrate_hard_factor(ctx, tlctx, **hit, l_real++, l_imag++, l_error++);
+                    integrate_hard_factor(ctx, tlctx, **hit, index_from(cc_index, hf_index));
+                    hf_index++;
                 }
             }
             cerr << "...done" << endl;
@@ -504,10 +511,12 @@ void ResultsCalculator::calculate() {
         catch (const exception& e) {
             cerr << e.what() << endl;
         }
+        cc_index++;
     }
 }
 
-void ResultsCalculator::integrate_hard_factor(const Context& ctx, const ThreadLocalContext& tlctx, HardFactorList& hflist, double* l_real, double* l_imag, double* l_error) {
+void ResultsCalculator::integrate_hard_factor(const Context& ctx, const ThreadLocalContext& tlctx, HardFactorList& hflist, size_t index) {
+    double l_real, l_imag, l_error;
     Integrator integrator(&ctx, &tlctx, hflist);
     if (trace) {
         integrator.set_callback(write_data_point);
@@ -519,8 +528,11 @@ void ResultsCalculator::integrate_hard_factor(const Context& ctx, const ThreadLo
     integrator.set_miser_callback(miser_eprint_callback);
     integrator.set_vegas_callback(vegas_eprint_callback);
     integrator.set_quasi_callback(quasi_eprint_callback);
-    integrator.integrate(l_real, l_imag, l_error);
-    _valid++;
+    integrator.integrate(&l_real, &l_imag, &l_error);
+    real[index] = l_real;
+    imag[index] = l_imag;
+    error[index] = l_error;
+    _valid[index] = true;
 }
 
 /**
