@@ -146,17 +146,27 @@ void IntegrationContext::update_positions(double xx, double xy, double yx, doubl
 
     // Calculate the new gluon distribution values
     // this has to be done after kinematics are updated
-    this->S2r = ctx->gdist->S2(r2, this->Qs2);
-    this->S4rst = ctx->gdist->S4(r2, s2, t2, this->Qs2);
+    if (r2 > 0) {
+        this->S2r = ctx->gdist->S2(r2, this->Qs2);
+        if (s2 > 0 || t2 > 0) {
+            this->S4rst = ctx->gdist->S4(r2, s2, t2, this->Qs2);
+        }
+        else {
+            this->S4rst = NAN;
+        }
+    }
+    else {
+        this->S2r = NAN;
+    }
 }
 
 void IntegrationContext::update_momenta(double q1x, double q1y, double q2x, double q2y, double q3x, double q3y) {
-    checkfinite(xx);
-    checkfinite(xy);
-    checkfinite(yx);
-    checkfinite(yy);
-    checkfinite(bx);
-    checkfinite(by);
+    checkfinite(q1x);
+    checkfinite(q1y);
+    checkfinite(q2x);
+    checkfinite(q2y);
+    checkfinite(q3x);
+    checkfinite(q3y);
     this->q1x = q1x;
     this->q1y = q1y;
     this->q2x = q2x;
@@ -168,12 +178,30 @@ void IntegrationContext::update_momenta(double q1x, double q1y, double q2x, doub
     this->q32 = q3x*q3x + q3y*q3y;
     
     this->Fk = ctx->gdist->F(kT2, this->Qs2);
-    this->Fq1 = ctx->gdist->F(q12, this->Qs2);
-    this->Fq2 = ctx->gdist->F(q22, this->Qs2);
-    this->Fq3 = ctx->gdist->F(q32, this->Qs2);
-    this->Fkq1 = ctx->gdist->F((kT - q1x)*(kT - q1x) + q1y*q1y, this->Qs2);
-    this->Fkq2 = ctx->gdist->F((kT - q2x)*(kT - q2x) + q2y*q2y, this->Qs2);
-    this->Fkq3 = ctx->gdist->F((kT - q3x)*(kT - q3x) + q3y*q3y, this->Qs2);
+    if (q12 > 0) {
+        this->Fq1 = ctx->gdist->F(q12, this->Qs2);
+        this->Fkq1 = ctx->gdist->F((kT - q1x)*(kT - q1x) + q1y*q1y, this->Qs2);
+    }
+    else {
+        this->Fq1 = NAN;
+        this->Fkq1 = NAN;
+    }
+    if (q22 > 0) {
+        this->Fq2 = ctx->gdist->F(q22, this->Qs2);
+        this->Fkq2 = ctx->gdist->F((kT - q2x)*(kT - q2x) + q2y*q2y, this->Qs2);
+    }
+    else {
+        this->Fq2 = NAN;
+        this->Fkq2 = NAN;
+    }
+    if (q32 > 0) {
+        this->Fq3 = ctx->gdist->F(q32, this->Qs2);
+        this->Fkq3 = ctx->gdist->F((kT - q3x)*(kT - q3x) + q3y*q3y, this->Qs2);
+    }
+    else {
+        this->Fq3 = NAN;
+        this->Fkq3 = NAN;
+    }
 }
 
 void IntegrationContext::update_auxiliary(double xiprime) {
