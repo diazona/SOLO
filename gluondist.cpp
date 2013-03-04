@@ -309,47 +309,44 @@ void read_from_file(const string filename, size_t& x_dimension, size_t& y_dimens
 }
 
 FileDataGluonDistribution::FileDataGluonDistribution(string pos_filename, string mom_filename, double Q02, double x0, double lambda) {
-    /* Read the values into the arrays, but note that what actually gets read
-     * into the Qs2 arrays is rapidity values at this point. So the variable
-     * name is misleading, for now. The Y values will be converted into Qs2 later.
-     */
     double Q02x0lambda = Q02 * pow(x0, lambda);
-    size_t Qs2_dimension_2;
-    double* Qs2_values_2;
-    read_from_file(pos_filename, r2_dimension, Qs2_dimension, r2_values, Qs2_values, S_dist);
-    read_from_file(mom_filename, q2_dimension, Qs2_dimension_2, q2_values, Qs2_values_2, F_dist);
-    if (Qs2_dimension != Qs2_dimension_2) {
-        delete[] r2_values, Qs2_values, S_dist, q2_values, Qs2_values_2, F_dist;
-        GSL_ERROR_VOID("Qs2 dimensions don't match", GSL_EINVAL);
+    double* Y_values_rspace;
+    double* Y_values_pspace;
+    read_from_file(pos_filename, r2_dimension, Qs2_dimension_r, r2_values, Y_values_rspace, S_dist);
+    read_from_file(mom_filename, q2_dimension, Qs2_dimension_p, q2_values, Y_values_pspace, F_dist);
+    Qs2_values_rspace = new double[Qs2_dimension_r];
+    Qs2_values_pspace = new double[Qs2_dimension_p];
+    for (size_t i = 0; i < Qs2_dimension_r; i++) {
+        Qs2_values_rspace[i] = Q02x0lambda * exp(lambda * Y_values_rspace[i]);
     }
-    for (size_t i = 0; i < Qs2_dimension; i++) {
-        if (Qs2_values[i] != Qs2_values_2[i]) {
-            delete[] r2_values, Qs2_values, S_dist, q2_values, Qs2_values_2, F_dist;
-            GSL_ERROR_VOID("Qs2 data points don't match", GSL_EINVAL);
-        }
-        // Here is where we convert the Y value into a Qs2 value
-        Qs2_values[i] = Q02x0lambda * exp(lambda * Qs2_values[i] /* Y */);
+    for (size_t i = 0; i < Qs2_dimension_p; i++) {
+        Qs2_values_pspace[i] = Q02x0lambda * exp(lambda * Y_values_pspace[i]);
     }
-    delete[] Qs2_values_2;
-    Qs2_values_2 = NULL;
+    delete[] Y_values_rspace;
+    Y_values_rspace = NULL;
+    delete[] Y_values_pspace;
+    Y_values_pspace = NULL;
     
     r2_accel = gsl_interp_accel_alloc();
     q2_accel = gsl_interp_accel_alloc();
 
-    if (Qs2_dimension == 1) {
+    if (Qs2_dimension_r == 1) {
+        assert(Qs2_dimension_p == 1);
         interp_dist_position_1D = gsl_interp_alloc(gsl_interp_cspline, r2_dimension);
         gsl_interp_init(interp_dist_position_1D, r2_values, S_dist, r2_dimension);
         interp_dist_momentum_1D = gsl_interp_alloc(gsl_interp_cspline, q2_dimension);
         gsl_interp_init(interp_dist_momentum_1D, q2_values, S_dist, q2_dimension);
     }
     else {
-        Qs2_accel = gsl_interp_accel_alloc();
+        assert(Qs2_dimension_p > 1);
+        Qs2_accel_r = gsl_interp_accel_alloc();
+        Qs2_accel_p = gsl_interp_accel_alloc();
 
-        interp_dist_position_2D = interp2d_alloc(interp2d_bilinear, r2_dimension, Qs2_dimension);
-        interp2d_init(interp_dist_position_2D, r2_values, Qs2_values, S_dist, r2_dimension, Qs2_dimension);
+        interp_dist_position_2D = interp2d_alloc(interp2d_bilinear, r2_dimension, Qs2_dimension_r);
+        interp2d_init(interp_dist_position_2D, r2_values, Qs2_values_rspace, S_dist, r2_dimension, Qs2_dimension_r);
         
-        interp_dist_momentum_2D = interp2d_alloc(interp2d_bilinear, q2_dimension, Qs2_dimension);
-        interp2d_init(interp_dist_momentum_2D, q2_values, Qs2_values, F_dist, q2_dimension, Qs2_dimension);
+        interp_dist_momentum_2D = interp2d_alloc(interp2d_bilinear, q2_dimension, Qs2_dimension_p);
+        interp2d_init(interp_dist_momentum_2D, q2_values, Qs2_values_pspace, F_dist, q2_dimension, Qs2_dimension_p);
     }
     
     ostringstream s;
@@ -358,15 +355,27 @@ FileDataGluonDistribution::FileDataGluonDistribution(string pos_filename, string
 }
 
 FileDataGluonDistribution::~FileDataGluonDistribution() {
-    delete[] r2_values, q2_values, Qs2_values, S_dist, F_dist;
+    delete[] r2_values, q2_values, Qs2_values_rspace, Qs2_values_pspace, S_dist, F_dist;
+    gsl_interp_accel_free(r2_accel);
+    gsl_interp_accel_free(q2_accel);
+    gsl_interp_accel_free(Qs2_accel_r);
+    gsl_interp_accel_free(Qs2_accel_p);
+    if (Qs2_dimension_r == 1) {
+        gsl_interp_free(interp_dist_position_1D);
+        gsl_interp_free(interp_dist_momentum_1D);
+    }
+    else {
+        interp2d_free(interp_dist_position_2D);
+        interp2d_free(interp_dist_momentum_2D);
+    }
 }
 
 double FileDataGluonDistribution::S2(double r2, double Qs2) {
-    if (Qs2_dimension == 1) {
+    if (Qs2_dimension_r == 1) {
         return gsl_interp_eval(interp_dist_position_1D, r2_values, F_dist, r2, r2_accel);
     }
     else {
-        return interp2d_eval(interp_dist_position_2D, r2_values, Qs2_values, F_dist, r2, Qs2, r2_accel, Qs2_accel);
+        return interp2d_eval(interp_dist_position_2D, r2_values, Qs2_values_rspace, F_dist, r2, Qs2, r2_accel, Qs2_accel_r);
     }
 }
 
@@ -375,11 +384,11 @@ double FileDataGluonDistribution::S4(double r2, double s2, double t2, double Qs2
 }
 
 double FileDataGluonDistribution::F(double q2, double Qs2) {
-    if (Qs2_dimension == 1) {
+    if (Qs2_dimension_p == 1) {
         return gsl_interp_eval(interp_dist_momentum_1D, q2_values, F_dist, q2, q2_accel);
     }
     else {
-        return interp2d_eval(interp_dist_momentum_2D, q2_values, Qs2_values, F_dist, q2, Qs2, q2_accel, Qs2_accel);
+        return interp2d_eval(interp_dist_momentum_2D, q2_values, Qs2_values_pspace, F_dist, q2, Qs2, q2_accel, Qs2_accel_p);
     }
 }
 

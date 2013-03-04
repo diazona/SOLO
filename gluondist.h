@@ -275,16 +275,14 @@ protected:
      */
     void calculate_position_interpolation();
 private:
-    
-    double r2min, r2max;
-    double q2min, q2max;
-    double Qs2min, Qs2max;
     /** Values of ln(r2) for the interpolation. */
     double* r2_values;
+    /** Values of ln(Qs2) for the position interpolation. */
+    double* Qs2_values_rspace;
     /** Values of ln(q2) for the interpolation. */
     double* q2_values;
-    /** Values of ln(Qs2) for the interpolation. */
-    double* Qs2_values;
+    /** Values of ln(Qs2) for the position interpolation. */
+    double* Qs2_values_pspace;
     /** Values of the position space gluon distribution for interpolation. */
     double* S_dist;
     /** Values of the momentum space gluon distribution for interpolation. */
@@ -300,11 +298,13 @@ private:
     
     gsl_interp_accel* r2_accel;
     gsl_interp_accel* q2_accel;
-    gsl_interp_accel* Qs2_accel;
+    gsl_interp_accel* Qs2_accel_r;
+    gsl_interp_accel* Qs2_accel_p;
     
     size_t r2_dimension;
     size_t q2_dimension;
-    size_t Qs2_dimension;
+    size_t Qs2_dimension_r;
+    size_t Qs2_dimension_p;
     
     size_t subinterval_limit;
     
