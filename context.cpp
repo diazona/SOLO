@@ -252,8 +252,6 @@ struct PT2x4Mu2Strategy {
 };
 
 void ContextCollection::create_contexts() {
-    contexts_created = true;
-    
     pair<multimap<string, string>::iterator, multimap<string, string>::iterator> itit;
 
     check_property(x0,           double, parse_double)
@@ -361,6 +359,7 @@ void ContextCollection::create_contexts() {
     }
     assert(cpl != NULL);
     
+    contexts_created = true;
     // create contexts
     for (vector<double>::iterator pTit = pT.begin(); pTit != pT.end(); pTit++) {
         for (vector<double>::iterator Yit = Y.begin(); Yit != Y.end(); Yit++) {
