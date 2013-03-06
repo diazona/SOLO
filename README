@@ -167,8 +167,13 @@ where the <options> can include any number of the following, in any order:
                 the total for each hard factor groups
     --minmax    Track and print out the minimum and maximum values of kinematic
                 variables
-    --trace     Print out the integration context after every single evaluation
-                of the function (produces a LOT of output)
+    --trace=var1,var2,...
+                Print out selected variables from the integration context after
+                every single evaluation of the function. The output goes to the
+                file trace.output in the working directory. (Expect this file to
+                grow to several megabytes.) The allowable variables are those
+                in ictx_var_list.inc, or you can use "--trace=all" or "--trace=*"
+                to print out all available variables.
         
 Structure
 ---------------
@@ -227,6 +232,9 @@ integrationtype.cpp
 utils.h
 utils.cpp
     Some string and list processing functions
+ictx_var_list.inc
+    Variables from the integration context, listed in a separate file as a
+    preprocessor hack of sorts
 
 Source code and object code for other things used by the program:
     

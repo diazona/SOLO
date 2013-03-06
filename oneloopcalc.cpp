@@ -25,6 +25,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <bitset>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -51,34 +52,30 @@ using namespace std;
  * the Monte Carlo routine evaluates the function.
  */
 
+namespace trace_variable {
+enum {
+#define process(v) v,
+#include "ictx_var_list.inc"
+#undef process
+    COUNT
+};
+}
+
+static bitset<trace_variable::COUNT> trace_vars;
+
 /**
  * A callback function that prints out a bunch of kinematic variables.
  */
 void write_data_point(const IntegrationContext* ictx, const double real, const double imag) {
-    if (ictx) {
-//         if ((++count) % 500 == 0) {
-            cerr
-            << ictx->z << "\t"
-            << ictx->xi << "\t"
-            << ictx->xx << "\t"
-            << ictx->xy << "\t"
-            << ictx->yx << "\t"
-            << ictx->yy << "\t"
-            << ictx->bx << "\t"
-            << ictx->by << "\t"
-            << ictx->kT2 << "\t"
-            << ictx->Qs2 << "\t"
-            << ictx->xp << "\t"
-            << ictx->xg << "\t"
-            << ictx->qqfactor << "\t"
-            << ictx->gqfactor << "\t"
-            << real << "\t"
-            << imag << endl;
-//         }
+    static ofstream trace_stream("trace.output");
+    if (ictx == NULL) {
+        trace_stream << endl;
+        return;
     }
-    else {
-        cerr << endl;
-    }
+#define process(v) if (trace_vars[(size_t)trace_variable::v]) { trace_stream << ictx->v << "\t"; }
+#include "ictx_var_list.inc"
+#undef process
+    trace_stream << endl;
 }
 
 /** An IntegrationContext to store the minimum values of variables */
@@ -87,7 +84,7 @@ static IntegrationContext min_ictx(NULL, NULL);
 static IntegrationContext max_ictx(NULL, NULL);
 
 /** Stores a property into min_ictx and/or max_ictx if it is a min or max, respectively */
-#define store(property) \
+#define process(property) \
   min_ictx.property = min_ictx.property == 0 ? ictx->property : min(min_ictx.property, ictx->property); \
   max_ictx.property = max_ictx.property == 0 ? ictx->property : max(max_ictx.property, ictx->property);
 
@@ -102,28 +99,9 @@ void store_minmax(const IntegrationContext* ictx, const double real, const doubl
     if (ictx == NULL) {
         return;
     }
-    store(z);
-    store(xi);
-    store(xx);
-    store(xy);
-    store(yx);
-    store(yy);
-    store(bx);
-    store(by);
-    store(q1x);
-    store(q1y);
-    store(q2x);
-    store(q2y);
-    store(q3x);
-    store(q3y);
-    store(kT);
-    store(kT2);
-    store(xp);
-    store(xg);
-    store(xiprime);
-    store(Qs2);
-    store(alphas);
+#include "ictx_var_list.inc"
 }
+#undef process
 
 /**
  * A callback function that writes out the result of the integration
@@ -308,8 +286,26 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
     string gdist_type;
     for (int i = 1; i < argc; i++) {
         string a = argv[i];
-        if (a == "--trace") {
-            trace = true;
+        if (a.compare(0, 7, "--trace") == 0) {
+            vector<string> v = split(a, "=", 2);
+            if (v.size() == 2) {
+                if (v[1] == "*" || v[1] == "all") {
+                    trace_vars.set();
+                }
+                else {
+                    vector<string> w = split(v[1], ",");
+                    for (vector<string>::iterator it = w.begin(); it != w.end(); it++) {
+                        bool handled = false;
+#define process(v) if (*it == #v) { trace_vars.set((size_t)trace_variable::v); handled = true; }
+#include "ictx_var_list.inc"
+#undef process
+                        if (!handled) {
+                            cerr << "unknown trace variable " << *it << endl;
+                        }
+                    }
+                }
+                trace = trace_vars.any();
+            }
         }
         else if (a == "--minmax") {
             minmax = true;
@@ -601,27 +597,9 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
     }
 
     if (rc.minmax) {
-        out << "xx\t" << min_ictx.xx << "\t" << max_ictx.xx << "\t" << endl;
-        out << "xy\t" << min_ictx.xy << "\t" << max_ictx.xy << "\t" << endl;
-        out << "yx\t" << min_ictx.yx << "\t" << max_ictx.yx << "\t" << endl;
-        out << "yy\t" << min_ictx.yy << "\t" << max_ictx.yy << "\t" << endl;
-        out << "bx\t" << min_ictx.bx << "\t" << max_ictx.bx << "\t" << endl;
-        out << "by\t" << min_ictx.by << "\t" << max_ictx.by << "\t" << endl;
-        out << "q1x\t" << min_ictx.q1x << "\t" << max_ictx.q1x << "\t" << endl;
-        out << "q1y\t" << min_ictx.q1y << "\t" << max_ictx.q1y << "\t" << endl;
-        out << "q2x\t" << min_ictx.q2x << "\t" << max_ictx.q2x << "\t" << endl;
-        out << "q2y\t" << min_ictx.q2y << "\t" << max_ictx.q2y << "\t" << endl;
-        out << "q3x\t" << min_ictx.q3x << "\t" << max_ictx.q3x << "\t" << endl;
-        out << "q3y\t" << min_ictx.q3y << "\t" << max_ictx.q3y << "\t" << endl;
-        out << "z\t" << min_ictx.z << "\t" << max_ictx.z << "\t" << endl;
-        out << "xi\t" << min_ictx.xi << "\t" << max_ictx.xi << "\t" << endl;
-        out << "xip\t" << min_ictx.xiprime << "\t" << max_ictx.xiprime << "\t" << endl;
-        out << "kT\t" << min_ictx.kT << "\t" << max_ictx.kT << "\t" << endl;
-        out << "kT2\t" << min_ictx.kT2 << "\t" << max_ictx.kT2 << "\t" << endl;
-        out << "xp\t" << min_ictx.xp << "\t" << max_ictx.xp << "\t" << endl;
-        out << "xg\t" << min_ictx.xg << "\t" << max_ictx.xg << "\t" << endl;
-        out << "Qs2\t" << min_ictx.Qs2 << "\t" << max_ictx.Qs2 << "\t" << endl;
-        out << "alphas\t" << min_ictx.alphas << "\t" << max_ictx.alphas << "\t" << endl;
+#define process(v) out << #v << "\t" << min_ictx.v << "\t" << max_ictx.v << "\t" << endl;
+#include "ictx_var_list.inc"
+#undef process
     }
 }
 
