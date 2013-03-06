@@ -179,8 +179,6 @@ private:
     size_t Qs2_dimension;
     
     size_t subinterval_limit;
-    
-    friend class FileDataGluonDistribution;
 #ifdef GLUON_DIST_DRIVER
 public:
     /**
@@ -188,7 +186,7 @@ public:
      * 
      * Only used for testing.
      */
-    void write_grid();
+    void write_pspace_grid(std::ostream&);
 #endif
 };
 
@@ -309,6 +307,21 @@ private:
     size_t subinterval_limit;
     
     std::string _name;
+#ifdef GLUON_DIST_DRIVER
+public:
+    /**
+     * This writes out the entire grid of the 2D momentum space interpolation to standard output.
+     * 
+     * Only used for testing.
+     */
+    void write_pspace_grid(std::ostream&);
+    /**
+     * This writes out the entire grid of the 2D position space interpolation to standard output.
+     * 
+     * Only used for testing.
+     */
+    void write_rspace_grid(std::ostream&);
+#endif
 };
 
 /** Prints the name of the gluon distribution to the given output stream. */

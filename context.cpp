@@ -54,8 +54,6 @@ using namespace std;
         p = parse(itit);\
     }
 
-extern const double inf;
-
 const string canonicalize(const string& i_key) {
     string key = trim(i_key, " \t\n");
     transform(key.begin(), key.end(), key.begin(), ::tolower);

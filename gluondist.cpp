@@ -405,31 +405,94 @@ ostream& operator<<(ostream& out, GluonDistribution& gdist) {
 #ifdef GLUON_DIST_DRIVER
 #include <cstdlib>
 #include <iostream>
+#include "context.h"
 
-void AbstractPositionGluonDistribution::write_grid() {
-    cout << "q2\tQs2\tF" << endl;
+// http://stackoverflow.com/a/1404473/56541
+// use "extern" explicitly to achieve external linkage
+extern const double inf = 10;
+ostream& logger = cerr;
+
+void AbstractPositionGluonDistribution::write_pspace_grid(ostream& out) {
+    out << "q2\tQs2\tF" << endl;
     for (size_t i_q2 = 0; i_q2 < q2_dimension; i_q2++) {
         for (size_t i_Qs2 = 0; i_Qs2 < Qs2_dimension; i_Qs2++) {
-            cout << exp(log_q2_values[i_q2]) << "\t"
-                    << exp(log_Qs2_values[i_Qs2]) << "\t"
-                    << F_dist[INDEX_2D(i_q2, i_Qs2, q2_dimension, Qs2_dimension)] << endl;
+            out << exp(log_q2_values[i_q2]) << "\t"
+                << exp(log_Qs2_values[i_Qs2]) << "\t"
+                << F_dist[INDEX_2D(i_q2, i_Qs2, q2_dimension, Qs2_dimension)] << endl;
         }
     }
 }
 
-void handle_input(AbstractPositionGluonDistribution& gdist) {
+void FileDataGluonDistribution::write_pspace_grid(ostream& out) {
+    out << "q2\tQs2\tF" << endl;
+    for (size_t i_q2 = 0; i_q2 < q2_dimension; i_q2++) {
+        for (size_t i_Qs2 = 0; i_Qs2 < Qs2_dimension_p; i_Qs2++) {
+            out << q2_values[i_q2] << "\t"
+                << Qs2_values_pspace[i_Qs2] << "\t"
+                << F_dist[INDEX_2D(i_q2, i_Qs2, q2_dimension, Qs2_dimension_p)] << endl;
+        }
+    }
+}
+
+void FileDataGluonDistribution::write_rspace_grid(ostream& out) {
+    out << "r2\tQs2\tS" << endl;
+    for (size_t i_r2 = 0; i_r2 < r2_dimension; i_r2++) {
+        for (size_t i_Qs2 = 0; i_Qs2 < Qs2_dimension_r; i_Qs2++) {
+            out << r2_values[i_r2] << "\t"
+                << Qs2_values_rspace[i_Qs2] << "\t"
+                << F_dist[INDEX_2D(i_r2, i_Qs2, r2_dimension, Qs2_dimension_r)] << endl;
+        }
+    }
+}
+
+#define Qs2(Y) Q02x0lambda*exp(lambda*(Y))
+
+void handle_input(GluonDistribution* gdist, double Q02x0lambda, double lambda, bool momentum = true) {
+    if (momentum) {
+        double q2, Y;
+        cout << "q2\tY\tF" << endl;
+        while (cin >> q2 >> Y) {
+            cout << q2 << "\t"<< Y << "\t" << gdist->F(q2, Qs2(Y)) << endl;
+        }
+    }
+    else {
+        double r2, Y;
+        cout << "r2\tY\tS" << endl;
+        while (cin >> r2 >> Y) {
+            cout << r2 << "\t"<< Y << "\t" << gdist->S2(r2, Qs2(Y)) << endl;
+        }
+    }
+}
+
+void handle_input(AbstractPositionGluonDistribution* gdist, double Q02x0lambda, double lambda, bool momentum = true) {
     cin.peek();
     if (cin.eof()) {
         // write out the grid
-        gdist.write_grid();
+        if (momentum) {
+            gdist->write_pspace_grid(cout);
+        }
+        else {
+            cerr << "No position space grid data available" << endl;
+        }
     }
     else {
-        double q2, Qs2;
-        cin >> q2 >> Qs2;
-        while (!cin.eof()) {
-            cout << q2 << "\t"<< Qs2 << "\t" << gdist.F(q2, Qs2) << endl;
-            cin >> q2 >> Qs2;
+        handle_input((GluonDistribution*)gdist, Q02x0lambda, lambda);
+    }
+}
+
+void handle_input(FileDataGluonDistribution* gdist, double Q02x0lambda, double lambda, bool momentum) {
+    cin.peek();
+    if (cin.eof()) {
+        // write out the grid
+        if (momentum) {
+            gdist->write_pspace_grid(cout);
         }
+        else {
+            gdist->write_rspace_grid(cout);
+        }
+    }
+    else {
+        handle_input((GluonDistribution*)gdist, Q02x0lambda, lambda);
     }
 }
 
@@ -438,29 +501,55 @@ void handle_input(AbstractPositionGluonDistribution& gdist) {
  * and prints its grid to standard output.
  */
 int main(int argc, char** argv) {
-    if (argc < 8) {
-        cerr << "Needs 7 arguments: gdist_type, LambdaMV, gammaMV, q2min, q2max, Qs2min, Qs2max" << endl;
+    bool momentum;
+    if (argc < 2) {
+        cerr << "Usage: " << argv[0] << "<filename.cfg> [p|r]" << endl;
         return 1;
     }
-    string gdist_type = argv[1];
-    double LambdaMV = strtod(argv[2], NULL);
-    double gammaMV = strtod(argv[3], NULL);
-    double q2min = strtod(argv[4], NULL);
-    double q2max = strtod(argv[5], NULL);
-    double Qs2min = strtod(argv[6], NULL);
-    double Qs2max = strtod(argv[7], NULL);
-    if (gdist_type == "MV") {
-        MVGluonDistribution gdist(LambdaMV, gammaMV, q2min, q2max, Qs2min, Qs2max);
-        handle_input(gdist);
+    else if (argc > 2) {
+        switch (argv[2][0]) {
+            case 'p':
+                momentum = true;
+                break;
+            case 'r':
+                momentum = false;
+                break;
+            default:
+                cerr << "Usage: " << argv[0] << "<filename.cfg> [p|r]"  << endl << "last arg must be p or r" << endl;
+                return 1;
+        }
     }
-    else if (gdist_type == "fMV") {
-        FixedSaturationMVGluonDistribution gdist(LambdaMV, gammaMV, q2min, q2max, Qs2min);
-        handle_input(gdist);
+    ContextCollection cc(argv[1]);
+    double Q02x0lambda, lambda;
+    try {
+        cc.create_contexts();
+        Q02x0lambda = cc[0].Q02x0lambda;
+        lambda = cc[0].lambda;
     }
-    else {
-        cerr << "Unrecognized gluon distribution type " << gdist_type << endl;
+    catch (const exception& e) {
+        cout << "Error in parsing: " << e.what() << endl;
         return 1;
     }
+    
+    {
+        AbstractPositionGluonDistribution* apgdist = dynamic_cast<AbstractPositionGluonDistribution*>(cc.gdist);
+        if (apgdist != NULL) {
+            handle_input(apgdist, Q02x0lambda, lambda, momentum);
+            return 0;
+        }
+    }
+    {
+        FileDataGluonDistribution* fgdist = dynamic_cast<FileDataGluonDistribution*>(cc.gdist);
+        if (fgdist != NULL) {
+            if (argc < 3) {
+                cerr << "Usage: " << argv[0] << "<filename.cfg> [p|r]" << endl << "last arg required for file gdist" << endl;
+                return 1;
+            }
+            handle_input(fgdist, Q02x0lambda, lambda, momentum);
+            return 0;
+        }
+    }
+    handle_input((GluonDistribution*)cc.gdist, Q02x0lambda, lambda, momentum);
     return 0;
 }
 #endif
