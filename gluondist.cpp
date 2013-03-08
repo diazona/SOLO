@@ -501,7 +501,7 @@ void handle_input(FileDataGluonDistribution* gdist, double Q02x0lambda, double l
  * and prints its grid to standard output.
  */
 int main(int argc, char** argv) {
-    bool momentum;
+    bool momentum = false;
     if (argc < 2) {
         cerr << "Usage: " << argv[0] << "<filename.cfg> [p|r]" << endl;
         return 1;
@@ -521,10 +521,12 @@ int main(int argc, char** argv) {
     }
     ContextCollection cc(argv[1]);
     double Q02x0lambda, lambda;
+    GluonDistribution* gdist;
     try {
         cc.create_contexts();
         Q02x0lambda = cc[0].Q02x0lambda;
         lambda = cc[0].lambda;
+        gdist = cc[0].gdist;
     }
     catch (const exception& e) {
         cout << "Error in parsing: " << e.what() << endl;
@@ -532,14 +534,14 @@ int main(int argc, char** argv) {
     }
     
     {
-        AbstractPositionGluonDistribution* apgdist = dynamic_cast<AbstractPositionGluonDistribution*>(cc.gdist);
+        AbstractPositionGluonDistribution* apgdist = dynamic_cast<AbstractPositionGluonDistribution*>(gdist);
         if (apgdist != NULL) {
             handle_input(apgdist, Q02x0lambda, lambda, momentum);
             return 0;
         }
     }
     {
-        FileDataGluonDistribution* fgdist = dynamic_cast<FileDataGluonDistribution*>(cc.gdist);
+        FileDataGluonDistribution* fgdist = dynamic_cast<FileDataGluonDistribution*>(gdist);
         if (fgdist != NULL) {
             if (argc < 3) {
                 cerr << "Usage: " << argv[0] << "<filename.cfg> [p|r]" << endl << "last arg required for file gdist" << endl;
@@ -549,7 +551,7 @@ int main(int argc, char** argv) {
             return 0;
         }
     }
-    handle_input((GluonDistribution*)cc.gdist, Q02x0lambda, lambda, momentum);
+    handle_input(gdist, Q02x0lambda, lambda, momentum);
     return 0;
 }
 #endif
