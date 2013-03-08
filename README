@@ -167,6 +167,11 @@ where the <options> can include any number of the following, in any order:
                 the total for each hard factor groups
     --minmax    Track and print out the minimum and maximum values of kinematic
                 variables
+    --trace-gdist
+                Print out parameters and values for every call to the gluon
+                distribution. Output goes to the file trace_gdist.output in the
+                working directory. (Expect this file to grow to several hundred
+                megabytes.)
     --trace=var1,var2,...
                 Print out selected variables from the integration context after
                 every single evaluation of the function. The output goes to the

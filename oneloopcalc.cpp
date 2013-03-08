@@ -248,6 +248,8 @@ public:
 private:
     /** Indicates whether the --trace option was specified */
     bool trace;
+    /** Indicates whether the --trace-gdist option was specified */
+    bool trace_gdist;
     /** Indicates whether the --minmax option was specified */
     bool minmax;
     /** Indicates whether the --separate option was specified */
@@ -286,7 +288,7 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
     string gdist_type;
     for (int i = 1; i < argc; i++) {
         string a = argv[i];
-        if (a.compare(0, 7, "--trace") == 0) {
+        if (a.compare(0, 8, "--trace=") == 0) {
             vector<string> v = split(a, "=", 2);
             if (v.size() == 2) {
                 if (v[1] == "*" || v[1] == "all") {
@@ -306,6 +308,9 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
                 }
                 trace = trace_vars.any();
             }
+        }
+        else if (a == "--trace-gdist") {
+            trace_gdist = true;
         }
         else if (a == "--minmax") {
             minmax = true;
@@ -349,6 +354,7 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
     if (!gdist_type.empty()) {
         cc.set("gdist", gdist_type);
     }
+    cc.trace_gdist = trace_gdist;
     if (hfgroups.empty()) {
         parse_hf_spec("lo");
         parse_hf_spec("nlo");

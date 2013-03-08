@@ -331,6 +331,7 @@ public:
     ContextCollection() :
       gdist(NULL),
       cpl(NULL),
+      trace_gdist(false),
       contexts_created(false) {
         setup_defaults();
     }
@@ -341,6 +342,7 @@ public:
     ContextCollection(const std::string& filename) :
       gdist(NULL),
       cpl(NULL),
+      trace_gdist(false),
       contexts_created(false) {
         setup_defaults();
         ifstream in(filename.c_str());
@@ -431,6 +433,17 @@ public:
     void create_contexts();
 
     /**
+     * Whether to use the tracing gluon distribution wrapper. (See gluondist.h/cpp)
+     * Changes made to this variable after contexts are created have no effect.
+     */
+    bool trace_gdist;
+
+    friend std::istream& operator>>(std::istream& in, ContextCollection& cc);
+    friend std::ostream& operator<<(std::ostream& out, ContextCollection& cc);
+    friend class ThreadLocalContext;
+    
+private:
+    /**
      * The gluon distribution. NULL until contexts are created.
      */
     GluonDistribution* gdist;
@@ -438,12 +451,6 @@ public:
      * The coupling. NULL until contexts are created.
      */
     Coupling* cpl;
-
-    friend std::istream& operator>>(std::istream& in, ContextCollection& cc);
-    friend std::ostream& operator<<(std::ostream& out, ContextCollection& cc);
-    friend class ThreadLocalContext;
-    
-private:
     /**
      * The map of key-value pairs provided to the ContextCollection.
      */

@@ -327,4 +327,23 @@ public:
 /** Prints the name of the gluon distribution to the given output stream. */
 std::ostream& operator<<(std::ostream& out, GluonDistribution& gdist);
 
+/**
+ * A wrapper object that prints out every call made to the gluon distribution.
+ */
+class GluonDistributionTraceWrapper : public GluonDistribution {
+public:
+    GluonDistributionTraceWrapper(GluonDistribution* gdist, const char* trace_filename = "trace_gdist.output") : gdist(gdist), trace_stream(trace_filename) {}
+    ~GluonDistributionTraceWrapper() { delete gdist; trace_stream.close(); }
+
+    double S2(double r2, double Qs2);
+    double S4(double r2, double s2, double t2, double Qs2);
+    double F(double q2, double Qs2);
+    const char* name();
+    
+private:
+    GluonDistribution* gdist;
+    std::ofstream trace_stream;
+};
+
+
 #endif // _GLUONDIST_H_

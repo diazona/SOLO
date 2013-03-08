@@ -402,6 +402,29 @@ ostream& operator<<(ostream& out, GluonDistribution& gdist) {
     return out;
 }
 
+double GluonDistributionTraceWrapper::F(double q2, double Qs2) {
+    double val = gdist->F(q2, Qs2);
+    trace_stream << "F\t" << q2 << "\t" << Qs2 << "\t" << val << endl;
+    return val;
+}
+
+double GluonDistributionTraceWrapper::S2(double r2, double Qs2) {
+    double val = gdist->S2(r2, Qs2);
+    trace_stream << "S2\t" << r2 << "\t" << Qs2 << "\t" << val << endl;
+    return val;
+}
+
+double GluonDistributionTraceWrapper::S4(double r2, double s2, double t2, double Qs2) {
+    double val = gdist->S4(r2, s2, t2, Qs2);
+    trace_stream << "S4\t" << r2 << "\t" << s2 << "\t" << t2 << "\t" << Qs2 << "\t" << val << endl;
+    return val;
+}
+
+const char* GluonDistributionTraceWrapper::name() {
+    return gdist->name();
+}
+
+
 #ifdef GLUON_DIST_DRIVER
 #include <cstdlib>
 #include <iostream>
