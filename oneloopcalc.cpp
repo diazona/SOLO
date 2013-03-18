@@ -284,7 +284,7 @@ private:
     void parse_hf_spec(const string& spec);
 };
 
-ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false), minmax(false), separate(false) {
+ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false), trace_gdist(false), minmax(false), separate(false) {
     string gdist_type;
     for (int i = 1; i < argc; i++) {
         string a = argv[i];
