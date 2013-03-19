@@ -36,6 +36,7 @@ public:
     double z2, xi2;
     double kT2, kT;
     double xp, xg;
+    double Yg;
     double rx, ry, r2;
     double sx, sy, s2;
     double tx, ty, t2;

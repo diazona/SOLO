@@ -44,7 +44,9 @@ void IntegrationContext::update_parton_factors(double z, double y) {
     this->kT2 = ctx->pT2 / this->z2;
     this->kT = sqrt(this->kT2);
     this->xg = kT / ctx->sqs * exp(-ctx->Y);
-    this->Qs2 = ctx->Q02x0lambda / pow(this->xg, ctx->lambda); // Q_0^2 (x_0 / x)^lambda
+    const SaturationScale& satscale = ctx->gdist->satscale;
+    this->Yg = satscale.Yx(this->xg);
+    this->Qs2 = satscale.Qs2x(this->xg);
     this->alphas = ctx->cpl->alphas(this->kT2);
     this->alphas_2pi = this->alphas * 0.5 * M_1_PI;
 
@@ -147,9 +149,9 @@ void IntegrationContext::update_positions(double xx, double xy, double yx, doubl
     // Calculate the new gluon distribution values
     // this has to be done after kinematics are updated
     if (r2 > 0) {
-        this->S2r = ctx->gdist->S2(r2, this->Qs2);
+        this->S2r = ctx->gdist->S2(r2, this->Yg);
         if (s2 > 0 || t2 > 0) {
-            this->S4rst = ctx->gdist->S4(r2, s2, t2, this->Qs2);
+            this->S4rst = ctx->gdist->S4(r2, s2, t2, this->Yg);
         }
         else {
             this->S4rst = NAN;
@@ -177,26 +179,26 @@ void IntegrationContext::update_momenta(double q1x, double q1y, double q2x, doub
     this->q22 = q2x*q2x + q2y*q2y;
     this->q32 = q3x*q3x + q3y*q3y;
     
-    this->Fk = ctx->gdist->F(kT2, this->Qs2);
+    this->Fk = ctx->gdist->F(kT2, this->Yg);
     if (q12 > 0) {
-        this->Fq1 = ctx->gdist->F(q12, this->Qs2);
-        this->Fkq1 = ctx->gdist->F((kT - q1x)*(kT - q1x) + q1y*q1y, this->Qs2);
+        this->Fq1 = ctx->gdist->F(q12, this->Yg);
+        this->Fkq1 = ctx->gdist->F((kT - q1x)*(kT - q1x) + q1y*q1y, this->Yg);
     }
     else {
         this->Fq1 = NAN;
         this->Fkq1 = NAN;
     }
     if (q22 > 0) {
-        this->Fq2 = ctx->gdist->F(q22, this->Qs2);
-        this->Fkq2 = ctx->gdist->F((kT - q2x)*(kT - q2x) + q2y*q2y, this->Qs2);
+        this->Fq2 = ctx->gdist->F(q22, this->Yg);
+        this->Fkq2 = ctx->gdist->F((kT - q2x)*(kT - q2x) + q2y*q2y, this->Yg);
     }
     else {
         this->Fq2 = NAN;
         this->Fkq2 = NAN;
     }
     if (q32 > 0) {
-        this->Fq3 = ctx->gdist->F(q32, this->Qs2);
-        this->Fkq3 = ctx->gdist->F((kT - q3x)*(kT - q3x) + q3y*q3y, this->Qs2);
+        this->Fq3 = ctx->gdist->F(q32, this->Yg);
+        this->Fkq3 = ctx->gdist->F((kT - q3x)*(kT - q3x) + q3y*q3y, this->Yg);
     }
     else {
         this->Fq3 = NAN;

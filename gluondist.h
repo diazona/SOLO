@@ -24,34 +24,66 @@
 #include "interp2d.h"
 
 /**
+ * Converter between x, Y, and Qs2.
+ */
+class SaturationScale {
+public:
+    SaturationScale(const double Q02, const double x0, const double lambda);
+    /**
+     * Converts a value of Y to a value of x.
+     */
+    virtual double xY(const double Y) const;
+    /**
+     * Converts a value of x to a value of Y.
+     */
+    virtual double Yx(const double x) const;
+    /**
+     * Return the saturation scale corresponding to the given value of x.
+     */
+    virtual double Qs2x(const double x) const;
+private:
+    const double Q02x0lambda;
+    const double lambda;
+};
+
+/**
  * A gluon distribution.
  */
 class GluonDistribution {
 public:
+    GluonDistribution(const SaturationScale& satscale) : satscale(satscale) {};
     /**
      * Return the value of the dipole gluon distribution at the given
-     * values of r^2 and Q_s^2. r2 is the squared magnitude of the
+     * values of r^2 and Y. r2 is the squared magnitude of the
      * dipole displacement vector x - y (equivalently, r2 is the
-     * squared dipole size)
+     * squared dipole size).
      */
-    virtual double S2(double r2, double Qs2) = 0;
+    virtual double S2(double r2, double Y) = 0;
     /**
      * Return the value of the quadrupole gluon distribution at the given
-     * values of r^2, s^2, t^2, and Q_s^2. r2 is the squared magnitude of
+     * values of r^2, s^2, t^2, and Y. r2 is the squared magnitude of
      * x - y, s2 is the squared magnitude of x - b, and t2 is the squared
      * magnitude of y - b, so that as vectors, r = s - t. r2, s2, and t2
      * thus are the squared lengths of three sides of a triangle.
      */
-    virtual double S4(double r2, double s2, double t2, double Qs2) = 0;
+    virtual double S4(double r2, double s2, double t2, double Y) = 0;
     /**
      * Return the value of the momentum-space dipole gluon distribution
-     * at the given values of q^2 and Q_s^2.
+     * at the given values of q^2 and Y.
      */
-    virtual double F(double q2, double Qs2) = 0;
+    virtual double F(double q2, double Y) = 0;
     /**
      * Returns a human-readable name for the gluon distribution.
      */
     virtual const char* name() = 0;
+    /**
+     * The object that computes the saturation scale.
+     */
+    const SaturationScale& satscale;
+    /**
+     * Shortcut to compute the saturation scale from Y
+     */
+    double Qs2(double Y);
 };
 
 /**
@@ -59,23 +91,24 @@ public:
  */
 class GBWGluonDistribution: public GluonDistribution {
 public:
+    GBWGluonDistribution(const SaturationScale& satscale);
     /**
      * Returns the value of the GBW dipole gluon distribution,
      * exp(-r2 Qs2 / 4)
      */
-    double S2(double r2, double Qs2);
+    double S2(double r2, double Y);
     /**
      * Returns the value of the GBW quadrupole gluon distribution,
      * exp(-s2 Qs2 / 4) exp(-t2 Qs2 / 4)
      * This is just a product of two dipole distributions (valid
      * in the large-Nc limit)
      */
-    double S4(double r2, double s2, double t2, double Qs2);
+    double S4(double r2, double s2, double t2, double Y);
     /**
      * Returns the value of the GBW momentum space dipole gluon
      * distribution, exp(-q2 / Qs2) / (pi * Qs2)
      */
-    double F(double q2, double Qs2);
+    double F(double q2, double Y);
     const char* name();
 };
 
@@ -106,7 +139,7 @@ public:
     /**
      * Constructs a new position gluon distribution object.
      * 
-     * `q2min`, `q2max`, `Qs2min`, and `Qs2max` specify the boundaries
+     * `q2min`, `q2max`, `Ymin`, and `Ymax` specify the boundaries
      * of the region in which to interpolate the momentum space
      * distribution. The grid will be set up using these boundaries,
      * with a spacing automatically chosen to be reasonably accurate.
@@ -120,7 +153,7 @@ public:
      * extreme parameters if the program crashes with a subdivision
      * error.
      */
-    AbstractPositionGluonDistribution(double q2min, double q2max, double Qs2min, double Qs2max, size_t subinterval_limit = 10000);
+    AbstractPositionGluonDistribution(const SaturationScale& satscale, double q2min, double q2max, double Ymin, double Ymax, size_t subinterval_limit = 10000);
     ~AbstractPositionGluonDistribution();
 
     /**
@@ -129,12 +162,12 @@ public:
      * S2(s2, Qs2) * S2 (t2, Qs2). This is usually valid in the large-Nc
      * limit.
      */
-    virtual double S4(double r2, double s2, double t2, double Qs2);
+    virtual double S4(double r2, double s2, double t2, double Y);
     /**
      * Returns the value of the MV momentum space dipole gluon
      * distribution.
      */
-    double F(double q2, double Qs2);
+    double F(double q2, double Y);
     /**
      * Returns the name of the distribution, which should incorporate
      * the values of the parameters.
@@ -151,11 +184,11 @@ protected:
     
 private:
     double q2min, q2max;
-    double Qs2min, Qs2max;
+    double Ymin, Ymax;
     /** Values of ln(q2) for the interpolation. */
     double* log_q2_values;
-    /** Values of ln(Qs2) for the interpolation. */
-    double* log_Qs2_values;
+    /** Values of Y for the interpolation. */
+    double* Y_values;
     /** Values of the leading coefficient in the series for small q2. */
     double* F_dist_leading_q2;
     /** Values of the subleading coefficient in the series for small q2. */
@@ -167,16 +200,16 @@ private:
     gsl_interp* interp_dist_leading_q2;
     gsl_interp* interp_dist_subleading_q2;
     // one of interp_dist_momentum_1D or interp_dist_momentum_2D will be NULL and the other one
-    // will be used, depending on whether there is a range of Qs2 values or
+    // will be used, depending on whether there is a range of Y values or
     // just a single one
     gsl_interp* interp_dist_momentum_1D;
     interp2d* interp_dist_momentum_2D;
     
     gsl_interp_accel* q2_accel;
-    gsl_interp_accel* Qs2_accel;
+    gsl_interp_accel* Y_accel;
     
     size_t q2_dimension;
-    size_t Qs2_dimension;
+    size_t Y_dimension;
     
     size_t subinterval_limit;
 #ifdef GLUON_DIST_DRIVER
@@ -203,14 +236,14 @@ public:
     /**
      * Constructs a new MV gluon distribution object.
      */
-    MVGluonDistribution(double LambdaMV, double gammaMV, double q2min, double q2max, double Qs2min, double Qs2max, size_t subinterval_limit = 10000);
+    MVGluonDistribution(const SaturationScale& satscale, double LambdaMV, double gammaMV, double q2min, double q2max, double Ymin, double Ymax, size_t subinterval_limit = 10000);
     ~MVGluonDistribution() {};
     
     /**
      * Returns the value of the MV dipole gluon distribution,
      * exp(-(r2 Qs02MV)^gammaMV ln(e + 1 / (LambdaMV r)) / 4)
      */
-    double S2(double r2, double Qs2);
+    double S2(double r2, double Y);
     /**
      * Returns the name of the distribution, which incorporates
      * the values of the parameters.
@@ -218,7 +251,6 @@ public:
     const char* name();
 protected:
     double LambdaMV;
-    double Qs02MV;
     double gammaMV;
     
     std::string _name;
@@ -233,16 +265,18 @@ public:
     /**
      * Constructs a new modified gluon distribution object.
      */
-    FixedSaturationMVGluonDistribution(double LambdaMV, double gammaMV, double q2min, double q2max, double Qs02MV, size_t subinterval_limit = 10000);
+    FixedSaturationMVGluonDistribution(const SaturationScale& satscale, double LambdaMV, double gammaMV, double q2min, double q2max, double YMV, size_t subinterval_limit = 10000);
     ~FixedSaturationMVGluonDistribution() {};
     
     /**
      * Returns the value of the dipole gluon distribution,
      * exp(-(r2 Qs02)^gammaMV ln(e + 1 / (LambdaMV r)) / 4)
      * 
-     * The parameter Qs2 is not used.
+     * The parameter Y is not used.
      */
-    double S2(double r2, double Qs2);
+    double S2(double r2, double Y);
+protected:
+    double YMV;
 };
 
 class FileDataGluonDistribution : public GluonDistribution {
@@ -250,23 +284,25 @@ public:
     /**
      * Constructs a new gluon distribution reading from the specified file.
      */
-    FileDataGluonDistribution(std::string pos_filename, std::string mom_filename, double Q02, double x0, double lambda);
+    FileDataGluonDistribution(const SaturationScale& satscale, std::string pos_filename, std::string mom_filename, double xinit);
     ~FileDataGluonDistribution();
     
     /**
      * Returns the interpolated value of the gluon distribution at the specified values.
      */
-    double S2(double r2, double Qs2);
+    double S2(double r2, double Y);
     
-    double S4(double r2, double s2, double t2, double Qs2);
+    double S4(double r2, double s2, double t2, double Y);
     
-    double F(double q2, double Qs2);
+    double F(double q2, double Y);
+    
+    double Qs2(double Y);
     
     /**
      * Returns the name of the gluon distribution.
      */
     const char* name();
-
+    
 protected:
     /**
      * Calculates the interpolation in position space.
@@ -275,12 +311,12 @@ protected:
 private:
     /** Values of ln(r2) for the interpolation. */
     double* r2_values;
-    /** Values of ln(Qs2) for the position interpolation. */
-    double* Qs2_values_rspace;
+    /** Values of Y for the position interpolation. */
+    double* Y_values_rspace;
     /** Values of ln(q2) for the interpolation. */
     double* q2_values;
-    /** Values of ln(Qs2) for the position interpolation. */
-    double* Qs2_values_pspace;
+    /** Values of Y for the position interpolation. */
+    double* Y_values_pspace;
     /** Values of the position space gluon distribution for interpolation. */
     double* S_dist;
     /** Values of the momentum space gluon distribution for interpolation. */
@@ -296,13 +332,13 @@ private:
     
     gsl_interp_accel* r2_accel;
     gsl_interp_accel* q2_accel;
-    gsl_interp_accel* Qs2_accel_r;
-    gsl_interp_accel* Qs2_accel_p;
+    gsl_interp_accel* Y_accel_r;
+    gsl_interp_accel* Y_accel_p;
     
     size_t r2_dimension;
     size_t q2_dimension;
-    size_t Qs2_dimension_r;
-    size_t Qs2_dimension_p;
+    size_t Y_dimension_r;
+    size_t Y_dimension_p;
     
     size_t subinterval_limit;
     
@@ -332,12 +368,13 @@ std::ostream& operator<<(std::ostream& out, GluonDistribution& gdist);
  */
 class GluonDistributionTraceWrapper : public GluonDistribution {
 public:
-    GluonDistributionTraceWrapper(GluonDistribution* gdist, const char* trace_filename = "trace_gdist.output") : gdist(gdist), trace_stream(trace_filename) {}
+    GluonDistributionTraceWrapper(GluonDistribution* gdist, const char* trace_filename = "trace_gdist.output") : GluonDistribution(gdist->satscale), gdist(gdist), trace_stream(trace_filename) {}
     ~GluonDistributionTraceWrapper() { delete gdist; trace_stream.close(); }
 
-    double S2(double r2, double Qs2);
-    double S4(double r2, double s2, double t2, double Qs2);
-    double F(double q2, double Qs2);
+    double S2(double r2, double Y);
+    double S4(double r2, double s2, double t2, double Y);
+    double F(double q2, double Y);
+    double Qs2(double Y);
     const char* name();
     
 private:

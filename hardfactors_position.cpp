@@ -80,7 +80,7 @@ void H14qqPrimary::Fd(const IntegrationContext* ictx, double* real, double* imag
     double realI, imagI;
     I1(ictx->kT * ictx->tx, &realI, &imagI);
     double amplitude = 0.25*M_1_PI*M_1_PI*M_1_PI * ictx->alphas_2pi * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->z2 * ictx->qqfactor
-        * (ictx->S4rst - ictx->ctx->gdist->S4(ictx->s2, ictx->s2, 0, ictx->Qs2))
+        * (ictx->S4rst - ictx->ctx->gdist->S4(ictx->s2, ictx->s2, 0, ictx->Yg))
         / ictx->t2;
     double phase = -ictx->kT * ictx->rx;
     *real = amplitude * (cos(phase) * realI - sin(phase) * imagI);
@@ -89,7 +89,7 @@ void H14qqPrimary::Fd(const IntegrationContext* ictx, double* real, double* imag
 
 void H14qqResidual::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
     double amplitude = (1.0/6.0 - 0.625*M_1_PI*M_1_PI) * ictx->alphas_2pi * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->z2 * ictx->qqfactor
-        * ictx->ctx->gdist->S4(ictx->r2, ictx->r2, 0, ictx->Qs2);
+        * ictx->ctx->gdist->S4(ictx->r2, ictx->r2, 0, ictx->Yg);
     double phase = ictx->kT * ictx->rx;
     *real = amplitude * cos(phase);
     *imag = amplitude * sin(phase);
@@ -148,7 +148,7 @@ void H12qqbarPrimary::Fd(const IntegrationContext* ictx, double* real, double* i
     I2(ictx->kT * sqrt(ictx->r2), &realI, &imagI);
     double amplitude = 1/(4*M_PI*M_PI*4*M_PI*M_PI) * ictx->alphas_2pi * ictx->ggfactor / ictx->z2 *
         8 * M_PI * ictx->ctx->Nf * ictx->ctx->TR * ictx->ctx->Sperp
-        * (ictx->ctx->gdist->S2(ictx->s2, ictx->Qs2) - ictx->ctx->gdist->S2(ictx->t2, ictx->Qs2)) * ictx->ctx->gdist->S2(ictx->t2, ictx->Qs2)
+        * (ictx->ctx->gdist->S2(ictx->s2, ictx->Yg) - ictx->ctx->gdist->S2(ictx->t2, ictx->Yg)) * ictx->ctx->gdist->S2(ictx->t2, ictx->Yg)
         / ictx->r2;
     double phase = ictx->kT * ictx->tx;
     *real = amplitude * (cos(phase) * realI + sin(phase) * imagI);
@@ -186,7 +186,7 @@ void I3(double x, double* real, double* imag) {
 
 void H16ggPrimary::Fs(const IntegrationContext* ictx, double* real, double* imag) const {
     double amplitude = M_1_PI*M_1_PI*M_1_PI * ictx->alphas_2pi * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->z2
-        * ictx->ggfactor * ictx->ctx->gdist->S2(ictx->s2, ictx->Qs2) * ictx->ctx->gdist->S2(ictx->t2, ictx->Qs2) * ictx->S2r * (1 - ictx->xi + ictx->xi2)*(1 - ictx->xi + ictx->xi2) / ictx->xi2
+        * ictx->ggfactor * ictx->ctx->gdist->S2(ictx->s2, ictx->Yg) * ictx->ctx->gdist->S2(ictx->t2, ictx->Yg) * ictx->S2r * (1 - ictx->xi + ictx->xi2)*(1 - ictx->xi + ictx->xi2) / ictx->xi2
         * (ictx->rx*ictx->tx + ictx->ry*ictx->ty) / (ictx->r2 * ictx->t2);
     double phase = -ictx->kT * (ictx->rx + ictx->tx / ictx->xi);
     *real = amplitude * cos(phase);
@@ -197,7 +197,7 @@ void H16ggPrimary::Fd(const IntegrationContext* ictx, double* real, double* imag
     double realI, imagI;
     I3(ictx->kT * ictx->tx, &realI, &imagI);
     double amplitude = M_1_PI*M_1_PI*M_1_PI * ictx->alphas_2pi * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->z2
-        * ictx->ggfactor * ictx->ctx->gdist->S2(ictx->s2, ictx->Qs2) * (ictx->ctx->gdist->S2(ictx->t2, ictx->Qs2) * ictx->ctx->gdist->S2((ictx->sx + ictx->tx)*(ictx->sx + ictx->tx) + (ictx->sy + ictx->ty)*(ictx->sy + ictx->ty), ictx->Qs2) - ictx->ctx->gdist->S2(ictx->s2, ictx->Qs2) * ictx->ctx->gdist->S2(0, ictx->Qs2))
+        * ictx->ggfactor * ictx->ctx->gdist->S2(ictx->s2, ictx->Yg) * (ictx->ctx->gdist->S2(ictx->t2, ictx->Yg) * ictx->ctx->gdist->S2((ictx->sx + ictx->tx)*(ictx->sx + ictx->tx) + (ictx->sy + ictx->ty)*(ictx->sy + ictx->ty), ictx->Yg) - ictx->ctx->gdist->S2(ictx->s2, ictx->Yg) * ictx->ctx->gdist->S2(0, ictx->Yg))
         / ictx->t2;
     double phase = -ictx->kT * ictx->rx;
     *real = amplitude * (cos(phase) * realI - sin(phase) * imagI);
@@ -206,7 +206,7 @@ void H16ggPrimary::Fd(const IntegrationContext* ictx, double* real, double* imag
 
 void H16ggResidual::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
     double amplitude = (-67.0 / 36.0 * M_1_PI*M_1_PI + 1.0 / 3.0) * ictx->alphas_2pi * ictx->ctx->Nc * ictx->ctx->Sperp / ictx->z2
-        * ictx->ggfactor * ictx->S2r * ictx->S2r * ictx->ctx->gdist->S2(0, ictx->Qs2);
+        * ictx->ggfactor * ictx->S2r * ictx->S2r * ictx->ctx->gdist->S2(0, ictx->Yg);
     double phase = -ictx->kT * ictx->rx;
     *real = amplitude * cos(phase);
     *imag = amplitude * cos(phase);

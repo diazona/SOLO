@@ -287,50 +287,52 @@ void ContextCollection::create_contexts() {
     check_property(pseudorandom_generator_type, const gsl_rng_type*, parse_rng_type)
     check_property(pseudorandom_generator_seed, unsigned long int, parse_ulong)
     
+    // TODO: allow different choices of saturation scale
+    assert(satscale == NULL);
+    satscale = new SaturationScale(c * pow(A, 1./3.), x0, lambda);
+    
     // create gluon distribution
     assert (gdist == NULL);
     check_property(gdist_type, string, parse_string)
     if (gdist_type == "GBW") {
-        gdist = new GBWGluonDistribution();
+        gdist = new GBWGluonDistribution(*satscale);
     }
     else if (gdist_type == "MV") {
         double Ymin = min(Y);
         double Ymax = max(Y);
         double pTmin = min(pT);
-        double Q02x0lambda = c * pow(A, 1./3.) * pow(x0, lambda);
         check_property_default(lambdaMV, double, parse_double, 0.241)
         check_property_default(gammaMV,  double, parse_double, 1)
-        check_property_default(q2min,  double, parse_double, 1e-6)
+        check_property_default(q2minMV,  double, parse_double, 1e-6)
         // q2max = (2 qxmax + sqrt(smax) / exp(Ymin))^2 + (2 qymax)^2
-        check_property_default(q2max,  double, parse_double, gsl_pow_2(2 * inf + sqs / exp(Ymin)) + gsl_pow_2(2 * inf))
-        // Qs2min = c A^1/3 Q02 (x0 / exp(-2Ymin))^λ
-        check_property_default(Qs2min, double, parse_double, Q02x0lambda * exp(2 * lambda * Ymin))
-        // Qs2max = c A^1/3 Q02 x0^λ / (pT / sqs * exp(-Ymin))^λ
-        check_property_default(Qs2max, double, parse_double, Q02x0lambda * pow(pTmin / sqs * exp(-Ymax), -lambda))
-        logger << "Creating MV gluon distribution with " << q2min << " < k2 < " << q2max << ", " << Qs2min << " < Qs2 < " << Qs2max << endl;
-        assert(q2min < q2max);
-        assert(Qs2min < Qs2max);
+        check_property_default(q2maxMV,  double, parse_double, gsl_pow_2(2 * inf + sqs / exp(Ymin)) + gsl_pow_2(2 * inf))
+        check_property_default(YminMV, double, parse_double, 2 * Ymin)
+        check_property_default(YmaxMV, double, parse_double, Ymax - log(pTmin) + log(sqs))
+        assert(q2minMV < q2maxMV);
+        assert(YminMV < YmaxMV);
         check_property_default(gdist_subinterval_limit, size_t, parse_size, 10000)
-        gdist = new MVGluonDistribution(lambdaMV, gammaMV, q2min, q2max, Qs2min, Qs2max, gdist_subinterval_limit);
+        logger << "Creating MV gluon distribution with " << q2minMV << " < k2 < " << q2maxMV << ", " << YminMV << " < Y < " << YmaxMV << endl;
+        gdist = new MVGluonDistribution(*satscale, lambdaMV, gammaMV, q2minMV, q2maxMV, 2*Ymin, YmaxMV, gdist_subinterval_limit);
     }
     else if (gdist_type == "fMV") {
         double Ymin = min(Y);
         check_property_default(lambdaMV, double, parse_double, 0.241)
         check_property_default(gammaMV,  double, parse_double, 1)
-        check_property_default(q2min,  double, parse_double, 1e-6)
+        check_property_default(q2minMV,  double, parse_double, 1e-6)
         // q2max = (2 qxmax + sqrt(smax) / exp(Ymin))^2 + (2 qymax)^2
-        check_property_default(q2max,  double, parse_double, gsl_pow_2(2 * inf + sqs / exp(Ymin)) + gsl_pow_2(2 * inf))
-        check_property_default(Qs02MV, double, parse_double, 1)
-        logger << "Creating fMV gluon distribution with " << q2min << " < k2 < " << q2max << ", Qs02 = " << Qs02MV << endl;
-        assert(q2min < q2max);
+        check_property_default(q2maxMV,  double, parse_double, gsl_pow_2(2 * inf + sqs / exp(Ymin)) + gsl_pow_2(2 * inf))
+        check_property(YMV, double, parse_double)
+        logger << "Creating fMV gluon distribution with " << q2minMV << " < k2 < " << q2maxMV << ", Y = " << YMV << endl;
+        assert(q2minMV < q2maxMV);
         check_property_default(gdist_subinterval_limit, size_t, parse_size, 10000)
-        gdist = new FixedSaturationMVGluonDistribution(lambdaMV, gammaMV, q2min, q2max, Qs02MV, gdist_subinterval_limit);
+        gdist = new FixedSaturationMVGluonDistribution(*satscale, lambdaMV, gammaMV, q2minMV, q2maxMV, YMV, gdist_subinterval_limit);
     }
     else if (gdist_type == "file") {
         check_property(gdist_position_filename, string, parse_string)
         check_property(gdist_momentum_filename, string, parse_string)
+        check_property_default(xinit, double, parse_double, 0.01)
         logger << "Reading gluon distribution from " << gdist_position_filename << " (pos) and " << gdist_momentum_filename << " (mom)" << endl;
-        gdist = new FileDataGluonDistribution(gdist_position_filename, gdist_momentum_filename, c * pow(A, 1./3.), x0, lambda);
+        gdist = new FileDataGluonDistribution(*satscale, gdist_position_filename, gdist_momentum_filename, xinit);
     }
     else {
         throw InvalidPropertyValueException<string>("gdist_type", gdist_type);
