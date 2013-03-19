@@ -145,6 +145,20 @@ main()
         
     }
     
+    // write out the fine grid at Y=0
+    {
+        double res=0.0,resinput=0.0;
+        for(int k=0;k<NN;k++) {
+            logr = log(bmin + double(k)/double(NN)*(bmax-bmin));
+            res = inter(logr,h_old);
+            res = 1.0 - res;
+            // double yout = 10.0;
+            resinput = 1.0- input(logr,xinit);
+            fileout2  << 0 << " " << exp(logr) << "  " << setprecision(PrecisionNumber) << resinput << " "  <<  setprecision(PrecisionNumber) <<res <<  endl;
+            
+        }
+    }
+    
     // Loop over the rapidity points
     for(iy=0;iy<NY;iy++) {
         start = clock();
@@ -239,9 +253,9 @@ double input(double logr,double x)
 double Qsat2(double x)
 {
     // GBW model parametrization of the saturation scale	
-    double lambda =  0.29;
-    double Q02 = 1.0;
-    double x0 = 0.0003;
+    double lambda =  0.288;
+    double Q02 = 0.56*pow(208, 1./3.);
+    double x0 = 0.000304;
     
     return pow(x0/x,lambda) * Q02;
 }
