@@ -324,7 +324,7 @@ void ContextCollection::create_contexts() {
         logger << "Creating fMV gluon distribution with " << q2min << " < k2 < " << q2max << ", Qs02 = " << Qs02MV << endl;
         assert(q2min < q2max);
         check_property_default(gdist_subinterval_limit, size_t, parse_size, 10000)
-        gdist = new MVGluonDistribution(lambdaMV, gammaMV, q2min, q2max, Qs02MV, gdist_subinterval_limit);
+        gdist = new FixedSaturationMVGluonDistribution(lambdaMV, gammaMV, q2min, q2max, Qs02MV, gdist_subinterval_limit);
     }
     else if (gdist_type == "file") {
         check_property(gdist_position_filename, string, parse_string)
