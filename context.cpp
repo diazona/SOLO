@@ -337,6 +337,7 @@ void ContextCollection::create_contexts() {
     }
     assert(gdist != NULL);
     if (trace_gdist) {
+        logger << "Activating gluon distribution trace wrapper" << endl;
         gdist = new GluonDistributionTraceWrapper(gdist);
     }
     assert(gdist != NULL);
