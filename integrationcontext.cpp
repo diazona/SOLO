@@ -47,6 +47,7 @@ void IntegrationContext::update_parton_factors(double z, double y) {
     const SaturationScale& satscale = ctx->gdist->satscale;
     this->Yg = satscale.Yx(this->xg);
     this->Qs2 = satscale.Qs2x(this->xg);
+    this->Fk = ctx->gdist->F(this->kT2, this->Yg);
     this->alphas = ctx->cpl->alphas(this->kT2);
     this->alphas_2pi = this->alphas * 0.5 * M_1_PI;
 
@@ -179,7 +180,6 @@ void IntegrationContext::update_momenta(double q1x, double q1y, double q2x, doub
     this->q22 = q2x*q2x + q2y*q2y;
     this->q32 = q3x*q3x + q3y*q3y;
     
-    this->Fk = ctx->gdist->F(kT2, this->Yg);
     if (q12 > 0) {
         this->Fq1 = ctx->gdist->F(q12, this->Yg);
         this->Fkq1 = ctx->gdist->F((kT - q1x)*(kT - q1x) + q1y*q1y, this->Yg);
