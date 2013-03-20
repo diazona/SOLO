@@ -475,7 +475,7 @@ void ContextCollection::setup_defaults() {
     options.insert(pair<string, string>("cubature_iterations", "1000000"));
     options.insert(pair<string, string>("miser_iterations", "10000000"));
     options.insert(pair<string, string>("vegas_initial_iterations", "100000"));
-    options.insert(pair<string, string>("vegas_incremental_iterations", "1000000"));
+    options.insert(pair<string, string>("vegas_incremental_iterations", "100000"));
     options.insert(pair<string, string>("quasi_iterations", "1000000"));
     options.insert(pair<string, string>("abserr", "1e-20"));
     options.insert(pair<string, string>("relerr", "0"));
