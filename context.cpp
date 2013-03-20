@@ -312,7 +312,7 @@ void ContextCollection::create_contexts() {
         assert(YminMV < YmaxMV);
         check_property_default(gdist_subinterval_limit, size_t, parse_size, 10000)
         logger << "Creating MV gluon distribution with " << q2minMV << " < k2 < " << q2maxMV << ", " << YminMV << " < Y < " << YmaxMV << endl;
-        gdist = new MVGluonDistribution(*satscale, lambdaMV, gammaMV, q2minMV, q2maxMV, 2*Ymin, YmaxMV, gdist_subinterval_limit);
+        gdist = new MVGluonDistribution(*satscale, lambdaMV, gammaMV, q2minMV, q2maxMV, YminMV, YmaxMV, gdist_subinterval_limit);
     }
     else if (gdist_type == "fMV") {
         double Ymin = min(Y);
