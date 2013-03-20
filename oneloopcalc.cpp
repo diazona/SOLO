@@ -310,6 +310,9 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
                 trace = trace_vars.any();
             }
         }
+        else if (a == "--trace") {
+            trace = true;
+        }
         else if (a == "--trace-gdist") {
             trace_gdist = true;
         }
