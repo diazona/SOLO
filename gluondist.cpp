@@ -525,7 +525,7 @@ void handle_input(AbstractPositionGluonDistribution* gdist, bool momentum = true
         }
     }
     else {
-        handle_input((GluonDistribution*)gdist);
+        handle_input((GluonDistribution*)gdist, momentum);
     }
 }
 
@@ -541,7 +541,7 @@ void handle_input(FileDataGluonDistribution* gdist, bool momentum) {
         }
     }
     else {
-        handle_input((GluonDistribution*)gdist);
+        handle_input((GluonDistribution*)gdist, momentum);
     }
 }
 
