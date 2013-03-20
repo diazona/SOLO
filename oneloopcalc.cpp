@@ -75,6 +75,7 @@ void write_data_point(const IntegrationContext* ictx, const double real, const d
 #define process(v) if (trace_vars[(size_t)trace_variable::v]) { trace_stream << ictx->v << "\t"; }
 #include "ictx_var_list.inc"
 #undef process
+    trace_stream << real << "\t" << imag << "\t";
     trace_stream << endl;
 }
 
