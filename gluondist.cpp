@@ -388,10 +388,10 @@ FileDataGluonDistribution::~FileDataGluonDistribution() {
 
 double FileDataGluonDistribution::S2(double r2, double Y) {
     if (Y_dimension_r == 1) {
-        return gsl_interp_eval(interp_dist_position_1D, r2_values, F_dist, r2, r2_accel);
+        return gsl_interp_eval(interp_dist_position_1D, r2_values, S_dist, r2, r2_accel);
     }
     else {
-        return interp2d_eval(interp_dist_position_2D, r2_values, Y_values_rspace, F_dist, r2, Y, r2_accel, Y_accel_r);
+        return interp2d_eval(interp_dist_position_2D, r2_values, Y_values_rspace, S_dist, r2, Y, r2_accel, Y_accel_r);
     }
 }
 
