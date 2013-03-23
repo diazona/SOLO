@@ -23,6 +23,7 @@
 #include <exception>
 #include <fstream>
 #include <iostream>
+#include <stdexcept>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_qrng.h>
 #include <gsl/gsl_rng.h>
@@ -433,6 +434,19 @@ size_t ContextCollection::size() {
         return contexts.size();
     }
 }
+
+string ContextCollection::get(string key, size_t index) {
+    key = canonicalize(key);
+    pair<multimap<string,string>::iterator, multimap<string,string>::iterator> p = options.equal_range(key);
+    multimap<string,string>::iterator it = p.first;
+    while (index-- > 0) {
+        if (++it == p.second) {
+            return "";
+        }
+    }
+    return it->second;
+}
+
 
 void ContextCollection::set(string key, string value) {
     assert(!contexts_created); // TODO throw a proper exception here

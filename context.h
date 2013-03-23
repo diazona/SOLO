@@ -421,6 +421,10 @@ public:
      */
     void erase(std::string key);
     /**
+     * Returns the value of a setting, if any, or the empty string if unset.
+     */
+    std::string get(std::string key, size_t index = 0);
+    /**
      * Add a setting, replacing any existing settings with the same key.
      */
     void set(std::string key, std::string value);

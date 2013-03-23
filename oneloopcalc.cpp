@@ -31,6 +31,7 @@
 #include <sstream>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_rng.h>
+#include <openssl/sha.h>
 #include "git_revision.h"
 #include "mstwpdf.h"
 #include "dss_pinlo.h"
@@ -692,6 +693,33 @@ void termination_handler(int signal) {
     _exit(2);
 }
 
+// from http://stackoverflow.com/questions/3969047/is-there-a-standard-way-of-representing-an-sha1-hash-as-a-c-string-and-how-do-i
+string get_hex_representation(const unsigned char* bytes, size_t length) {
+    ostringstream os;
+    os.fill('0');
+    os << hex;
+    for(const unsigned char * ptr=bytes; ptr < bytes+length; ptr++) {
+        os << setw(2) << (unsigned int)*ptr;
+    }
+    return os.str();
+}
+
+string sha1_file(string filename) {
+    char buffer[1024];
+    unsigned char hash[SHA_DIGEST_LENGTH];
+    SHA_CTX c;
+    SHA1_Init(&c);
+    ifstream i(filename.c_str());
+    while (i) {
+        i.read(buffer, sizeof(buffer));
+        SHA1_Update(&c, buffer, i.gcount());
+    }
+    i.close();
+    SHA1_Final(hash, &c);
+    return get_hex_representation(hash, SHA_DIGEST_LENGTH);
+}
+
+
 /**
  * Runs the program.
  * 
@@ -727,8 +755,18 @@ int run(int argc, char** argv) {
 #ifdef GIT_REVISION
     cout << "# git revision " << GIT_REVISION << endl;
 #endif
-    cout << cc << "------------" << endl;
+    {
+        FileDataGluonDistribution* fgdist = dynamic_cast<FileDataGluonDistribution*>(cc[0].gdist);
+        if (fgdist != NULL) {
+            // print hashes of the input files
+            // TODO: make the gdist compute the hashes itself
+            cout << "# momentum gdist file hash: " << sha1_file(cc.get("gdist_momentum_filename")) << endl;
+            cout << "# position gdist file hash: " << sha1_file(cc.get("gdist_position_filename")) << endl;
+        }
+    }
 
+    cout << cc << "------------" << endl;
+    
     ResultsCalculator rc(cc, tlctx, pc);
     p_rc = &rc;
 

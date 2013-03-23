@@ -1,6 +1,10 @@
 cmake_minimum_required (VERSION 2.6)
 project (oneloopcalc)
 
+find_package(OpenSSL REQUIRED)
+include_directories(${OPENSSL_INCLUDE_DIR})
+set(LIBS ${LIBS} ${OPENSSL_LIBRARIES})
+
 find_package(GSL REQUIRED)
 include_directories(${GSL_INCLUDE_DIRS})
 set(LIBS ${LIBS} ${GSL_LIBRARIES})
