@@ -41,6 +41,10 @@ public:
      * Return the saturation scale corresponding to the given value of x.
      */
     virtual double Qs2x(const double x) const;
+    /**
+     * Return the saturation scale corresponding to the given value of Y.
+     */
+    virtual double Qs2Y(const double Y) const;
 private:
     const double Q02x0lambda;
     const double lambda;
@@ -80,10 +84,6 @@ public:
      * The object that computes the saturation scale.
      */
     const SaturationScale& satscale;
-    /**
-     * Shortcut to compute the saturation scale from Y
-     */
-    double Qs2(double Y);
 };
 
 /**
@@ -296,8 +296,6 @@ public:
     
     double F(double q2, double Y);
     
-    double Qs2(double Y);
-    
     /**
      * Returns the name of the gluon distribution.
      */
@@ -374,7 +372,6 @@ public:
     double S2(double r2, double Y);
     double S4(double r2, double s2, double t2, double Y);
     double F(double q2, double Y);
-    double Qs2(double Y);
     const char* name();
     
 private:

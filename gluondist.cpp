@@ -43,23 +43,20 @@ double SaturationScale::Yx(const double x) const {
 double SaturationScale::Qs2x(const double x) const {
     return Q02x0lambda * pow(x, -lambda);
 }
-
-
-double GluonDistribution::Qs2(double Y) {
-    return satscale.Qs2x(satscale.xY(Y));
+double SaturationScale::Qs2Y(const double Y) const {
+    return Qs2x(xY(Y));
 }
-
 
 GBWGluonDistribution::GBWGluonDistribution(const SaturationScale& satscale) : GluonDistribution(satscale) {}
 
 double GBWGluonDistribution::S2(double r2, double Y) {
-    return exp(-0.25 * r2 * Qs2(Y));
+    return exp(-0.25 * r2 * satscale.Qs2Y(Y));
 }
 double GBWGluonDistribution::S4(double r2, double s2, double t2, double Y) {
-    return exp(-0.25 * Qs2(Y) * (s2 + t2));
+    return exp(-0.25 * satscale.Qs2Y(Y) * (s2 + t2));
 }
 double GBWGluonDistribution::F(double q2, double Y) {
-    double Qs2 = this->Qs2(Y);
+    double Qs2 = satscale.Qs2Y(Y);
     return M_1_PI * exp(-q2/Qs2) / Qs2;
 }
 const char* GBWGluonDistribution::name() {
@@ -140,7 +137,7 @@ void AbstractPositionGluonDistribution::setup() {
     F_dist_subleading_q2 = new double[Y_dimension]; // second order term in series around q2 = 0
     for (size_t i_Y = 0; i_Y < Y_dimension; i_Y++) {
         Y_values[i_Y] = Ymin + i_Y * log_step;
-        params.Qs2 = Qs2(Y_values[i_Y]);
+        params.Qs2 = satscale.Qs2Y(Y_values[i_Y]);
         
         params.n = 0;
         gsl_integration_qagiu(&func, 0, 0, 0.0001, subinterval_limit, workspace, F_dist_leading_q2 + i_Y, &error);
@@ -156,7 +153,7 @@ void AbstractPositionGluonDistribution::setup() {
         log_q2_values[i_q2] = log_q2min + i_q2 * log_step;
         params.q = exp(0.5 * log_q2_values[i_q2]);
         for (size_t i_Y = 0; i_Y < Y_dimension; i_Y++) {
-            params.Qs2 = Qs2(Y_values[i_Y]);
+            params.Qs2 = satscale.Qs2Y(Y_values[i_Y]);
             size_t index = INDEX_2D(i_q2, i_Y, q2_dimension, Qs2_dimension);
             gsl_integration_qagiu(&func, 0, 0, 0.0001, subinterval_limit, workspace, F_dist + index, &error);
         }
@@ -241,7 +238,7 @@ MVGluonDistribution::MVGluonDistribution(const SaturationScale& satscale, double
 }
 
 double MVGluonDistribution::S2(double r2, double Y) {
-    return pow(M_E + 1.0 / (sqrt(r2) * LambdaMV), -0.25 * pow(r2 * Qs2(Y), gammaMV));
+    return pow(M_E + 1.0 / (sqrt(r2) * LambdaMV), -0.25 * pow(r2 * satscale.Qs2Y(Y), gammaMV));
 }
 
 const char* MVGluonDistribution::name() {
@@ -436,10 +433,6 @@ double GluonDistributionTraceWrapper::S4(double r2, double s2, double t2, double
     return val;
 }
 
-double GluonDistributionTraceWrapper::Qs2(double Y) {
-    return gdist->Qs2(Y);
-}
-
 const char* GluonDistributionTraceWrapper::name() {
     return gdist->name();
 }
@@ -496,7 +489,7 @@ void handle_input(GluonDistribution* gdist, bool momentum = true) {
             cout << q2 << "\t"
                  << Y << "\t"
                  << gdist->satscale.xY(Y) << "\t"
-                 << gdist->Qs2(Y) << "\t"
+                 << gdist->satscale.Qs2Y(Y) << "\t"
                  << gdist->F(q2, Y) << endl;
         }
     }
@@ -507,7 +500,7 @@ void handle_input(GluonDistribution* gdist, bool momentum = true) {
             cout << r2 << "\t"
                  << Y << "\t"
                  << gdist->satscale.xY(Y) << "\t"
-                 << gdist->Qs2(Y) << "\t"
+                 << gdist->satscale.Qs2Y(Y) << "\t"
                  << gdist->S2(r2, Y) << endl;
         }
     }
