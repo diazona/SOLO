@@ -30,14 +30,6 @@ class SaturationScale {
 public:
     SaturationScale(const double Q02, const double x0, const double lambda);
     /**
-     * Converts a value of Y to a value of x.
-     */
-    virtual double xY(const double Y) const;
-    /**
-     * Converts a value of x to a value of Y.
-     */
-    virtual double Yx(const double x) const;
-    /**
      * Return the saturation scale corresponding to the given value of x.
      */
     virtual double Qs2x(const double x) const;

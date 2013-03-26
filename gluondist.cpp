@@ -34,17 +34,11 @@
 using namespace std;
 
 SaturationScale::SaturationScale(const double Q02, const double x0, const double lambda) : Q02x0lambda(Q02 * pow(x0, lambda)), lambda(lambda) {}
-double SaturationScale::xY(const double Y) const {
-    return exp(-Y);
-}
-double SaturationScale::Yx(const double x) const {
-    return -log(x);
-}
 double SaturationScale::Qs2x(const double x) const {
     return Q02x0lambda * pow(x, -lambda);
 }
 double SaturationScale::Qs2Y(const double Y) const {
-    return Qs2x(xY(Y));
+    return Qs2x(exp(-Y));
 }
 
 GBWGluonDistribution::GBWGluonDistribution(const SaturationScale& satscale) : GluonDistribution(satscale) {}
@@ -488,7 +482,7 @@ void handle_input(GluonDistribution* gdist, bool momentum = true) {
         while (cin >> q2 >> Y) {
             cout << q2 << "\t"
                  << Y << "\t"
-                 << gdist->satscale.xY(Y) << "\t"
+                 << exp(-Y) << "\t"
                  << gdist->satscale.Qs2Y(Y) << "\t"
                  << gdist->F(q2, Y) << endl;
         }
@@ -499,7 +493,7 @@ void handle_input(GluonDistribution* gdist, bool momentum = true) {
         while (cin >> r2 >> Y) {
             cout << r2 << "\t"
                  << Y << "\t"
-                 << gdist->satscale.xY(Y) << "\t"
+                 << exp(-Y) << "\t"
                  << gdist->satscale.Qs2Y(Y) << "\t"
                  << gdist->S2(r2, Y) << endl;
         }
