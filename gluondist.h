@@ -24,30 +24,11 @@
 #include "interp2d.h"
 
 /**
- * Converter between x, Y, and Qs2.
- */
-class SaturationScale {
-public:
-    SaturationScale(const double Q02, const double x0, const double lambda);
-    /**
-     * Return the saturation scale corresponding to the given value of x.
-     */
-    virtual double Qs2x(const double x) const;
-    /**
-     * Return the saturation scale corresponding to the given value of Y.
-     */
-    virtual double Qs2Y(const double Y) const;
-private:
-    const double Q02x0lambda;
-    const double lambda;
-};
-
-/**
  * A gluon distribution.
  */
 class GluonDistribution {
 public:
-    GluonDistribution(const SaturationScale& satscale) : satscale(satscale) {};
+    GluonDistribution() {};
     /**
      * Return the value of the dipole gluon distribution at the given
      * values of r^2 and Y. r2 is the squared magnitude of the
@@ -69,13 +50,13 @@ public:
      */
     virtual double F(double q2, double Y) = 0;
     /**
+     * Return the saturation scale corresponding to the given value of Y.
+     */
+    virtual double Qs2(const double Y) const = 0;
+    /**
      * Returns a human-readable name for the gluon distribution.
      */
     virtual const char* name() = 0;
-    /**
-     * The object that computes the saturation scale.
-     */
-    const SaturationScale& satscale;
 };
 
 /**
@@ -83,7 +64,7 @@ public:
  */
 class GBWGluonDistribution: public GluonDistribution {
 public:
-    GBWGluonDistribution(const SaturationScale& satscale);
+    GBWGluonDistribution(double Q02, double x0, double lambda);
     /**
      * Returns the value of the GBW dipole gluon distribution,
      * exp(-r2 Qs2 / 4)
@@ -101,7 +82,15 @@ public:
      * distribution, exp(-q2 / Qs2) / (pi * Qs2)
      */
     double F(double q2, double Y);
+    /**
+     * Returns the standard saturation scale, Q0^2(x0/x)^λ
+     */
+    double Qs2(const double Y) const;
     const char* name();
+private:
+    double Q02x0lambda;
+    double lambda;
+    std::string _name;
 };
 
 /**
@@ -145,7 +134,7 @@ public:
      * extreme parameters if the program crashes with a subdivision
      * error.
      */
-    AbstractPositionGluonDistribution(const SaturationScale& satscale, double q2min, double q2max, double Ymin, double Ymax, size_t subinterval_limit = 10000);
+    AbstractPositionGluonDistribution(double q2min, double q2max, double Ymin, double Ymax, size_t subinterval_limit = 10000);
     ~AbstractPositionGluonDistribution();
 
     /**
@@ -228,7 +217,7 @@ public:
     /**
      * Constructs a new MV gluon distribution object.
      */
-    MVGluonDistribution(const SaturationScale& satscale, double LambdaMV, double gammaMV, double q2min, double q2max, double Ymin, double Ymax, size_t subinterval_limit = 10000);
+    MVGluonDistribution(double LambdaMV, double gammaMV, double q2min, double q2max, double Ymin, double Ymax, double Q02, double x0, double lambda, size_t subinterval_limit = 10000);
     ~MVGluonDistribution() {};
     
     /**
@@ -236,6 +225,10 @@ public:
      * exp(-(r2 Qs02MV)^gammaMV ln(e + 1 / (LambdaMV r)) / 4)
      */
     double S2(double r2, double Y);
+    /**
+     * Returns the standard saturation scale, Q0^2(x0/x)^λ
+     */
+    double Qs2(const double Y) const;
     /**
      * Returns the name of the distribution, which incorporates
      * the values of the parameters.
@@ -246,6 +239,9 @@ protected:
     double gammaMV;
     
     std::string _name;
+private:
+    double Q02x0lambda;
+    double lambda;
 };
 
 /**
@@ -257,7 +253,7 @@ public:
     /**
      * Constructs a new modified gluon distribution object.
      */
-    FixedSaturationMVGluonDistribution(const SaturationScale& satscale, double LambdaMV, double gammaMV, double q2min, double q2max, double YMV, size_t subinterval_limit = 10000);
+    FixedSaturationMVGluonDistribution(double LambdaMV, double gammaMV, double q2min, double q2max, double YMV, double Q02, double x0, double lambda, size_t subinterval_limit = 10000);
     ~FixedSaturationMVGluonDistribution() {};
     
     /**
@@ -275,8 +271,9 @@ class FileDataGluonDistribution : public GluonDistribution {
 public:
     /**
      * Constructs a new gluon distribution reading from the specified file.
+     * This constructor uses the default saturation scale.
      */
-    FileDataGluonDistribution(const SaturationScale& satscale, std::string pos_filename, std::string mom_filename, double xinit);
+    FileDataGluonDistribution(std::string pos_filename, std::string mom_filename, double Q02, double x0, double lambda, double xinit);
     ~FileDataGluonDistribution();
     
     /**
@@ -286,6 +283,8 @@ public:
     
     double S4(double r2, double s2, double t2, double Y);
     
+    double Qs2(const double Y) const;
+    
     double F(double q2, double Y);
     
     /**
@@ -294,6 +293,10 @@ public:
     const char* name();
     
 protected:
+    /**
+     * Performs setup common to constructors
+     */
+    void setup(std::string pos_filename, std::string mom_filename, double xinit);
     /**
      * Calculates the interpolation in position space.
      */
@@ -313,7 +316,7 @@ private:
     double* F_dist;
     
     // one of interp_dist_momentum_1D or interp_dist_momentum_2D will be NULL and the other one
-    // will be used, depending on whether there is a range of Qs2 values or just a single one
+    // will be used, depending on whether there is a range of Y values or just a single one
     gsl_interp* interp_dist_momentum_1D;
     interp2d* interp_dist_momentum_2D;
     // same for position
@@ -331,6 +334,9 @@ private:
     size_t Y_dimension_p;
     
     size_t subinterval_limit;
+    
+    double Q02x0lambda;
+    double lambda;
     
     std::string _name;
 #ifdef GLUON_DIST_DRIVER
@@ -358,12 +364,13 @@ std::ostream& operator<<(std::ostream& out, GluonDistribution& gdist);
  */
 class GluonDistributionTraceWrapper : public GluonDistribution {
 public:
-    GluonDistributionTraceWrapper(GluonDistribution* gdist, const char* trace_filename = "trace_gdist.output") : GluonDistribution(gdist->satscale), gdist(gdist), trace_stream(trace_filename) {}
+    GluonDistributionTraceWrapper(GluonDistribution* gdist, const char* trace_filename = "trace_gdist.output") : GluonDistribution(), gdist(gdist), trace_stream(trace_filename) {}
     ~GluonDistributionTraceWrapper() { delete gdist; trace_stream.close(); }
 
     double S2(double r2, double Y);
     double S4(double r2, double s2, double t2, double Y);
     double F(double q2, double Y);
+    double Qs2(const double Y) const;
     const char* name();
     
 private:

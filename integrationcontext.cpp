@@ -45,7 +45,7 @@ void IntegrationContext::update_parton_factors(double z, double y) {
     this->kT = sqrt(this->kT2);
     this->xg = kT / ctx->sqs * exp(-ctx->Y);
     this->Yg = -log(this->xg);
-    this->Qs2 = ctx->gdist->satscale.Qs2x(this->xg);
+    this->Qs2 = ctx->gdist->Qs2(this->Yg);
     this->Fk = ctx->gdist->F(this->kT2, this->Yg);
     this->alphas = ctx->cpl->alphas(this->kT2);
     this->alphas_2pi = this->alphas * 0.5 * M_1_PI;

@@ -33,28 +33,27 @@
 
 using namespace std;
 
-SaturationScale::SaturationScale(const double Q02, const double x0, const double lambda) : Q02x0lambda(Q02 * pow(x0, lambda)), lambda(lambda) {}
-double SaturationScale::Qs2x(const double x) const {
-    return Q02x0lambda * pow(x, -lambda);
+GBWGluonDistribution::GBWGluonDistribution(double Q02, double x0, double lambda) : GluonDistribution(), Q02x0lambda(Q02 * pow(x0, lambda)), lambda(lambda) {
+    ostringstream s;
+    s << "GBW(Q02 = " << Q02 << ", x0 = " << x0 << ", lambda = " << lambda << ")";
+    _name = s.str();
 }
-double SaturationScale::Qs2Y(const double Y) const {
-    return Qs2x(exp(-Y));
-}
-
-GBWGluonDistribution::GBWGluonDistribution(const SaturationScale& satscale) : GluonDistribution(satscale) {}
 
 double GBWGluonDistribution::S2(double r2, double Y) {
-    return exp(-0.25 * r2 * satscale.Qs2Y(Y));
+    return exp(-0.25 * r2 * Qs2(Y));
 }
 double GBWGluonDistribution::S4(double r2, double s2, double t2, double Y) {
-    return exp(-0.25 * satscale.Qs2Y(Y) * (s2 + t2));
+    return exp(-0.25 * Qs2(Y) * (s2 + t2));
 }
 double GBWGluonDistribution::F(double q2, double Y) {
-    double Qs2 = satscale.Qs2Y(Y);
-    return M_1_PI * exp(-q2/Qs2) / Qs2;
+    double _Qs2 = Qs2(Y);
+    return M_1_PI * exp(-q2/_Qs2) / _Qs2;
+}
+double GBWGluonDistribution::Qs2(const double Y) const {
+    return Q02x0lambda * exp(lambda * Y);
 }
 const char* GBWGluonDistribution::name() {
-    return "GBW";
+    return _name.c_str();
 }
 
 
@@ -84,8 +83,8 @@ static double position_gdist_series_term_integrand(double r, void* closure) {
     }
 }
 
-AbstractPositionGluonDistribution::AbstractPositionGluonDistribution(const SaturationScale& satscale, double q2min, double q2max, double Ymin, double Ymax, size_t subinterval_limit) :
- GluonDistribution(satscale),
+AbstractPositionGluonDistribution::AbstractPositionGluonDistribution(double q2min, double q2max, double Ymin, double Ymax, size_t subinterval_limit) :
+ GluonDistribution(),
  q2min(q2min), q2max(q2max), Ymin(Ymin), Ymax(Ymax),
  F_dist_leading_q2(NULL), F_dist_subleading_q2(NULL), F_dist(NULL),
  interp_dist_leading_q2(NULL), interp_dist_subleading_q2(NULL), interp_dist_momentum_1D(NULL), interp_dist_momentum_2D(NULL),
@@ -131,7 +130,7 @@ void AbstractPositionGluonDistribution::setup() {
     F_dist_subleading_q2 = new double[Y_dimension]; // second order term in series around q2 = 0
     for (size_t i_Y = 0; i_Y < Y_dimension; i_Y++) {
         Y_values[i_Y] = Ymin + i_Y * log_step;
-        params.Qs2 = satscale.Qs2Y(Y_values[i_Y]);
+        params.Qs2 = Qs2(Y_values[i_Y]); // TODO: verify whether sat scale is available at this point
         
         params.n = 0;
         gsl_integration_qagiu(&func, 0, 0, 0.0001, subinterval_limit, workspace, F_dist_leading_q2 + i_Y, &error);
@@ -147,7 +146,7 @@ void AbstractPositionGluonDistribution::setup() {
         log_q2_values[i_q2] = log_q2min + i_q2 * log_step;
         params.q = exp(0.5 * log_q2_values[i_q2]);
         for (size_t i_Y = 0; i_Y < Y_dimension; i_Y++) {
-            params.Qs2 = satscale.Qs2Y(Y_values[i_Y]);
+            params.Qs2 = Qs2(Y_values[i_Y]);
             size_t index = INDEX_2D(i_q2, i_Y, q2_dimension, Qs2_dimension);
             gsl_integration_qagiu(&func, 0, 0, 0.0001, subinterval_limit, workspace, F_dist + index, &error);
         }
@@ -223,27 +222,31 @@ double AbstractPositionGluonDistribution::F(double q2, double Y) {
     }
 }
 
-MVGluonDistribution::MVGluonDistribution(const SaturationScale& satscale, double LambdaMV, double gammaMV, double q2min, double q2max, double Ymin, double Ymax, size_t subinterval_limit) :
-  AbstractPositionGluonDistribution(satscale, q2min, q2max, Ymin, Ymax, subinterval_limit), LambdaMV(LambdaMV), gammaMV(gammaMV) {
+MVGluonDistribution::MVGluonDistribution(double LambdaMV, double gammaMV, double q2min, double q2max, double Ymin, double Ymax, double Q02, double x0, double lambda, size_t subinterval_limit) :
+  AbstractPositionGluonDistribution(q2min, q2max, Ymin, Ymax, subinterval_limit), LambdaMV(LambdaMV), gammaMV(gammaMV), Q02x0lambda(Q02 * pow(x0, lambda)), lambda(lambda) {
     ostringstream s;
-    s << "MV(LambdaMV = " << LambdaMV << ", gammaMV = " << gammaMV << ", q2min = " << q2min << ", q2max = " << q2max << ", Ymin = " << Ymin << ", Ymax = " << Ymax << ")";
+    s << "MV(LambdaMV = " << LambdaMV << ", gammaMV = " << gammaMV << ", q2min = " << q2min << ", q2max = " << q2max << ", Ymin = " << Ymin << ", Ymax = " << Ymax << ", Q02 = " << Q02 << ", x0 = " << x0 << ", lambda = " << lambda << ")";
     _name = s.str();
     setup();
 }
 
 double MVGluonDistribution::S2(double r2, double Y) {
-    return pow(M_E + 1.0 / (sqrt(r2) * LambdaMV), -0.25 * pow(r2 * satscale.Qs2Y(Y), gammaMV));
+    return pow(M_E + 1.0 / (sqrt(r2) * LambdaMV), -0.25 * pow(r2 * Qs2(Y), gammaMV));
+}
+
+double MVGluonDistribution::Qs2(const double Y) const {
+    return Q02x0lambda * exp(lambda * Y);
 }
 
 const char* MVGluonDistribution::name() {
     return _name.c_str();
 }
 
-FixedSaturationMVGluonDistribution::FixedSaturationMVGluonDistribution(const SaturationScale& satscale, double LambdaMV, double gammaMV, double q2min, double q2max, double YMV, size_t subinterval_limit) :
-  MVGluonDistribution(satscale, LambdaMV, gammaMV, q2min, q2max, YMV, YMV, subinterval_limit) {
+FixedSaturationMVGluonDistribution::FixedSaturationMVGluonDistribution(double LambdaMV, double gammaMV, double q2min, double q2max, double YMV, double Q02, double x0, double lambda, size_t subinterval_limit) :
+  MVGluonDistribution(LambdaMV, gammaMV, q2min, q2max, YMV, YMV, Q02, x0, lambda, subinterval_limit) {
     // calculate_interpolation_grid runs in the superclass constructor
     ostringstream s;
-    s << "fMV(LambdaMV = " << LambdaMV << ", gammaMV = " << gammaMV << ", q2min = " << q2min << ", q2max = " << q2max << ", YMV = " << YMV << ")";
+    s << "fMV(LambdaMV = " << LambdaMV << ", gammaMV = " << gammaMV << ", q2min = " << q2min << ", q2max = " << q2max << ", YMV = " << YMV << ", Q02 = " << Q02 << ", x0 = " << x0 << ", lambda = " << lambda << ")";
     _name = s.str();
 }
 
@@ -317,7 +320,30 @@ void read_from_file(const string filename, size_t& x_dimension, size_t& y_dimens
     }
 }
 
-FileDataGluonDistribution::FileDataGluonDistribution(const SaturationScale& satscale, string pos_filename, string mom_filename, double xinit = 1) : GluonDistribution(satscale) {
+FileDataGluonDistribution::FileDataGluonDistribution(string pos_filename, string mom_filename, double Q02, double x0, double lambda, double xinit) : GluonDistribution(), Q02x0lambda(Q02 * pow(x0, lambda)), lambda(lambda) {
+    setup(pos_filename, mom_filename, xinit);
+    ostringstream s;
+    s << "file(pos_filename = " << pos_filename << ", mom_filename = " << mom_filename << ")";
+    _name = s.str();
+}
+
+FileDataGluonDistribution::~FileDataGluonDistribution() {
+    delete[] r2_values, q2_values, Y_values_rspace, Y_values_pspace, S_dist, F_dist;
+    gsl_interp_accel_free(r2_accel);
+    gsl_interp_accel_free(q2_accel);
+    gsl_interp_accel_free(Y_accel_r);
+    gsl_interp_accel_free(Y_accel_p);
+    if (Y_dimension_r == 1) {
+        gsl_interp_free(interp_dist_position_1D);
+        gsl_interp_free(interp_dist_momentum_1D);
+    }
+    else {
+        interp2d_free(interp_dist_position_2D);
+        interp2d_free(interp_dist_momentum_2D);
+    }
+}
+
+void FileDataGluonDistribution::setup(string pos_filename, string mom_filename, double xinit) {
     // the rapidity values we read from the file are considered values of ΔY
     // relative to some initial rapidity, Yinit.
     read_from_file(pos_filename, r2_dimension, Y_dimension_r, r2_values, Y_values_rspace, S_dist);
@@ -355,27 +381,8 @@ FileDataGluonDistribution::FileDataGluonDistribution(const SaturationScale& sats
         interp_dist_momentum_2D = interp2d_alloc(interp2d_bilinear, q2_dimension, Y_dimension_p);
         interp2d_init(interp_dist_momentum_2D, q2_values, Y_values_pspace, F_dist, q2_dimension, Y_dimension_p);
     }
-    
-    ostringstream s;
-    s << "file(pos_filename = " << pos_filename << ", mom_filename = " << mom_filename << ")";
-    _name = s.str();
 }
 
-FileDataGluonDistribution::~FileDataGluonDistribution() {
-    delete[] r2_values, q2_values, Y_values_rspace, Y_values_pspace, S_dist, F_dist;
-    gsl_interp_accel_free(r2_accel);
-    gsl_interp_accel_free(q2_accel);
-    gsl_interp_accel_free(Y_accel_r);
-    gsl_interp_accel_free(Y_accel_p);
-    if (Y_dimension_r == 1) {
-        gsl_interp_free(interp_dist_position_1D);
-        gsl_interp_free(interp_dist_momentum_1D);
-    }
-    else {
-        interp2d_free(interp_dist_position_2D);
-        interp2d_free(interp_dist_momentum_2D);
-    }
-}
 
 double FileDataGluonDistribution::S2(double r2, double Y) {
     if (Y_dimension_r == 1) {
@@ -397,6 +404,10 @@ double FileDataGluonDistribution::F(double q2, double Y) {
     else {
         return interp2d_eval(interp_dist_momentum_2D, q2_values, Y_values_pspace, F_dist, q2, Y, q2_accel, Y_accel_p);
     }
+}
+
+double FileDataGluonDistribution::Qs2(const double Y) const {
+    return Q02x0lambda * exp(lambda * Y);
 }
 
 const char* FileDataGluonDistribution::name() {
@@ -425,6 +436,10 @@ double GluonDistributionTraceWrapper::S4(double r2, double s2, double t2, double
     double val = gdist->S4(r2, s2, t2, Y);
     trace_stream << "S4\t" << r2 << "\t" << s2 << "\t" << t2 << "\t" << Y << "\t" << val << endl;
     return val;
+}
+
+double GluonDistributionTraceWrapper::Qs2(const double Y) const {
+    return gdist->Qs2(Y);
 }
 
 const char* GluonDistributionTraceWrapper::name() {
@@ -483,7 +498,7 @@ void handle_input(GluonDistribution* gdist, bool momentum = true) {
             cout << q2 << "\t"
                  << Y << "\t"
                  << exp(-Y) << "\t"
-                 << gdist->satscale.Qs2Y(Y) << "\t"
+                 << gdist->Qs2(Y) << "\t"
                  << gdist->F(q2, Y) << endl;
         }
     }
@@ -494,7 +509,7 @@ void handle_input(GluonDistribution* gdist, bool momentum = true) {
             cout << r2 << "\t"
                  << Y << "\t"
                  << exp(-Y) << "\t"
-                 << gdist->satscale.Qs2Y(Y) << "\t"
+                 << gdist->Qs2(Y) << "\t"
                  << gdist->S2(r2, Y) << endl;
         }
     }

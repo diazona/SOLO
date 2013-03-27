@@ -329,7 +329,6 @@ public:
     typedef std::vector<Context>::iterator iterator;
 
     ContextCollection() :
-      satscale(NULL),
       gdist(NULL),
       cpl(NULL),
       trace_gdist(false),
@@ -341,7 +340,6 @@ public:
      * read from the named file.
      */
     ContextCollection(const std::string& filename) :
-      satscale(NULL),
       gdist(NULL),
       cpl(NULL),
       trace_gdist(false),
@@ -352,8 +350,6 @@ public:
         in.close();
     }
     ~ContextCollection() {
-        delete satscale;
-        satscale = NULL;
         delete gdist;
         gdist = NULL;
         delete cpl;
@@ -451,10 +447,6 @@ public:
     friend class ThreadLocalContext;
     
 private:
-    /**
-     * The saturation scale converter. NULL until contexts are created.
-     */
-    const SaturationScale* satscale;
     /**
      * The gluon distribution. NULL until contexts are created.
      */

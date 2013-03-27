@@ -288,15 +288,13 @@ void ContextCollection::create_contexts() {
     check_property(pseudorandom_generator_type, const gsl_rng_type*, parse_rng_type)
     check_property(pseudorandom_generator_seed, unsigned long int, parse_ulong)
     
-    // TODO: allow different choices of saturation scale
-    assert(satscale == NULL);
-    satscale = new SaturationScale(c * pow(A, 1./3.), x0, lambda);
+    double Q02 = c * pow(A, 1./3.);
     
     // create gluon distribution
     assert (gdist == NULL);
     check_property(gdist_type, string, parse_string)
     if (gdist_type == "GBW") {
-        gdist = new GBWGluonDistribution(*satscale);
+        gdist = new GBWGluonDistribution(Q02, x0, lambda);
     }
     else if (gdist_type == "MV") {
         double Ymin = min(Y);
@@ -313,7 +311,7 @@ void ContextCollection::create_contexts() {
         assert(YminMV < YmaxMV);
         check_property_default(gdist_subinterval_limit, size_t, parse_size, 10000)
         logger << "Creating MV gluon distribution with " << q2minMV << " < k2 < " << q2maxMV << ", " << YminMV << " < Y < " << YmaxMV << endl;
-        gdist = new MVGluonDistribution(*satscale, lambdaMV, gammaMV, q2minMV, q2maxMV, YminMV, YmaxMV, gdist_subinterval_limit);
+        gdist = new MVGluonDistribution(lambdaMV, gammaMV, q2minMV, q2maxMV, YminMV, YmaxMV, Q02, x0, lambda, gdist_subinterval_limit);
     }
     else if (gdist_type == "fMV") {
         double Ymin = min(Y);
@@ -326,14 +324,14 @@ void ContextCollection::create_contexts() {
         logger << "Creating fMV gluon distribution with " << q2minMV << " < k2 < " << q2maxMV << ", Y = " << YMV << endl;
         assert(q2minMV < q2maxMV);
         check_property_default(gdist_subinterval_limit, size_t, parse_size, 10000)
-        gdist = new FixedSaturationMVGluonDistribution(*satscale, lambdaMV, gammaMV, q2minMV, q2maxMV, YMV, gdist_subinterval_limit);
+        gdist = new FixedSaturationMVGluonDistribution(lambdaMV, gammaMV, q2minMV, q2maxMV, YMV, Q02, x0, lambda, gdist_subinterval_limit);
     }
     else if (gdist_type == "file") {
         check_property(gdist_position_filename, string, parse_string)
         check_property(gdist_momentum_filename, string, parse_string)
         check_property_default(xinit, double, parse_double, 0.01)
         logger << "Reading gluon distribution from " << gdist_position_filename << " (pos) and " << gdist_momentum_filename << " (mom)" << endl;
-        gdist = new FileDataGluonDistribution(*satscale, gdist_position_filename, gdist_momentum_filename, xinit);
+        gdist = new FileDataGluonDistribution(gdist_position_filename, gdist_momentum_filename, Q02, x0, lambda, xinit);
     }
     else {
         throw InvalidPropertyValueException<string>("gdist_type", gdist_type);
