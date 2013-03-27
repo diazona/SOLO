@@ -297,10 +297,6 @@ protected:
      * Performs setup common to constructors
      */
     void setup(std::string pos_filename, std::string mom_filename, double xinit);
-    /**
-     * Calculates the interpolation in position space.
-     */
-    void calculate_position_interpolation();
 private:
     /** Values of ln(r2) for the interpolation. */
     double* r2_values;
