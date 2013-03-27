@@ -368,7 +368,7 @@ void FileDataGluonDistribution::setup(string pos_filename, string mom_filename, 
         interp_dist_position_1D = gsl_interp_alloc(gsl_interp_cspline, r2_dimension);
         gsl_interp_init(interp_dist_position_1D, r2_values, S_dist, r2_dimension);
         interp_dist_momentum_1D = gsl_interp_alloc(gsl_interp_cspline, q2_dimension);
-        gsl_interp_init(interp_dist_momentum_1D, q2_values, S_dist, q2_dimension);
+        gsl_interp_init(interp_dist_momentum_1D, q2_values, F_dist, q2_dimension);
     }
     else {
         assert(Y_dimension_p > 1);
