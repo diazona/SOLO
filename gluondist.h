@@ -269,6 +269,11 @@ protected:
 
 class FileDataGluonDistribution : public GluonDistribution {
 public:
+    enum satscale_source {POSITION_THRESHOLD, MOMENTUM_THRESHOLD};
+    /**
+     * Constructs a new gluon distribution reading from the specified file.
+     */
+    FileDataGluonDistribution(std::string pos_filename, std::string mom_filename, double xinit, enum satscale_source satscale_source, double satscale_threshold);
     /**
      * Constructs a new gluon distribution reading from the specified file.
      * This constructor uses the default saturation scale.
@@ -288,6 +293,30 @@ public:
     double F(double q2, double Y);
     
     /**
+     * Returns the derivative of F with respect to q2 at the given
+     * values of q2 and Y.
+     */
+    double Fprime(double q2, double Y);
+    
+    /**
+     * Returns the second derivative of F with respect to q2 at the given
+     * values of q2 and Y.
+     */
+    double Fpprime(double k2, double Y);
+    
+    /**
+     * Returns the derivative of S with respect to r2 at the given
+     * values of r2 and Y.
+     */
+    double S2prime(double r2, double Y);
+    
+    /**
+     * Returns the second derivative of S2 with respect to r2 at the given
+     * values of r2 and Y.
+     */
+    double S2pprime(double r2, double Y);
+    
+    /**
      * Returns the name of the gluon distribution.
      */
     const char* name();
@@ -297,6 +326,14 @@ protected:
      * Performs setup common to constructors
      */
     void setup(std::string pos_filename, std::string mom_filename, double xinit);
+    /**
+     * Initializes the variables used to compute Qs2(Y) from the position space function
+     */
+    void initialize_saturation_scale_from_position_space(double satscale_threshold);
+    /**
+     * Initializes the variables used to compute Qs2(Y) from the momentum space function
+     */
+    void initialize_saturation_scale_from_momentum_space(double satscale_threshold);
 private:
     /** Values of ln(r2) for the interpolation. */
     double* r2_values;
@@ -318,6 +355,10 @@ private:
     // same for position
     gsl_interp* interp_dist_position_1D;
     interp2d* interp_dist_position_2D;
+    
+    // this will be used if we are extracting the saturation scale
+    double* Qs2_values;
+    gsl_interp* interp_Qs2_1D;
     
     gsl_interp_accel* r2_accel;
     gsl_interp_accel* q2_accel;

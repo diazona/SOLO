@@ -27,6 +27,7 @@
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_integration.h>
+#include <gsl/gsl_roots.h>
 #include <gsl/gsl_sf_bessel.h>
 #include "gluondist.h"
 #include "interp2d.h"
@@ -320,15 +321,35 @@ void read_from_file(const string filename, size_t& x_dimension, size_t& y_dimens
     }
 }
 
-FileDataGluonDistribution::FileDataGluonDistribution(string pos_filename, string mom_filename, double Q02, double x0, double lambda, double xinit) : GluonDistribution(), Q02x0lambda(Q02 * pow(x0, lambda)), lambda(lambda) {
+FileDataGluonDistribution::FileDataGluonDistribution(string pos_filename, string mom_filename, double xinit, enum satscale_source satscale_source, double satscale_threshold) :
+  GluonDistribution(), Q02x0lambda(0), lambda(0), Qs2_values(NULL) {
     setup(pos_filename, mom_filename, xinit);
     ostringstream s;
-    s << "file(pos_filename = " << pos_filename << ", mom_filename = " << mom_filename << ")";
+    s << "file(pos_filename = " << pos_filename << ", mom_filename = " << mom_filename << ", xinit = " << xinit;
+    switch (satscale_source) {
+        case MOMENTUM_THRESHOLD:
+            initialize_saturation_scale_from_momentum_space(satscale_threshold);
+            s << ", extracted saturation scale from momentum)";
+            break;
+        case POSITION_THRESHOLD:
+            initialize_saturation_scale_from_position_space(satscale_threshold);
+            s << ", extracted saturation scale from position)";
+            break;
+    }
+    _name = s.str();
+}
+
+
+FileDataGluonDistribution::FileDataGluonDistribution(string pos_filename, string mom_filename, double Q02, double x0, double lambda, double xinit) :
+  GluonDistribution(), Q02x0lambda(Q02 * pow(x0, lambda)), lambda(lambda), Qs2_values(NULL) {
+    setup(pos_filename, mom_filename, xinit);
+    ostringstream s;
+    s << "file(pos_filename = " << pos_filename << ", mom_filename = " << mom_filename << ", xinit = " << xinit << ", default saturation scale)";
     _name = s.str();
 }
 
 FileDataGluonDistribution::~FileDataGluonDistribution() {
-    delete[] r2_values, q2_values, Y_values_rspace, Y_values_pspace, S_dist, F_dist;
+    delete[] r2_values, q2_values, Y_values_rspace, Y_values_pspace, S_dist, F_dist, Qs2_values;
     gsl_interp_accel_free(r2_accel);
     gsl_interp_accel_free(q2_accel);
     gsl_interp_accel_free(Y_accel_r);
@@ -340,6 +361,7 @@ FileDataGluonDistribution::~FileDataGluonDistribution() {
     else {
         interp2d_free(interp_dist_position_2D);
         interp2d_free(interp_dist_momentum_2D);
+        gsl_interp_free(interp_Qs2_1D);
     }
 }
 
@@ -383,6 +405,105 @@ void FileDataGluonDistribution::setup(string pos_filename, string mom_filename, 
     }
 }
 
+struct EvaluationParameters {
+    FileDataGluonDistribution* gdist;
+    double Y;
+    double threshold;
+};
+
+double bracket_root(double (*f)(double, void*), EvaluationParameters* params, double min, double max) {
+    const static size_t max_iter = 1000; // should be way more than necessary
+    size_t iter = 0;
+    int status;
+    double current_root;
+    
+    { // check that the function has opposite signs at the endpoints
+        double minv = f(min, params);
+        double maxv = f(max, params);
+        if (minv == 0) {
+            return min;
+        }
+        if (maxv == 0) {
+            return max;
+        }
+        if ((minv > 0 && maxv > 0) || (minv < 0 && maxv < 0)) {
+            GSL_ERROR_VAL("Zero crossing not found", GSL_EINVAL, 0.0);
+        }
+    }
+    
+    gsl_function func;
+    func.function = f;
+    func.params = params;
+    
+    gsl_root_fsolver* solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
+    gsl_root_fsolver_set(solver, &func, min, max);
+    
+    do {
+        status = gsl_root_fsolver_iterate(solver);
+        current_root = gsl_root_fsolver_root(solver);
+        min = gsl_root_fsolver_x_lower(solver);
+        max = gsl_root_fsolver_x_upper(solver);
+        status = gsl_root_test_interval(min, max, 0, 1e-3);
+    } while (status == GSL_CONTINUE && ++iter < max_iter);
+    gsl_root_fsolver_free(solver);
+    
+    return current_root;
+}
+
+double evaluate_rspace_threshold_criterion(double r2, void* params) {
+    EvaluationParameters* p = (EvaluationParameters*)params;
+    return p->gdist->S2(r2, p->Y) - p->threshold;
+}
+
+void FileDataGluonDistribution::initialize_saturation_scale_from_position_space(double satscale_threshold) {
+    // strategy: search for the point where S(r,Y) = T
+    assert(Y_dimension_r >= 1);
+    
+    double last_Rs2;
+    double r2min = r2_values[0];
+    double r2max = r2_values[r2_dimension - 1];
+    EvaluationParameters p;
+    p.gdist = this;
+    p.threshold = satscale_threshold;
+    
+    Qs2_values = new double[Y_dimension_r];
+    for (size_t i = 0; i < Y_dimension_r; i++) {
+        p.Y = Y_values_rspace[i];
+        last_Rs2 = bracket_root(evaluate_rspace_threshold_criterion, &p, r2min, r2max);
+        Qs2_values[i] = 1.0 / last_Rs2;
+    }
+    if (Y_dimension_r > 1) {
+        interp_Qs2_1D = gsl_interp_alloc(gsl_interp_cspline, Y_dimension_r);
+        gsl_interp_init(interp_Qs2_1D, Y_values_rspace, Qs2_values, Y_dimension_r);
+    }
+}
+
+double evaluate_pspace_threshold_criterion(double k2, void* params) {
+    EvaluationParameters* p = (EvaluationParameters*)params;
+    return p->gdist->F(k2, p->Y) - p->threshold;
+}
+
+void FileDataGluonDistribution::initialize_saturation_scale_from_momentum_space(double satscale_threshold) {
+    // strategy: search for the point where F(k,Y) = T F(k0, Y) 
+    assert(Y_dimension_p >= 1);
+    
+    double last_Qs2;
+    double k2min = q2_values[0];
+    double k2max = q2_values[q2_dimension - 1];
+    EvaluationParameters p;
+    p.gdist = this;
+    
+    Qs2_values = new double[Y_dimension_p];
+    for (size_t i = 0; i < Y_dimension_p; i++) {
+        p.Y = Y_values_pspace[i];
+        p.threshold = satscale_threshold * F(k2min, p.Y);
+        Qs2_values[i] = last_Qs2 = bracket_root(evaluate_pspace_threshold_criterion, &p, k2min, k2max);
+    }
+    if (Y_dimension_p > 1) {
+        interp_Qs2_1D = gsl_interp_alloc(gsl_interp_cspline, Y_dimension_p);
+        gsl_interp_init(interp_Qs2_1D, Y_values_pspace, Qs2_values, Y_dimension_p);
+    }
+}
 
 double FileDataGluonDistribution::S2(double r2, double Y) {
     if (Y_dimension_r == 1) {
@@ -406,8 +527,55 @@ double FileDataGluonDistribution::F(double q2, double Y) {
     }
 }
 
+double FileDataGluonDistribution::Fprime(double q2, double Y) {
+    if (Y_dimension_p == 1) {
+        return gsl_interp_eval_deriv(interp_dist_momentum_1D, q2_values, F_dist, q2, q2_accel);
+    }
+    else {
+        return interp2d_eval_deriv_x(interp_dist_momentum_2D, q2_values, Y_values_pspace, F_dist, q2, Y, q2_accel, Y_accel_p);
+    }
+}
+
+double FileDataGluonDistribution::Fpprime(double q2, double Y) {
+    if (Y_dimension_p == 1) {
+        return gsl_interp_eval_deriv2(interp_dist_momentum_1D, q2_values, F_dist, q2, q2_accel);
+    }
+    else {
+        return interp2d_eval_deriv_xx(interp_dist_momentum_2D, q2_values, Y_values_pspace, F_dist, q2, Y, q2_accel, Y_accel_p);
+    }
+}
+
+double FileDataGluonDistribution::S2prime(double r2, double Y) {
+    if (Y_dimension_r == 1) {
+        return gsl_interp_eval_deriv(interp_dist_position_1D, r2_values, S_dist, r2, r2_accel);
+    }
+    else {
+        return interp2d_eval_deriv_x(interp_dist_position_2D, r2_values, Y_values_rspace, S_dist, r2, Y, r2_accel, Y_accel_r);
+    }
+}
+
+double FileDataGluonDistribution::S2pprime(double r2, double Y) {
+    if (Y_dimension_r == 1) {
+        return gsl_interp_eval_deriv2(interp_dist_position_1D, r2_values, S_dist, r2, r2_accel);
+    }
+    else {
+        return interp2d_eval_deriv_xx(interp_dist_position_2D, r2_values, Y_values_rspace, S_dist, r2, Y, r2_accel, Y_accel_r);
+    }
+}
+
 double FileDataGluonDistribution::Qs2(const double Y) const {
-    return Q02x0lambda * exp(lambda * Y);
+    if (Qs2_values == NULL) {
+        assert(Q02x0lambda > 0);
+        assert(lambda > 0);
+        return Q02x0lambda * exp(lambda * Y);
+    }
+    else if (Y_dimension_p == 1) {
+        assert(Y_dimension_r == 0);
+        return Qs2_values[0];
+    }
+    else {
+        return gsl_interp_eval(interp_Qs2_1D, Y_values_pspace, Qs2_values, Y, Y_accel_p);
+    }
 }
 
 const char* FileDataGluonDistribution::name() {
@@ -445,7 +613,6 @@ double GluonDistributionTraceWrapper::Qs2(const double Y) const {
 const char* GluonDistributionTraceWrapper::name() {
     return gdist->name();
 }
-
 
 #ifdef GLUON_DIST_DRIVER
 #include <cstdlib>

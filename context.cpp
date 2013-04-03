@@ -329,9 +329,23 @@ void ContextCollection::create_contexts() {
     else if (gdist_type == "file") {
         check_property(gdist_position_filename, string, parse_string)
         check_property(gdist_momentum_filename, string, parse_string)
+        check_property_default(satscale_source, string, parse_string, "analytic")
         check_property_default(xinit, double, parse_double, 0.01)
         logger << "Reading gluon distribution from " << gdist_position_filename << " (pos) and " << gdist_momentum_filename << " (mom)" << endl;
-        gdist = new FileDataGluonDistribution(gdist_position_filename, gdist_momentum_filename, Q02, x0, lambda, xinit);
+        if (satscale_source == "analytic") {
+            gdist = new FileDataGluonDistribution(gdist_position_filename, gdist_momentum_filename, Q02, x0, lambda, xinit);
+        }
+        else if (satscale_source == "extract from momentum") {
+            check_property(satscale_threshold, double, parse_double)
+            gdist = new FileDataGluonDistribution(gdist_position_filename, gdist_momentum_filename, xinit, FileDataGluonDistribution::MOMENTUM_THRESHOLD, satscale_threshold);
+        }
+        else if (satscale_source == "extract from position") {
+            check_property(satscale_threshold, double, parse_double)
+            gdist = new FileDataGluonDistribution(gdist_position_filename, gdist_momentum_filename, xinit, FileDataGluonDistribution::POSITION_THRESHOLD, satscale_threshold);
+        }
+        else {
+            throw InvalidPropertyValueException<string>("satscale_source", satscale_source);
+        }
     }
     else {
         throw InvalidPropertyValueException<string>("gdist_type", gdist_type);

@@ -133,6 +133,15 @@ where the <options> can include any number of the following, in any order:
         the position of the Landau pole for the regulated LO running coupling
     relerr (default 0)
         the relative error at which to stop an integration, for strategies which use this termination condition
+    satscale_source (default extract from momentum)
+        for a file gluon distribution, how to extract the saturation scale; allowed values are "analytic" (Q0²(x0/x)^λ),
+        "extract from momentum" which determines the saturation scale by finding the momentum where the gluon distribution
+        equals a fixed fraction of its value at a reference momentum, and "extract from position" which finds the radius
+        where the gluon distribution equals a fixed threshold value
+    satscale_threshold (no default)
+        if satscale_source is "extract from momentum" or "extract from position", this is the fixed threshold value
+        (or fraction of its value at a reference point, in the momentum case) that the gluon distribution should equal
+        at the saturation scale
     Sperp (default 1)
         cross-sectional area of the hadron
     sqs (no default)
