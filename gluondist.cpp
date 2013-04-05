@@ -570,7 +570,7 @@ double FileDataGluonDistribution::Qs2(const double Y) const {
         return Q02x0lambda * exp(lambda * Y);
     }
     else if (Y_dimension_p == 1) {
-        assert(Y_dimension_r == 0);
+        assert(Y_dimension_r == 1);
         return Qs2_values[0];
     }
     else {
