@@ -217,6 +217,8 @@ oneloopcalc.cpp
     Main program
 log.h
     Declares an output stream to write status messages to
+gsl_exception.h
+    Declares an exception to be thrown when GSL reports an error
 hardfactors.h
     A class that abstractly represents a hard factor (i.e. an expression to be integrated)
 hardfactors_momentum.h

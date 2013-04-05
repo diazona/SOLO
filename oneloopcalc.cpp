@@ -33,6 +33,7 @@
 #include <gsl/gsl_rng.h>
 #include <openssl/sha.h>
 #include "git_revision.h"
+#include "gsl_exception.h"
 #include "mstwpdf.h"
 #include "dss_pinlo.h"
 #include "coupling.h"
@@ -612,59 +613,6 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
 #include "ictx_var_list.inc"
 #undef process
     }
-}
-
-/**
- * An exception to be thrown when there is an error in the GSL code.
- */
-class GSLException : public exception {
-private:
-    string _reason;
-    string _file;
-    int _line;
-    int _gsl_errno;
-    string _message;
-public:
-    GSLException(const char* reason, const char* file, int line, int gsl_errno) throw() :
-        _reason(reason), _file(file), _line(line), _gsl_errno(gsl_errno) {
-        ostringstream s;
-        s << "GSL error " << gsl_errno << "(" << gsl_strerror(gsl_errno) << "): " << reason << " at " << file << ":" << line;
-        _message = s.str();
-    }
-    GSLException(const GSLException& e) throw() :
-        _reason(e._reason), _file(e._file), _line(e._line), _gsl_errno(e._gsl_errno), _message(e._message) {
-    }
-    GSLException& operator=(const GSLException& e) throw() {
-        _reason = e._reason;
-        _file = e._file;
-        _line = e._line;
-        _gsl_errno = e._gsl_errno;
-        _message = e._message;
-    }
-    ~GSLException() throw() {
-    }
-    const string& reason() const {
-        return _reason;
-    }
-    const string& file() const {
-        return _file;
-    }
-    const int line() const {
-        return _line;
-    }
-    const int gsl_errno() const {
-        return _gsl_errno;
-    }
-    const char* what() const throw() {
-        return _message.c_str();
-    }
-};
-
-/**
- * GSL error handler function that throws a GSLException.
- */
-void gsl_error_throw(const char* reason, const char* file, int line, int gsl_errno) {
-    throw GSLException(reason, file, line, gsl_errno);
 }
 
 /* The output stream to write logging messages to. Declared in log.h. */
