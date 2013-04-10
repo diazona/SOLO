@@ -230,6 +230,8 @@ hardfactors_position.cpp
 gluondist.h
 gluondist.cpp
     Implementations of the gluon distributions
+gluondist_driver.cpp
+    A program to print out values from the gluon distributions
 coupling.h
 coupling.cpp
     Implementations of the fixed and LO running couplings

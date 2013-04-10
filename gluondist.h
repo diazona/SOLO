@@ -20,8 +20,12 @@
 #ifndef _GLUONDIST_H_
 #define _GLUONDIST_H_
 
+#include <exception>
 #include <string>
 #include "interp2d.h"
+
+class NoGridException : public std::exception {
+};
 
 /**
  * A gluon distribution.
@@ -57,6 +61,25 @@ public:
      * Returns a human-readable name for the gluon distribution.
      */
     virtual const char* name() = 0;
+    
+    /**
+     * This writes out the entire grid of the 2D momentum interpolation to standard output.
+     * 
+     * Only used for testing.
+     */
+    virtual void write_pspace_grid(std::ostream& out);
+    /**
+     * This writes out the entire grid of the 2D position interpolation to standard output.
+     * 
+     * Only used for testing.
+     */
+    virtual void write_rspace_grid(std::ostream& out);
+    /**
+     * This writes out the entire grid of the 1D saturation scale interpolation to standard output.
+     * 
+     * Only used for testing.
+     */
+    virtual void write_satscale_grid(std::ostream& out);
 };
 
 /**
@@ -155,6 +178,7 @@ public:
      */
     virtual const char* name() = 0;
 
+    void write_pspace_grid(std::ostream& out);
 protected:
     /**
      * Handles the actual calculation of the points to use for interpolation.
@@ -193,15 +217,6 @@ private:
     size_t Y_dimension;
     
     size_t subinterval_limit;
-#ifdef GLUON_DIST_DRIVER
-public:
-    /**
-     * This writes out the entire grid of the 2D interpolation to standard output.
-     * 
-     * Only used for testing.
-     */
-    void write_pspace_grid(std::ostream&);
-#endif
 };
 
 /**
@@ -269,7 +284,7 @@ protected:
 
 class FileDataGluonDistribution : public GluonDistribution {
 public:
-    enum satscale_source {POSITION_THRESHOLD, MOMENTUM_THRESHOLD};
+    enum satscale_source {NONE, POSITION_THRESHOLD, MOMENTUM_THRESHOLD};
     /**
      * Constructs a new gluon distribution reading from the specified file.
      */
@@ -321,6 +336,9 @@ public:
      */
     const char* name();
     
+    void write_pspace_grid(std::ostream& out);
+    void write_rspace_grid(std::ostream& out);
+    void write_satscale_grid(std::ostream& out);
 protected:
     /**
      * Performs setup common to constructors
@@ -347,6 +365,8 @@ private:
     double* S_dist;
     /** Values of the momentum space gluon distribution for interpolation. */
     double* F_dist;
+    
+    enum satscale_source satscale_source;
     
     // one of interp_dist_momentum_1D or interp_dist_momentum_2D will be NULL and the other one
     // will be used, depending on whether there is a range of Y values or just a single one
@@ -376,21 +396,6 @@ private:
     double lambda;
     
     std::string _name;
-#ifdef GLUON_DIST_DRIVER
-public:
-    /**
-     * This writes out the entire grid of the 2D momentum space interpolation to standard output.
-     * 
-     * Only used for testing.
-     */
-    void write_pspace_grid(std::ostream&);
-    /**
-     * This writes out the entire grid of the 2D position space interpolation to standard output.
-     * 
-     * Only used for testing.
-     */
-    void write_rspace_grid(std::ostream&);
-#endif
 };
 
 /** Prints the name of the gluon distribution to the given output stream. */
