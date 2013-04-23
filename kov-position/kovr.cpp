@@ -150,11 +150,10 @@ main()
         double res=0.0,resinput=0.0;
         for(int k=0;k<NN;k++) {
             logr = log(bmin + double(k)/double(NN)*(bmax-bmin));
-            res = inter(logr,h_old);
-            res = 1.0 - res;
+            res = 1.0 - inter(logr,h_old);
             // double yout = 10.0;
             resinput = 1.0- input(logr,xinit);
-            fileout2  << 0 << " " << exp(logr) << "  " << setprecision(PrecisionNumber) << resinput << " "  <<  setprecision(PrecisionNumber) <<res <<  endl;
+            fileout2  << Rapinitial << " " << exp(logr) << "  " << setprecision(PrecisionNumber) << resinput << " "  <<  setprecision(PrecisionNumber) <<res <<  endl;
             
         }
     }
