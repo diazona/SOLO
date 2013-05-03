@@ -31,6 +31,14 @@
 
 using namespace radial;
 
+void H02qq::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
+    double amplitude = 0.25*M_1_PI*M_1_PI * ictx->ctx->Sperp / ictx->z2 * ictx->qqfactor * ictx->S2r;
+    double r = sqrt(ictx->r2);
+    double b_phase = ictx->kT * r;
+    *real = 2*M_PI*r * amplitude * gsl_sf_bessel_J0(b_phase);
+    *imag = 0;
+}
+
 void H12qq::Fs(const IntegrationContext* ictx, double* real, double* imag) const {
     if (ictx->ctx->c0r_optimization) {
         *real = *imag = 0;

@@ -27,16 +27,16 @@
 
 namespace radial {
 
-// class H02qq : public HardFactorTerm {
-// public:
-//     const char* get_name() const {
-//         return "H02qq";
-//     }
-//     const IntegrationType* get_type() const {
-//         return DipoleIntegrationType::get_instance();
-//     }
-//     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
-// };
+class H02qq : public HardFactorTerm {
+public:
+    const char* get_name() const {
+        return "H02qq";
+    }
+    const IntegrationType* get_type() const {
+        return RadialDipoleIntegrationType::get_instance();
+    }
+    void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
+};
 
 class H12qq : public HardFactorTerm {
 public:
@@ -291,7 +291,7 @@ public:
     }
 private:
     registry() {
-//         add_hard_factor(new H02qq(), true);
+        add_hard_factor(new H02qq(), true);
         add_hard_factor(new H12qq(), true);
 //         add_hard_factor(new H14qq(), true);
 //         add_hard_factor(new H02gg(), true);
