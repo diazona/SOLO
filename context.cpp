@@ -136,6 +136,14 @@ double parse_double(pair<multimap<string, string>::iterator, multimap<string, st
     return strtod(range.first->second.c_str(), NULL);
 }
 
+bool parse_boolean(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
+    multimap<string, string>::iterator el = range.first;
+    assert(++el == range.second);
+    return range.first->second == "true"
+        || range.first->second == "yes"
+        || range.first->second == "1";
+}
+
 string& parse_string(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
     multimap<string, string>::iterator el = range.first;
     assert(++el == range.second);
@@ -251,6 +259,7 @@ struct PT2x4Mu2Strategy {
 };
 
 void ContextCollection::create_contexts() {
+    bool _c0r_optimization = false;
     pair<multimap<string, string>::iterator, multimap<string, string>::iterator> itit;
 
     check_property(x0,           double, parse_double)
@@ -391,6 +400,8 @@ void ContextCollection::create_contexts() {
         fs = new PTProportionalFactorizationScale(4);
     }
     else if (factorization_scale == "c0r") {
+        check_property_default(c0r_optimization, bool, parse_boolean, true)
+        _c0r_optimization = c0r_optimization;
         fs = new RPerpFactorizationScale(4 * exp(-2*M_EULER)); // this value is c_0^2, with c_0 defined in the long paper
     }
     assert(fs != NULL);
@@ -431,7 +442,8 @@ void ContextCollection::create_contexts() {
                         pseudorandom_generator_seed,
                         gdist,
                         cpl,
-                        fs));
+                        fs,
+                        _c0r_optimization));
             }
             catch (const InvalidKinematicsException& e) {
                 logger << "Failed to create context at pT = " << *pTit << ", Y = " << *Yit << ": " << e.what() << endl;
@@ -606,6 +618,7 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "gluon distribution\t = " << ctx.gdist << endl;
     out << "coupling\t = " << ctx.cpl << endl;
     out << "factorization scale\t = " << ctx.fs << endl;
+    out << "c0r optimization\t = " << ctx.c0r_optimization << endl;
     out << "quasirandom generator type: " <<  ctx.quasirandom_generator_type->name << endl;
     out << "pseudorandom generator type: " <<  ctx.pseudorandom_generator_type->name << endl;
     out << "pseudorandom generator seed: " << ctx.pseudorandom_generator_seed << endl;

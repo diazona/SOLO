@@ -170,6 +170,8 @@ public:
     Coupling* cpl;
     /** The factorization scale */
     FactorizationScale* fs;
+    /** Whether to apply the optimization that sets ln(c_0^2/(r^2 mu^2)) to zero */
+    bool c0r_optimization;
     
     /** Projectile type */
     projectile_type projectile;
@@ -233,7 +235,8 @@ public:
         unsigned long int pseudorandom_generator_seed,
         GluonDistribution* gdist,
         Coupling* cpl,
-        FactorizationScale* fs) :
+        FactorizationScale* fs,
+        bool c0r_optimization) :
      x0(x0),
      A(A),
      c(c),
@@ -264,11 +267,13 @@ public:
      gdist(gdist),
      cpl(cpl),
      fs(fs),
+     c0r_optimization(c0r_optimization),
      Q02x0lambda(c * pow(A, 1.0d/3.0d) * pow(x0, lambda)),
      tau(sqrt(pT2)/sqs*exp(Y)) {
         if (tau > 1) {
             throw InvalidKinematicsException("τ > 1: empty phase space");
         }
+        
     }
     Context(const Context& other) :
      x0(other.x0),
@@ -301,6 +306,7 @@ public:
      gdist(other.gdist),
      cpl(other.cpl),
      fs(other.fs),
+     c0r_optimization(other.c0r_optimization),
      Q02x0lambda(other.Q02x0lambda),
      tau(other.tau) {}
 };

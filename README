@@ -79,6 +79,8 @@ where the <options> can include any number of the following, in any order:
         coefficient for the LO running coupling
     c (no default)
         the centrality coefficient, 0-1
+    c0r_optimization (default true)
+        if the factorization scale scheme is c0r, whether to skip calculating terms that should be zero
     CF (default 1.5)
         the color factor
     coupling_type (default fixed)
