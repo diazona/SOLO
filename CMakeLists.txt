@@ -11,7 +11,10 @@ set(LIBS ${LIBS} ${GSL_LIBRARIES})
 
 set(LIBS ${LIBS} m)
 
-add_custom_target(git_revision.h git log -1 "--format=format:#define GIT_REVISION \"%H\"%n" HEAD > git_revision.h WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} VERBATIM)
+add_custom_target(git_revision.h
+    git log -1 "--format=format:#define GIT_REVISION \"%H\"%n" HEAD > git_revision.h 
+    COMMAND git diff-index --quiet HEAD || echo "#define GIT_DIRTY" >> git_revision.h
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} VERBATIM)
 
 add_executable(oneloopcalc oneloopcalc.cpp integrator.cpp hardfactors_position.cpp hardfactors_radial.cpp hardfactors_momentum.cpp dss_pinlo.cpp mstwpdf.cc cubature.c gluondist.cpp coupling.cpp factorizationscale.cpp integrationcontext.cpp integrationtype.cpp context.cpp utils.cpp)
 target_link_libraries(oneloopcalc ${CMAKE_SOURCE_DIR}/libinterp2d.a ${CMAKE_SOURCE_DIR}/libquasimontecarlo.a ${LIBS})

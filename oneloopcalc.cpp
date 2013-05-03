@@ -701,7 +701,11 @@ int run(int argc, char** argv) {
      * and given run, and is also useful in case we want to reproduce a run.
      */
 #ifdef GIT_REVISION
-    cout << "# git revision " << GIT_REVISION << endl;
+    cout << "# git revision " << GIT_REVISION;
+#ifdef GIT_DIRTY
+    cout << " (dirty)";
+#endif
+    cout << endl;
 #endif
     {
         FileDataGluonDistribution* fgdist = dynamic_cast<FileDataGluonDistribution*>(cc[0].gdist);
