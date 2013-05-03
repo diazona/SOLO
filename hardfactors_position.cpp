@@ -39,7 +39,7 @@ void H02qq::Fd(const IntegrationContext* ictx, double* real, double* imag) const
 
 void H12qq::Fs(const IntegrationContext* ictx, double* real, double* imag) const {
     double amplitude = 0.25*M_1_PI*M_1_PI * ictx->alphas_2pi * ictx->ctx->CF * ictx->ctx->Sperp / ictx->z2 * ictx->qqfactor * ictx->S2r *
-        (1 + ictx->xi2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
+        (1 + ictx->xi2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->mu2));
     double phase1 = -ictx->kT * ictx->rx;
     double phase2 = -ictx->kT * ictx->rx / ictx->xi;
     *real = amplitude * (cos(phase1) + cos(phase2) / ictx->xi2);
@@ -47,7 +47,7 @@ void H12qq::Fs(const IntegrationContext* ictx, double* real, double* imag) const
 }
 void H12qq::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
     double amplitude = 0.75*M_1_PI*M_1_PI * ictx->alphas_2pi * ictx->ctx->CF * ictx->ctx->Sperp / ictx->z2 * ictx->qqfactor * ictx->S2r;
-    double term1 = 0.5 * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
+    double term1 = 0.5 * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->mu2));
     double term2 = -(-2*M_EULER + log(4) - log(ictx->r2 * ictx->kT2));
     double phase1 = -ictx->kT * ictx->rx;
     double phase2 = -ictx->kT * ictx->rx / ictx->xi;
@@ -105,7 +105,7 @@ void H02gg::Fd(const IntegrationContext* ictx, double* real, double* imag) const
 void H12gg::Fs(const IntegrationContext* ictx, double* real, double* imag) const {
     double amplitude = 1/(4*M_PI*M_PI) * ictx->alphas_2pi * ictx->ggfactor / ictx->z2 * ictx->S2r * ictx->S2r *
         ictx->ctx->Nc * 2 * ictx->xi
-        * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
+        * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->mu2));
     double phase1 = -ictx->kT * ictx->rx;
     double phase2 = -ictx->kT * ictx->rx / ictx->xi;
     *real = amplitude * (cos(phase1) + cos(phase2) / ictx->xi2);
@@ -115,7 +115,7 @@ void H12gg::Fs(const IntegrationContext* ictx, double* real, double* imag) const
 void H12gg::Fn(const IntegrationContext* ictx, double* real, double* imag) const {
     double amplitude = 1/(4*M_PI*M_PI) * ictx->alphas_2pi * ictx->ggfactor / ictx->z2 * ictx->S2r * ictx->S2r *
         ictx->ctx->Nc * 2 * (1.0 / ictx->xi - 1.0 + ictx->xi - ictx->xi2)
-        * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
+        * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->mu2));
     double phase1 = ictx->kT * ictx->rx;
     double phase2 = ictx->kT * ictx->rx / ictx->xi;
     *real = amplitude * (cos(phase1) + cos(phase2) / ictx->xi2);
@@ -125,7 +125,7 @@ void H12gg::Fn(const IntegrationContext* ictx, double* real, double* imag) const
 void H12gg::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
     double amplitude = 1/(4*M_PI*M_PI) * ictx->alphas_2pi * ictx->ggfactor / ictx->z2 * ictx->S2r * ictx->S2r;
     double term1 = ictx->ctx->Nc * (11.0/6.0 - 2 * ictx->ctx->Nf * ictx->ctx->TR / (3 * ictx->ctx->Nc))       // P_gg term
-        * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
+        * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->mu2));
     double term2 = -ictx->ctx->Nc * 2 * (11.0/6.0 - 2 * ictx->ctx->Nf * ictx->ctx->TR / (3 * ictx->ctx->Nc)) // independent term
         * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->kT2));
     double phase1 = ictx->kT * ictx->rx;
@@ -214,7 +214,7 @@ void H16ggResidual::Fd(const IntegrationContext* ictx, double* real, double* ima
 
 void H112gq::Fn(const IntegrationContext* ictx, double* real, double* imag) const {
     double amplitude = 1/(4*M_PI*M_PI) * ictx->alphas_2pi * ictx->gqfactor / ictx->z2 * ictx->S2r *
-        0.5 * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / (ictx->xi * ictx->xi2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
+        0.5 * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / (ictx->xi * ictx->xi2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->mu2));
     double phase = -ictx->kT * ictx->rx / ictx->xi;
     checkfinite(amplitude);
     checkfinite(phase);
@@ -224,7 +224,7 @@ void H112gq::Fn(const IntegrationContext* ictx, double* real, double* imag) cons
 
 void H122gq::Fn(const IntegrationContext* ictx, double* real, double* imag) const {
     double amplitude = 1/(4*M_PI*M_PI) * ictx->alphas_2pi * ictx->gqfactor / ictx->z2 * ictx->S2r * ictx->S2r *
-        0.5 * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / ictx->xi * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2));
+        0.5 * ictx->ctx->Nc * (1 + (1 - ictx->xi)*(1 - ictx->xi)) / ictx->xi * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->mu2));
     double phase = -ictx->kT * ictx->rx;
     checkfinite(amplitude);
     checkfinite(phase);
@@ -246,7 +246,7 @@ void H14gq::Fn(const IntegrationContext* ictx, double* real, double* imag) const
 
 void H112qg::Fn(const IntegrationContext* ictx, double* real, double* imag) const {
     double amplitude = 0.125*M_1_PI*M_1_PI * ictx->alphas_2pi * ictx->ctx->Sperp / ictx->z2 * ictx->qgfactor * ictx->S2r *
-        (1 - 2 * ictx->xi + 2 * ictx->xi2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2) - 1);
+        (1 - 2 * ictx->xi + 2 * ictx->xi2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->mu2) - 1);
     double phase = -ictx->kT * ictx->rx;
     checkfinite(amplitude);
     checkfinite(phase);
@@ -256,7 +256,7 @@ void H112qg::Fn(const IntegrationContext* ictx, double* real, double* imag) cons
 
 void H122qg::Fn(const IntegrationContext* ictx, double* real, double* imag) const {
     double amplitude = 0.125*M_1_PI*M_1_PI * ictx->alphas_2pi * ictx->ctx->Sperp / ictx->z2 * ictx->qgfactor * ictx->S2r * ictx->S2r *
-        (1 / ictx->xi2 - 2 / ictx->xi + 2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->ctx->mu2) - 1);
+        (1 / ictx->xi2 - 2 / ictx->xi + 2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->mu2) - 1);
     double phase = -ictx->kT * ictx->rx / ictx->xi;
     checkfinite(amplitude);
     checkfinite(phase);

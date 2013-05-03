@@ -85,6 +85,8 @@ where the <options> can include any number of the following, in any order:
         "fixed" or "running"
     cubature_iterations
         number of calls to use for cubature integration
+    factorization_scale (default fixed)
+        "fixed" or "4pT2" or "c0r" to specify how to set the factorization scale
     ff_filename (default PINLO.DAT)
         filename to read DSS FF data from
     gammaMV
@@ -110,7 +112,7 @@ where the <options> can include any number of the following, in any order:
     miser_iterations (default 10000000 = 1e7)
         number of iterations to use in MISER integration
     mu2 (default 10)
-        factorization scale in GeV
+        factorization scale in GeV, if factorization_scale is "fixed"
     Nc (default 3)
         number of colors
     Nf (default 3)
@@ -235,6 +237,9 @@ gluondist_driver.cpp
 coupling.h
 coupling.cpp
     Implementations of the fixed and LO running couplings
+factorizationscale.h
+factorizationscale.cpp
+    Implementations of the various schemes for the factorization scale
 integrationcontext.h
 integrationcontext.cpp
     A class that stores the kinematic variables used in the calculation. The

@@ -47,6 +47,7 @@ public:
     double xiprime;
     double xiprime2;
     double Qs2;
+    double mu2;
     double alphas, alphas_2pi; // αs/2π
     double qqfactor;
     double ggfactor;
@@ -76,6 +77,7 @@ public:
       sx(0), sy(0), s2(0),
       tx(0), ty(0), t2(0),
       Qs2(0),
+      mu2(0),
       alphas(0),
       alphas_2pi(0),
       qqfactor(0),
@@ -87,11 +89,12 @@ public:
       Fq1(0), Fq2(0), Fq3(0),
       Fkq1(0), Fkq2(0), Fkq3(0) {
     };
+    void update_kinematics(double z, double y);
     void update_positions(double xx, double xy, double yx, double yy, double bx, double by);
     void update_momenta(double q1x, double q1y, double q2x, double q2y, double q3x, double q3y);
     void update_auxiliary(double xiprime);
-    void update_parton_factors(double z, double y);
-    void set_xi_to_1() { update_parton_factors(z, 1); }
+    void update_parton_functions();
+    void set_xi_to_1() { update_kinematics(z, 1); update_parton_functions(); }
 };
 
 #endif // _INTEGRATIONCONTEXT_H_

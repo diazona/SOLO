@@ -257,13 +257,6 @@ void ContextCollection::create_contexts() {
     check_property(A,            double, parse_double)
     check_property(c,            double, parse_double)
     check_property(lambda,       double, parse_double)
-    check_property(mu2,          double, parse_double)
-    bool mu24pT2 = false;
-    // special case: check for mu2=4pT2. This could be done with an object if more complicated schemes are needed.
-    itit = options.equal_range(canonicalize("mu2"));
-    if (itit.first->second == "4pT2") {
-        mu24pT2 = true;
-    }
     check_property(Nc,           double, parse_double)
     check_property(Nf,           double, parse_double)
     check_property(CF,           double, parse_double)
@@ -375,6 +368,33 @@ void ContextCollection::create_contexts() {
     }
     assert(cpl != NULL);
     
+    // create factorization scale strategy
+    assert(fs == NULL);
+    check_property_default(factorization_scale, string, parse_string, "fixed")
+    if (factorization_scale == "fixed") {
+        /* special case: check for old config file format with
+         *  mu2 = 4pT2
+         * and convert it to new format
+         *  factorization_scale = 4pT2
+         */
+        itit = options.equal_range(canonicalize("mu2"));
+        if (itit.first->second == "4pT2") {
+            fs = new PTProportionalFactorizationScale(4);
+        }
+        else {
+            // this is the normal case
+            check_property(mu2, double, parse_double)
+            fs = new FixedFactorizationScale(mu2);
+        }
+    }
+    else if (factorization_scale == "4pT2") {
+        fs = new PTProportionalFactorizationScale(4);
+    }
+    else if (factorization_scale == "c0r") {
+        fs = new RPerpFactorizationScale(4 * exp(-2*M_EULER)); // this value is c_0^2, with c_0 defined in the long paper
+    }
+    assert(fs != NULL);
+    
     contexts_created = true;
     // create contexts
     for (vector<double>::iterator pTit = pT.begin(); pTit != pT.end(); pTit++) {
@@ -386,7 +406,6 @@ void ContextCollection::create_contexts() {
                         A,
                         c,
                         lambda,
-                        mu24pT2 ? 4*gsl_pow_2(*pTit) : mu2,
                         Nc,
                         Nf,
                         CF,
@@ -411,7 +430,8 @@ void ContextCollection::create_contexts() {
                         pseudorandom_generator_type,
                         pseudorandom_generator_seed,
                         gdist,
-                        cpl));
+                        cpl,
+                        fs));
             }
             catch (const InvalidKinematicsException& e) {
                 logger << "Failed to create context at pT = " << *pTit << ", Y = " << *Yit << ": " << e.what() << endl;
@@ -563,7 +583,6 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "A\t= "          << ctx.A            << endl;
     out << "c\t= "          << ctx.c            << endl;
     out << "lambda\t= "     << ctx.lambda       << endl;
-    out << "mu2\t= "        << ctx.mu2          << endl;
     out << "Nc\t= "         << ctx.Nc           << endl;
     out << "Nf\t= "         << ctx.Nf           << endl;
     out << "CF\t= "         << ctx.CF           << endl;
@@ -586,6 +605,7 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "relerr\t= " << ctx.relerr << endl;
     out << "gluon distribution\t = " << ctx.gdist << endl;
     out << "coupling\t = " << ctx.cpl << endl;
+    out << "factorization scale\t = " << ctx.fs << endl;
     out << "quasirandom generator type: " <<  ctx.quasirandom_generator_type->name << endl;
     out << "pseudorandom generator type: " <<  ctx.pseudorandom_generator_type->name << endl;
     out << "pseudorandom generator seed: " << ctx.pseudorandom_generator_seed << endl;

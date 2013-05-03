@@ -26,7 +26,7 @@
 
 #define checkfinite(d) assert(gsl_finite(d))
 
-void IntegrationContext::update_parton_factors(double z, double y) {
+void IntegrationContext::update_kinematics(double z, double y) {
     assert(z <= 1);
     assert(z >= ctx->tau);
     assert(y <= 1);
@@ -49,78 +49,6 @@ void IntegrationContext::update_parton_factors(double z, double y) {
     this->Fk = ctx->gdist->F(this->kT2, this->Yg);
     this->alphas = ctx->cpl->alphas(this->kT2);
     this->alphas_2pi = this->alphas * 0.5 * M_1_PI;
-
-    double qqfactor = 0.0d, ggfactor = 0.0d, gqfactor = 0.0d, qgfactor = 0.0d;
-    c_mstwpdf* pdf_object = tlctx->pdf_object;
-    DSSpiNLO* ff_object = tlctx->ff_object;
-    
-    DSSpiNLO::hadron hadron = ctx->hadron;
-    
-    // Calculate the new quark/gluon factors
-    pdf_object->update(xp, sqrt(ctx->mu2));
-    ff_object->update(z, ctx->mu2);
-    
-    // Proton contributions:
-    qqfactor += (pdf_object->cont.upv + pdf_object->cont.usea) * ff_object->fragmentation(DSSpiNLO::up, hadron);
-    qqfactor += pdf_object->cont.usea * ff_object->fragmentation(DSSpiNLO::up_bar, hadron);
-    qqfactor += (pdf_object->cont.dnv + pdf_object->cont.dsea) * ff_object->fragmentation(DSSpiNLO::down, hadron);
-    qqfactor += pdf_object->cont.dsea * ff_object->fragmentation(DSSpiNLO::down_bar, hadron);
-    qqfactor += pdf_object->cont.str * ff_object->fragmentation(DSSpiNLO::strange, hadron);
-    qqfactor += pdf_object->cont.sbar * ff_object->fragmentation(DSSpiNLO::strange_bar, hadron);
-    
-    if (ctx->projectile == deuteron) {
-        // Neutron contributions (for deuteron collisions), assuming isospin symmetry:
-        qqfactor += (pdf_object->cont.dnv + pdf_object->cont.dsea) * ff_object->fragmentation(DSSpiNLO::up, hadron);
-        qqfactor += pdf_object->cont.dsea * ff_object->fragmentation(DSSpiNLO::up_bar, hadron);
-        qqfactor += (pdf_object->cont.upv + pdf_object->cont.usea) * ff_object->fragmentation(DSSpiNLO::down, hadron);
-        qqfactor += pdf_object->cont.usea * ff_object->fragmentation(DSSpiNLO::down_bar, hadron);
-        qqfactor += pdf_object->cont.str * ff_object->fragmentation(DSSpiNLO::strange, hadron);
-        qqfactor += pdf_object->cont.sbar * ff_object->fragmentation(DSSpiNLO::strange_bar, hadron);
-    }
-    
-    this->qqfactor = qqfactor;
-
-    
-    // Proton contribution:
-    ggfactor += pdf_object->cont.glu * ff_object->fragmentation(DSSpiNLO::gluon, hadron);
-    
-    if (ctx->projectile == deuteron) {
-        // Neutron contribution (for deuteron collisions), assuming isospin symmetry:
-        ggfactor *= 2;
-    }
-    
-    this->ggfactor = ggfactor;
-
-    
-    // Proton contributions:
-    gqfactor += (  pdf_object->cont.upv + 2*pdf_object->cont.usea
-                 + pdf_object->cont.dnv + 2*pdf_object->cont.dsea
-                 + pdf_object->cont.str
-                 + pdf_object->cont.sbar
-                ) * ff_object->fragmentation(DSSpiNLO::gluon, hadron);
-    
-    if (ctx->projectile == deuteron) {
-        // Neutron contributions (for deuteron collisions), assuming isospin symmetry:
-        gqfactor *= 2;
-    }
-    
-    this->gqfactor = gqfactor;
-
-    
-    // Proton contributions:
-    qgfactor += pdf_object->cont.glu * (  ff_object->fragmentation(DSSpiNLO::up, hadron)
-                                        + ff_object->fragmentation(DSSpiNLO::up_bar, hadron)
-                                        + ff_object->fragmentation(DSSpiNLO::down, hadron)
-                                        + ff_object->fragmentation(DSSpiNLO::down_bar, hadron)
-                                        + ff_object->fragmentation(DSSpiNLO::strange, hadron)
-                                        + ff_object->fragmentation(DSSpiNLO::strange_bar, hadron));
-    
-    if (ctx->projectile == deuteron) {
-        // Neutron contributions (for deuteron collisions), assuming isospin symmetry:
-        qgfactor *= 2;
-    }
-    
-    this->qgfactor = qgfactor;
 }
 
 void IntegrationContext::update_positions(double xx, double xy, double yx, double yy, double bx, double by) {
@@ -210,5 +138,80 @@ void IntegrationContext::update_auxiliary(double xiprime) {
     assert(xiprime >= 0 && xiprime <= 1);
     this->xiprime = xiprime;
     this->xiprime2 = xiprime * xiprime;
+}
+
+void IntegrationContext::update_parton_functions() {
+    double qqfactor = 0.0d, ggfactor = 0.0d, gqfactor = 0.0d, qgfactor = 0.0d;
+    c_mstwpdf* pdf_object = tlctx->pdf_object;
+    DSSpiNLO* ff_object = tlctx->ff_object;
+    
+    DSSpiNLO::hadron hadron = ctx->hadron;
+    
+    // Calculate the new quark/gluon factors
+    this->mu2 = ctx->fs->mu2(*this);
+    pdf_object->update(this->xp, sqrt(this->mu2));
+    ff_object->update(this->z, this->mu2);
+    
+    // Proton contributions:
+    qqfactor += (pdf_object->cont.upv + pdf_object->cont.usea) * ff_object->fragmentation(DSSpiNLO::up, hadron);
+    qqfactor += pdf_object->cont.usea * ff_object->fragmentation(DSSpiNLO::up_bar, hadron);
+    qqfactor += (pdf_object->cont.dnv + pdf_object->cont.dsea) * ff_object->fragmentation(DSSpiNLO::down, hadron);
+    qqfactor += pdf_object->cont.dsea * ff_object->fragmentation(DSSpiNLO::down_bar, hadron);
+    qqfactor += pdf_object->cont.str * ff_object->fragmentation(DSSpiNLO::strange, hadron);
+    qqfactor += pdf_object->cont.sbar * ff_object->fragmentation(DSSpiNLO::strange_bar, hadron);
+    
+    if (ctx->projectile == deuteron) {
+        // Neutron contributions (for deuteron collisions), assuming isospin symmetry:
+        qqfactor += (pdf_object->cont.dnv + pdf_object->cont.dsea) * ff_object->fragmentation(DSSpiNLO::up, hadron);
+        qqfactor += pdf_object->cont.dsea * ff_object->fragmentation(DSSpiNLO::up_bar, hadron);
+        qqfactor += (pdf_object->cont.upv + pdf_object->cont.usea) * ff_object->fragmentation(DSSpiNLO::down, hadron);
+        qqfactor += pdf_object->cont.usea * ff_object->fragmentation(DSSpiNLO::down_bar, hadron);
+        qqfactor += pdf_object->cont.str * ff_object->fragmentation(DSSpiNLO::strange, hadron);
+        qqfactor += pdf_object->cont.sbar * ff_object->fragmentation(DSSpiNLO::strange_bar, hadron);
+    }
+    
+    this->qqfactor = qqfactor;
+
+    
+    // Proton contribution:
+    ggfactor += pdf_object->cont.glu * ff_object->fragmentation(DSSpiNLO::gluon, hadron);
+    
+    if (ctx->projectile == deuteron) {
+        // Neutron contribution (for deuteron collisions), assuming isospin symmetry:
+        ggfactor *= 2;
+    }
+    
+    this->ggfactor = ggfactor;
+
+    
+    // Proton contributions:
+    gqfactor += (  pdf_object->cont.upv + 2*pdf_object->cont.usea
+                 + pdf_object->cont.dnv + 2*pdf_object->cont.dsea
+                 + pdf_object->cont.str
+                 + pdf_object->cont.sbar
+                ) * ff_object->fragmentation(DSSpiNLO::gluon, hadron);
+    
+    if (ctx->projectile == deuteron) {
+        // Neutron contributions (for deuteron collisions), assuming isospin symmetry:
+        gqfactor *= 2;
+    }
+    
+    this->gqfactor = gqfactor;
+
+    
+    // Proton contributions:
+    qgfactor += pdf_object->cont.glu * (  ff_object->fragmentation(DSSpiNLO::up, hadron)
+                                        + ff_object->fragmentation(DSSpiNLO::up_bar, hadron)
+                                        + ff_object->fragmentation(DSSpiNLO::down, hadron)
+                                        + ff_object->fragmentation(DSSpiNLO::down_bar, hadron)
+                                        + ff_object->fragmentation(DSSpiNLO::strange, hadron)
+                                        + ff_object->fragmentation(DSSpiNLO::strange_bar, hadron));
+    
+    if (ctx->projectile == deuteron) {
+        // Neutron contributions (for deuteron collisions), assuming isospin symmetry:
+        qgfactor *= 2;
+    }
+    
+    this->qgfactor = qgfactor;
 }
 

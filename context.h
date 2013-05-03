@@ -30,6 +30,7 @@
 #include "mstwpdf.h"
 #include "dss_pinlo.h"
 #include "coupling.h"
+#include "factorizationscale.h"
 #include "gluondist.h"
 
 /**
@@ -136,8 +137,6 @@ public:
     double c;
     /** The exponent in the saturation scale formula */
     double lambda;
-    /** The factorization scale */
-    double mu2;
     /** The number of colors */
     double Nc;
     /** The number of flavors */
@@ -169,6 +168,8 @@ public:
     GluonDistribution* gdist;
     /** The coupling */
     Coupling* cpl;
+    /** The factorization scale */
+    FactorizationScale* fs;
     
     /** Projectile type */
     projectile_type projectile;
@@ -207,7 +208,6 @@ public:
         double A,
         double c,
         double lambda,
-        double mu2,
         double Nc,
         double Nf,
         double CF,
@@ -232,12 +232,12 @@ public:
         const gsl_rng_type* pseudorandom_generator_type,
         unsigned long int pseudorandom_generator_seed,
         GluonDistribution* gdist,
-        Coupling* cpl) :
+        Coupling* cpl,
+        FactorizationScale* fs) :
      x0(x0),
      A(A),
      c(c),
      lambda(lambda),
-     mu2(mu2),
      Nc(Nc),
      Nf(Nf),
      CF(CF),
@@ -263,6 +263,7 @@ public:
      pseudorandom_generator_seed(pseudorandom_generator_seed),
      gdist(gdist),
      cpl(cpl),
+     fs(fs),
      Q02x0lambda(c * pow(A, 1.0d/3.0d) * pow(x0, lambda)),
      tau(sqrt(pT2)/sqs*exp(Y)) {
         if (tau > 1) {
@@ -274,7 +275,6 @@ public:
      A(other.A),
      c(other.c),
      lambda(other.lambda),
-     mu2(other.mu2),
      Nc(other.Nc),
      Nf(other.Nf),
      CF(other.CF),
@@ -300,6 +300,7 @@ public:
      pseudorandom_generator_seed(other.pseudorandom_generator_seed),
      gdist(other.gdist),
      cpl(other.cpl),
+     fs(other.fs),
      Q02x0lambda(other.Q02x0lambda),
      tau(other.tau) {}
 };
@@ -331,6 +332,7 @@ public:
     ContextCollection() :
       gdist(NULL),
       cpl(NULL),
+      fs(NULL),
       trace_gdist(false),
       contexts_created(false) {
         setup_defaults();
@@ -342,6 +344,7 @@ public:
     ContextCollection(const std::string& filename) :
       gdist(NULL),
       cpl(NULL),
+      fs(NULL),
       trace_gdist(false),
       contexts_created(false) {
         setup_defaults();
@@ -455,6 +458,10 @@ private:
      * The coupling. NULL until contexts are created.
      */
     Coupling* cpl;
+    /**
+     * The factorization scale strategy. NULL until contexts are created.
+     */
+    FactorizationScale* fs;
     /**
      * The map of key-value pairs provided to the ContextCollection.
      */

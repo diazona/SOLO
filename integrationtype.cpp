@@ -53,65 +53,77 @@ void PlainIntegrationType::fill_max(IntegrationContext& ictx, const size_t core_
 
 void NoIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     if (core_dimensions == 1) {
-        ictx.update_parton_factors(values[0], 1);
+        ictx.update_kinematics(values[0], 1);
+        ictx.update_parton_functions();
     }
     else {
-        ictx.update_parton_factors(values[0], values[1]);
+        ictx.update_kinematics(values[0], values[1]);
+        ictx.update_parton_functions();
     }
 }
 
 void DipoleIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     if (core_dimensions == 1) {
-        ictx.update_parton_factors(values[0], 1);
+        ictx.update_kinematics(values[0], 1);
         ictx.update_positions(values[1], values[2], 0, 0, 0, 0);
+        ictx.update_parton_functions();
     }
     else {
-        ictx.update_parton_factors(values[0], values[1]);
+        ictx.update_kinematics(values[0], values[1]);
         ictx.update_positions(values[2], values[3], 0, 0, 0, 0);
+        ictx.update_parton_functions();
     }
 }
 
 void QuadrupoleIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     if (core_dimensions == 1) {
-        ictx.update_parton_factors(values[0], 1);
+        ictx.update_kinematics(values[0], 1);
         ictx.update_positions(values[1], values[2], values[3], values[4], 0, 0);
+        ictx.update_parton_functions();
     }
     else {
-        ictx.update_parton_factors(values[0], values[1]);
+        ictx.update_kinematics(values[0], values[1]);
         ictx.update_positions(values[2], values[3], values[4], values[5], 0, 0);
+        ictx.update_parton_functions();
     }
 }
 
 void Momentum1IntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     if (core_dimensions == 1) {
-        ictx.update_parton_factors(values[0], 1);
+        ictx.update_kinematics(values[0], 1);
         ictx.update_momenta(values[1], values[2], 0, 0, 0, 0);
+        ictx.update_parton_functions();
     }
     else {
-        ictx.update_parton_factors(values[0], values[1]);
+        ictx.update_kinematics(values[0], values[1]);
         ictx.update_momenta(values[2], values[3], 0, 0, 0, 0);
+        ictx.update_parton_functions();
     }
 }
 
 void Momentum2IntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     if (core_dimensions == 1) {
-        ictx.update_parton_factors(values[0], 1);
+        ictx.update_kinematics(values[0], 1);
         ictx.update_momenta(values[1], values[2], values[3], values[4], 0, 0);
+        ictx.update_parton_functions();
     }
     else {
-        ictx.update_parton_factors(values[0], values[1]);
+        ictx.update_kinematics(values[0], values[1]);
         ictx.update_momenta(values[2], values[3], values[4], values[5], 0, 0);
+        ictx.update_parton_functions();
     }
 }
 
 void Momentum3IntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     if (core_dimensions == 1) {
-        ictx.update_parton_factors(values[0], 1);
+        ictx.update_kinematics(values[0], 1);
         ictx.update_momenta(values[1], values[2], values[3], values[4], values[5], values[6]);
+        ictx.update_parton_functions();
     }
     else {
-        ictx.update_parton_factors(values[0], values[1]);
+        ictx.update_kinematics(values[0], values[1]);
         ictx.update_momenta(values[2], values[3], values[4], values[5], values[6], values[7]);
+        ictx.update_parton_functions();
     }
 }
 
@@ -136,27 +148,31 @@ void XiPIntegrationType::fill_max(IntegrationContext& ictx, const size_t core_di
 
 void Momentum1XiPIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     if (core_dimensions == 1) {
-        ictx.update_parton_factors(values[0], 1);
+        ictx.update_kinematics(values[0], 1);
         ictx.update_auxiliary(values[1]);
         ictx.update_momenta(values[2], values[3], 0, 0, 0, 0);
+        ictx.update_parton_functions();
     }
     else {
-        ictx.update_parton_factors(values[0], values[1]);
+        ictx.update_kinematics(values[0], values[1]);
         ictx.update_auxiliary(values[2]);
         ictx.update_momenta(values[3], values[4], 0, 0, 0, 0);
+        ictx.update_parton_functions();
     }
 }
 
 void Momentum2XiPIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     if (core_dimensions == 1) {
-        ictx.update_parton_factors(values[0], 1);
+        ictx.update_kinematics(values[0], 1);
         ictx.update_auxiliary(values[1]);
         ictx.update_momenta(values[2], values[3], values[4], values[5], 0, 0);
+        ictx.update_parton_functions();
     }
     else {
-        ictx.update_parton_factors(values[0], values[1]);
+        ictx.update_kinematics(values[0], values[1]);
         ictx.update_auxiliary(values[2]);
         ictx.update_momenta(values[3], values[4], values[5], values[6], 0, 0);
+        ictx.update_parton_functions();
     }
 }
 
@@ -178,23 +194,27 @@ void RadialIntegrationType::fill_max(IntegrationContext& ictx, const size_t core
 
 void RadialDipoleIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     if (core_dimensions == 1) {
-        ictx.update_parton_factors(values[0], 1);
+        ictx.update_kinematics(values[0], 1);
         ictx.update_positions(values[1], 0, 0, 0, 0, 0);
+        ictx.update_parton_functions();
     }
     else {
-        ictx.update_parton_factors(values[0], values[1]);
+        ictx.update_kinematics(values[0], values[1]);
         ictx.update_positions(values[2], 0, 0, 0, 0, 0);
+        ictx.update_parton_functions();
     }
 }
 
 void RadialQuadrupoleIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     if (core_dimensions == 1) {
-        ictx.update_parton_factors(values[0], 1);
+        ictx.update_kinematics(values[0], 1);
         ictx.update_positions(values[1], 0, values[2], 0, 0, 0);
+        ictx.update_parton_functions();
     }
     else {
-        ictx.update_parton_factors(values[0], values[1]);
+        ictx.update_kinematics(values[0], values[1]);
         ictx.update_positions(values[2], 0, values[4], 0, 0, 0);
+        ictx.update_parton_functions();
     }
 }
 
