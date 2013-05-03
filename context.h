@@ -20,6 +20,7 @@
 #ifndef _CONTEXT_H_
 #define _CONTEXT_H_
 
+#include <cassert>
 #include <iterator>
 #include <map>
 #include <sstream>
@@ -172,6 +173,13 @@ public:
     FactorizationScale* fs;
     /** Whether to apply the optimization that sets ln(c_0^2/(r^2 mu^2)) to zero */
     bool c0r_optimization;
+    /**
+     * Whether to use the prescription from Collins/Soper/Sterman for modifying r,
+     * from DOI 10.1016/0550-3213(85)90479-1
+     */
+    bool css_r_regularization;
+    /** The cutoff value for the CSS r regularization */
+    double css_r2_max;
     
     /** Projectile type */
     projectile_type projectile;
@@ -236,7 +244,9 @@ public:
         GluonDistribution* gdist,
         Coupling* cpl,
         FactorizationScale* fs,
-        bool c0r_optimization) :
+        bool c0r_optimization,
+        bool css_r_regularization,
+        double css_r2_max) :
      x0(x0),
      A(A),
      c(c),
@@ -268,12 +278,16 @@ public:
      cpl(cpl),
      fs(fs),
      c0r_optimization(c0r_optimization),
+     css_r_regularization(css_r_regularization),
+     css_r2_max(css_r2_max),
      Q02x0lambda(c * pow(A, 1.0d/3.0d) * pow(x0, lambda)),
      tau(sqrt(pT2)/sqs*exp(Y)) {
         if (tau > 1) {
             throw InvalidKinematicsException("τ > 1: empty phase space");
         }
-        
+        if (css_r_regularization) {
+            assert(css_r2_max > 0);
+        }
     }
     Context(const Context& other) :
      x0(other.x0),
@@ -307,6 +321,8 @@ public:
      cpl(other.cpl),
      fs(other.fs),
      c0r_optimization(other.c0r_optimization),
+     css_r_regularization(other.css_r_regularization),
+     css_r2_max(other.css_r2_max),
      Q02x0lambda(other.Q02x0lambda),
      tau(other.tau) {}
 };

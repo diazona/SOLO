@@ -73,6 +73,21 @@ void IntegrationContext::update_positions(double xx, double xy, double yx, doubl
     this->tx = this->yx - this->bx;
     this->ty = this->yy - this->by;
     this->t2 = tx*tx + ty*ty;
+    
+    // implement the CSS r regularization
+    if (ctx->css_r_regularization) {
+        double ratio = 1 / (1 + r2 / ctx->css_r2_max);
+        r2 *= ratio;
+        rx *= ratio;
+        ry *= ratio;
+        // TODO: figure out if scaling all these variables is necessary or even appropriate
+        s2 *= ratio;
+        sx *= ratio;
+        sy *= ratio;
+        t2 *= ratio;
+        tx *= ratio;
+        ty *= ratio;
+    }
 
     // Calculate the new gluon distribution values
     // this has to be done after kinematics are updated

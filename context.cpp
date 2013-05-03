@@ -289,8 +289,14 @@ void ContextCollection::create_contexts() {
     check_property(quasirandom_generator_type, const gsl_qrng_type*, parse_qrng_type)
     check_property(pseudorandom_generator_type, const gsl_rng_type*, parse_rng_type)
     check_property(pseudorandom_generator_seed, unsigned long int, parse_ulong)
+    check_property_default(css_r_regularization, bool, parse_boolean, false)
+    check_property_default(css_r2_max, double, parse_double, 0) // 0 is a dummy value for when the regularization is not being used
     
     double Q02 = c * pow(A, 1./3.);
+    
+    if (css_r_regularization && css_r2_max <= 0) {
+        GSL_ERROR_VOID("invalid r_max", GSL_EINVAL);
+    }
     
     // create gluon distribution
     assert (gdist == NULL);
@@ -443,7 +449,9 @@ void ContextCollection::create_contexts() {
                         gdist,
                         cpl,
                         fs,
-                        _c0r_optimization));
+                        _c0r_optimization,
+                        css_r_regularization,
+                        css_r2_max));
             }
             catch (const InvalidKinematicsException& e) {
                 logger << "Failed to create context at pT = " << *pTit << ", Y = " << *Yit << ": " << e.what() << endl;
@@ -619,6 +627,8 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "coupling\t = " << ctx.cpl << endl;
     out << "factorization scale\t = " << ctx.fs << endl;
     out << "c0r optimization\t = " << ctx.c0r_optimization << endl;
+    out << "CSS r regularization\t = " << ctx.css_r_regularization << endl;
+    out << "CSS r_max\t = " << ctx.css_r2_max << endl;
     out << "quasirandom generator type: " <<  ctx.quasirandom_generator_type->name << endl;
     out << "pseudorandom generator type: " <<  ctx.pseudorandom_generator_type->name << endl;
     out << "pseudorandom generator seed: " << ctx.pseudorandom_generator_seed << endl;
