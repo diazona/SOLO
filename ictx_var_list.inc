@@ -18,6 +18,7 @@ process(q3x) process(q3y) process(q32)
 process(xiprime)
 process(xiprime2)
 process(Qs2)
+process(mu2)
 process(alphas) process(alphas_2pi) // αs/2π
 process(qqfactor)
 process(ggfactor)
