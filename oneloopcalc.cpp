@@ -667,6 +667,12 @@ string sha1_file(string filename) {
     return get_hex_representation(hash, SHA_DIGEST_LENGTH);
 }
 
+/**
+ * GSL error handler function that throws a GSLException.
+ */
+void gsl_error_throw(const char* reason, const char* file, int line, int gsl_errno) {
+    throw GSLException(reason, file, line, gsl_errno);
+}
 
 /**
  * Runs the program.
