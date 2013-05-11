@@ -56,7 +56,13 @@ RPerpFactorizationScale::RPerpFactorizationScale(double coefficient) : coefficie
 }
 double RPerpFactorizationScale::mu2(const IntegrationContext& ictx) {
     assert(ictx.r2 > 0);
-    return coefficient / ictx.r2;
+    // implement the CSS r regularization
+    if (ictx.ctx->css_r_regularization) {
+        return coefficient * (1 + ictx.r2 / ictx.ctx->css_r2_max) / ictx.r2;
+    }
+    else {
+        return coefficient / ictx.r2;
+    }
 }
 const char* RPerpFactorizationScale::name() {
     return _name.c_str();
