@@ -289,9 +289,14 @@ private:
 
 ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false), trace_gdist(false), minmax(false), separate(false) {
     string gdist_type;
+    bool current_arg_is_config_line = false;
     for (int i = 1; i < argc; i++) {
         string a = argv[i];
-        if (a.compare(0, 8, "--trace=") == 0) {
+        if (current_arg_is_config_line) {
+            cc.read_config_line(a);
+            current_arg_is_config_line = false;
+        }
+        else if (a.compare(0, 8, "--trace=") == 0) {
             vector<string> v = split(a, "=", 2);
             if (v.size() == 2) {
                 if (v[1] == "*" || v[1] == "all") {
@@ -323,6 +328,17 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
         }
         else if (a == "--separate") {
             separate = true;
+        }
+        else if (a == "-o" || a == "--option") {
+            current_arg_is_config_line = true;
+        }
+        else if (a.compare(0, 2, "-o") == 0) {
+            string s(a.substr(2));
+            cc.read_config_line(s);
+        }
+        else if (a.compare(0, 8, "--option") == 0) {
+            string s(a.substr(8));
+            cc.read_config_line(s);
         }
         else if (a == "MV" || a == "fMV" ||  a == "GBW") {
             gdist_type = a;

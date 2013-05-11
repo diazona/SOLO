@@ -462,11 +462,22 @@ public:
     void create_contexts();
 
     /**
+     * Read a config file, or something in an equivalent format, from an input stream
+     * and add the settings to the ContextCollection.
+     */
+    void read_config(std::istream& in);
+    /**
+     * Process a string representing one line of a config file (i.e. one setting)
+     */
+    void read_config_line(std::string& line);
+    
+    /**
      * Whether to use the tracing gluon distribution wrapper. (See gluondist.h/cpp)
      * Changes made to this variable after contexts are created have no effect.
      */
     bool trace_gdist;
 
+    friend ContextCollection& operator>>(std::string& line, ContextCollection& cc);
     friend std::istream& operator>>(std::istream& in, ContextCollection& cc);
     friend std::ostream& operator<<(std::ostream& out, ContextCollection& cc);
     friend class ThreadLocalContext;
@@ -500,13 +511,12 @@ private:
      * Called from the constructor to set default values.
      */
     void setup_defaults();
-    /**
-     * Read a config file, or something in an equivalent format, from an input stream
-     * and add the settings to the ContextCollection.
-     */
-    void read_config(std::istream& in);
 };
 
+/**
+ * Allows adding a setting to a ContextCollection using >> notation.
+ */
+ContextCollection& operator>>(std::string& line, ContextCollection& cc);
 /**
  * Allows reading a ContextCollection in from a stream using >> notation.
  */

@@ -558,19 +558,23 @@ void ContextCollection::read_config(istream& in) {
     string line;
     do {
         getline(in, line);
-        if (line.size() > 2 && line[0] != '#') {
-            // Split the line into two pieces on the '=' character
-            // The first piece becomes the key, the second becomes the value
-            vector<string> kv = split(line, "\n=", 2);
-            string key = canonicalize(kv[0]);
-            // split the value on commas
-            vector<string> v = split(kv[1], ",");
-            for (vector<string>::iterator it = v.begin(); it != v.end(); it++) {
-                string value = trim(*it, " \n\t");
-                add(key, value);
-            }
-        }
+        read_config_line(line);
     } while (!in.eof());
+}
+
+void ContextCollection::read_config_line(string& line) {
+    if (line.size() > 2 && line[0] != '#') {
+        // Split the line into two pieces on the '=' character
+        // The first piece becomes the key, the second becomes the value
+        vector<string> kv = split(line, "\n=", 2);
+        string key = canonicalize(kv[0]);
+        // split the value on commas
+        vector<string> v = split(kv[1], ",");
+        for (vector<string>::iterator it = v.begin(); it != v.end(); it++) {
+            string value = trim(*it, " \n\t");
+            add(key, value);
+        }
+    }
 }
 
 std::ostream& operator<<(std::ostream& out, const projectile_type& proj) {
@@ -644,6 +648,11 @@ ostream& operator<<(ostream& out, vector<T>& vec) {
         out << *it;
     }
     return out;
+}
+
+ContextCollection& operator>>(std::string& line, ContextCollection& cc) {
+    cc.read_config_line(line);
+    return cc;
 }
 
 std::istream& operator>>(std::istream& in, ContextCollection& cc) {
