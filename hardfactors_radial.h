@@ -50,6 +50,18 @@ public:
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
 
+class H012qqExp : public HardFactorTerm {
+public:
+    const char* get_name() const {
+        return "H012qqExp";
+    }
+    const IntegrationType* get_type() const {
+        return RadialDipoleIntegrationType::get_instance();
+    }
+    void Fs(const IntegrationContext* ictx, double* real, double* imag) const;
+    void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
+};
+
 // class H14qqPrimary : public HardFactorTerm {
 // public:
 //     const char* get_name() const {
@@ -293,6 +305,7 @@ private:
     registry() {
         add_hard_factor(new H02qq(), true);
         add_hard_factor(new H12qq(), true);
+        add_hard_factor(new H012qqExp(), true);
 //         add_hard_factor(new H14qq(), true);
 //         add_hard_factor(new H02gg(), true);
         add_hard_factor(new H12gg(), true);

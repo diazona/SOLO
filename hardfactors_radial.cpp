@@ -55,6 +55,8 @@ void H12qq::Fs(const IntegrationContext* ictx, double* real, double* imag) const
 
 void H12qq::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
     double amplitude = 0.75*M_1_PI*M_1_PI * ictx->alphas_2pi * ictx->ctx->CF * ictx->ctx->Sperp / ictx->z2 * ictx->qqfactor * ictx->S2r;
+    assert(ictx->xi == 1);
+    assert(ictx->xi2 == 1);
     if (ictx->ctx->c0r_optimization) {
         double term2 = -(-2*M_EULER + log(4) - log(ictx->r2 * ictx->kT2));
         double r = sqrt(ictx->r2);
@@ -63,12 +65,49 @@ void H12qq::Fd(const IntegrationContext* ictx, double* real, double* imag) const
         *imag = 0;
     }
     else {
+        // this expression can be simplified by assuming xi=1 and combining
+        // terms, but I don't do that so that it is obvious how the expressions
+        // here match up to the formulas in the paper
         double term1 = 0.5 * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->mu2));
         double term2 = -(-2*M_EULER + log(4) - log(ictx->r2 * ictx->kT2));
         double r = sqrt(ictx->r2);
         double phase1 = ictx->kT * r;
         double phase2 = ictx->kT * r / ictx->xi;
         *real = 2*M_PI*r * amplitude * (term1 * (gsl_sf_bessel_J0(phase1) + gsl_sf_bessel_J0(phase2) / ictx->xi2) + term2 * gsl_sf_bessel_J0(phase1));
+        *imag = 0;
+    }
+}
+
+void H012qqExp::Fs(const IntegrationContext* ictx, double* real, double* imag) const {
+    if (ictx->ctx->c0r_optimization) {
+        *real = *imag = 0;
+        return;
+    }
+    double amplitude = 0.25*M_1_PI*M_1_PI * ictx->alphas_2pi * ictx->ctx->CF * ictx->ctx->Sperp / ictx->z2 * ictx->qqfactor * ictx->S2r *
+        (1 + ictx->xi2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->mu2));
+    double r = sqrt(ictx->r2);
+    double b_phase1 = ictx->kT * r;
+    double b_phase2 = ictx->kT * r / ictx->xi;
+    *real = 2*M_PI*r * amplitude * (gsl_sf_bessel_J0(b_phase1) + gsl_sf_bessel_J0(b_phase2) / ictx->xi2);
+    *imag = 0;
+}
+
+void H012qqExp::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
+    double amplitude = 0.25*M_1_PI*M_1_PI * ictx->ctx->Sperp / ictx->z2 * ictx->qqfactor * ictx->S2r;
+    double factor1 = 3 * ictx->alphas_2pi * ictx->ctx->CF;
+    double r = sqrt(ictx->r2);
+    assert(ictx->xi == 1);
+    assert(ictx->xi2 == 1);
+    if (ictx->ctx->c0r_optimization) {
+        double term2 = -(-2*M_EULER + log(4) - log(ictx->r2 * ictx->kT2));
+        double b_phase = ictx->kT * r;
+        *real = 2*M_PI*r * amplitude * exp(factor1 * term2);
+        *imag = 0;
+    }
+    else {
+        double logterm = log(ictx->mu2 / ictx->kT2);
+        double b_phase = ictx->kT * r;
+        *real = 2*M_PI*r * amplitude * exp(factor1 * logterm) * gsl_sf_bessel_J0(b_phase);
         *imag = 0;
     }
 }
