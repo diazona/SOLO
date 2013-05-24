@@ -23,7 +23,6 @@
 #include "dss_pinlo.h"
 #include "integrationcontext.h"
 #include "gluondist.h"
-#include "gsl_exception.h"
 
 #define checkfinite(d) assert(gsl_finite(d))
 
@@ -151,14 +150,7 @@ void IntegrationContext::update_parton_functions() {
     // Calculate the new quark/gluon factors
     this->mu2 = ctx->fs->mu2(*this);
     pdf_object->update(this->xp, sqrt(this->mu2));
-    try {
-        ff_object->update(this->z, this->mu2);
-    }
-    catch (GSLException e) {
-        cerr << "Invalid interpolation in FF" << endl;
-        qqfactor = ggfactor = qgfactor = gqfactor = 0;
-        return;
-    }
+    ff_object->update(this->z, this->mu2);
     
     // Proton contributions:
     qqfactor += (pdf_object->cont.upv + pdf_object->cont.usea) * ff_object->fragmentation(DSSpiNLO::up, hadron);
