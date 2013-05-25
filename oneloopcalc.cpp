@@ -563,7 +563,7 @@ void ResultsCalculator::integrate_hard_factor(const Context& ctx, const ThreadLo
  * Write the list of results in a ResultsCalculator to the given output stream.
  */
 ostream& operator<<(ostream& out, ResultsCalculator& rc) {
-    bool all_valid = true;
+    bool all_valid = true, row_valid = true;
     _Setw lw = setw(6), rw = setw(26); // "label width" and "result width"
     // write headers
     if (rc.separate) {
@@ -610,15 +610,16 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
             }
             else {
                 out << rw << "---";
-                all_valid = false;
+                all_valid = row_valid = false;
             }
         }
-        if (all_valid) {
+        if (row_valid) {
             out << rw << total << endl;
         }
         else {
             out << rw << "---" << endl;
         }
+        row_valid = true;
     }
     if (!all_valid) {
         out << "WARNING: some results were not computed" << endl;
