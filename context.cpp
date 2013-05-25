@@ -567,6 +567,10 @@ void ContextCollection::read_config_line(string& line) {
         // Split the line into two pieces on the '=' character
         // The first piece becomes the key, the second becomes the value
         vector<string> kv = split(line, "\n=", 2);
+        if (kv.size() < 2) {
+            return;
+        }
+        assert(kv.size() == 2);
         string key = canonicalize(kv[0]);
         // split the value on commas
         vector<string> v = split(kv[1], ",");
