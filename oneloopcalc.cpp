@@ -33,7 +33,7 @@
 #include <gsl/gsl_rng.h>
 #include <openssl/sha.h>
 #include "git_revision.h"
-#include "gsl_exception.h"
+#include "exceptions.h"
 #include "mstwpdf.h"
 #include "dss_pinlo.h"
 #include "coupling.h"
