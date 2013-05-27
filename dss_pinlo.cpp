@@ -134,6 +134,9 @@ void DSSpiNLO::update(double z, double qs2) {
     // loop takes care of u, ubar, d, dbar, s, sbar, c??, cbar??, gluons
     // all fragmenting to pi+
     for (size_t i = 0; i < number_of_flavors; i++) {
+        if (lnz < lnz_array[0] || lnz > lnz_array[number_of_lnz_values-1] || lnqs2 < lnqs2_array[0] || lnqs2 > lnqs2_array[number_of_lnqs2_values-1]) {
+            throw FragmentationFunctionRangeException(z, qs2);
+        }
         pi_plus_ff[i] = interp2d_eval(interpolators[i], lnz_array, lnqs2_array, ff_arrays[i], lnz, lnqs2, lnz_accel[i], lnqs2_accel[i]) / z;
     }
     pi_minus_ff[up] = pi_plus_ff[up_bar];

@@ -20,7 +20,42 @@
 #ifndef DSS_PINLO_H_INCLUDED
 #define DSS_PINLO_H_INCLUDED
 
+#include <exception>
+#include <sstream>
 #include "interp2d.h"
+
+class FragmentationFunctionRangeException : public std::exception {
+private:
+    double _z, _mu2;
+    std::string _message;
+public:
+    FragmentationFunctionRangeException(double z, double mu2) throw() :
+        _z(z), _mu2(mu2) {
+        std::ostringstream s;
+        s << "Fragmentation function evaluated at " << z << "," << mu2 << " (out of range)";
+        _message = s.str();
+    }
+    FragmentationFunctionRangeException(const FragmentationFunctionRangeException& e) throw() :
+        _z(e._z), _mu2(e._mu2), _message(e._message) {
+    }
+    FragmentationFunctionRangeException& operator=(const FragmentationFunctionRangeException& e) throw() {
+        _z = e._z;
+        _mu2 = e._mu2;
+        _message = e._message;
+    }
+    virtual ~FragmentationFunctionRangeException() throw() {
+    }
+    const double z() const {
+        return _z;
+    }
+    const double mu2() const {
+        return _mu2;
+    }
+    const char* what() const throw() {
+        return _message.c_str();
+    }
+};
+
 
 /**
  * A fairly simple C++ interface to the DSS fragmentation functions.

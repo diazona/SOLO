@@ -27,6 +27,99 @@
 class NoGridException : public std::exception {
 };
 
+class GluonDistributionS2RangeException : public std::exception {
+private:
+    double _r2, _Y;
+protected:
+    std::string _message;
+public:
+    GluonDistributionS2RangeException(double r2, double Y) throw() :
+        _r2(r2), _Y(Y) {
+        std::ostringstream s;
+        s << "Gluon distribution S2 evaluated at " << _r2 << "," << Y << " (out of range)";
+        _message = s.str();
+    }
+    GluonDistributionS2RangeException(const GluonDistributionS2RangeException& e) throw() :
+        _r2(e._r2), _Y(e._Y), _message(e._message) {
+    }
+    GluonDistributionS2RangeException& operator=(const GluonDistributionS2RangeException& e) throw() {
+        _r2 = e._r2;
+        _Y = e._Y;
+        _message = e._message;
+    }
+    virtual ~GluonDistributionS2RangeException() throw() {
+    }
+    const double r2() const {
+        return _r2;
+    }
+    const double Y() const {
+        return _Y;
+    }
+    const char* what() const throw() {
+        return _message.c_str();
+    }
+};
+
+class GluonDistributionS4RangeException : public GluonDistributionS2RangeException {
+private:
+    double _s2, _t2;
+public:
+    GluonDistributionS4RangeException(double r2, double s2, double t2, double Y) throw() :
+        GluonDistributionS2RangeException(r2, Y), _s2(s2), _t2(t2) {
+        std::ostringstream s;
+        s << "Gluon distribution S4 evaluated at " << this->r2() << "," << this->s2() << "," << this->t2() << "," << this->Y() << " (out of range)";
+        _message = s.str();
+    }
+    GluonDistributionS4RangeException(const GluonDistributionS4RangeException& e) throw() :
+        GluonDistributionS2RangeException(e), _s2(e._s2), _t2(e._t2) {
+    }
+    GluonDistributionS4RangeException& operator=(const GluonDistributionS4RangeException& e) throw() {
+        GluonDistributionS2RangeException::operator=(e);
+        _s2 = e._s2;
+        _t2 = e._t2;
+    }
+    virtual ~GluonDistributionS4RangeException() throw() {
+    }
+    const double s2() const {
+        return _s2;
+    }
+    const double t2() const {
+        return _t2;
+    }
+};
+
+class GluonDistributionFRangeException : public std::exception {
+private:
+    double _q2, _Y;
+    std::string _message;
+public:
+    GluonDistributionFRangeException(double r2, double Y) throw() :
+        _q2(r2), _Y(Y) {
+        std::ostringstream s;
+        s << "Gluon distribution F evaluated at " << _q2 << "," << Y << " (out of range)";
+        _message = s.str();
+    }
+    GluonDistributionFRangeException(const GluonDistributionFRangeException& e) throw() :
+        _q2(e._q2), _Y(e._Y), _message(e._message) {
+    }
+    GluonDistributionFRangeException& operator=(const GluonDistributionFRangeException& e) throw() {
+        _q2 = e._q2;
+        _Y = e._Y;
+        _message = e._message;
+    }
+    virtual ~GluonDistributionFRangeException() throw() {
+    }
+    const double q2() const {
+        return _q2;
+    }
+    const double Y() const {
+        return _Y;
+    }
+    const char* what() const throw() {
+        return _message.c_str();
+    }
+};
+
 /**
  * A gluon distribution.
  */
@@ -353,6 +446,10 @@ protected:
      */
     void initialize_saturation_scale_from_momentum_space(double satscale_threshold);
 private:
+    double r2min, r2max;
+    double Yminr, Ymaxr;
+    double q2min, q2max;
+    double Yminp, Ymaxp;
     /** Values of ln(r2) for the interpolation. */
     double* r2_values;
     /** Values of Y for the position interpolation. */

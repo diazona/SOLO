@@ -217,6 +217,9 @@ double AbstractPositionGluonDistribution::S4(double r2, double s2, double t2, do
 double AbstractPositionGluonDistribution::F(double q2, double Y) {
     if (Y_dimension == 1) {
         if (q2 > q2min) {
+            if (q2 > q2max || Y < Ymin || Y > Ymax) {
+                throw GluonDistributionFRangeException(q2, Y);
+            }
             return gsl_interp_eval(interp_dist_momentum_1D, log_q2_values, F_dist, log(q2), q2_accel);
         }
         else {
@@ -409,11 +412,22 @@ void FileDataGluonDistribution::setup(string pos_filename, string mom_filename, 
         }
     }
     
+    r2min = r2_values[0];
+    r2max = r2_values[r2_dimension-1];
+    Yminr = Y_values_rspace[0];
+    Ymaxr = Y_values_rspace[Y_dimension_r-1];
+    q2min = q2_values[0];
+    q2max = q2_values[q2_dimension-1];
+    Yminp = Y_values_pspace[0];
+    Ymaxp = Y_values_pspace[Y_dimension_p-1];
+    
     r2_accel = gsl_interp_accel_alloc();
     q2_accel = gsl_interp_accel_alloc();
 
     if (Y_dimension_r == 1) {
         assert(Y_dimension_p == 1);
+        assert(Yminr == Ymaxr);
+        assert(Yminp == Ymaxp);
         interp_dist_position_1D = gsl_interp_alloc(gsl_interp_cspline, r2_dimension);
         gsl_interp_init(interp_dist_position_1D, r2_values, S_dist, r2_dimension);
         interp_dist_momentum_1D = gsl_interp_alloc(gsl_interp_cspline, q2_dimension);
@@ -487,8 +501,6 @@ void FileDataGluonDistribution::initialize_saturation_scale_from_position_space(
     assert(Y_dimension_r >= 1);
     
     double last_Rs2;
-    double r2min = r2_values[0];
-    double r2max = r2_values[r2_dimension - 1];
     EvaluationParameters p;
     p.gdist = this;
     p.threshold = satscale_threshold;
@@ -515,16 +527,14 @@ void FileDataGluonDistribution::initialize_saturation_scale_from_momentum_space(
     assert(Y_dimension_p >= 1);
     
     double last_Qs2;
-    double k2min = q2_values[0];
-    double k2max = q2_values[q2_dimension - 1];
     EvaluationParameters p;
     p.gdist = this;
     
     Qs2_values = new double[Y_dimension_p];
     for (size_t i = 0; i < Y_dimension_p; i++) {
         p.Y = Y_values_pspace[i];
-        p.threshold = satscale_threshold * F(k2min, p.Y);
-        Qs2_values[i] = last_Qs2 = bracket_root(evaluate_pspace_threshold_criterion, &p, k2min, k2max);
+        p.threshold = satscale_threshold * F(q2min, p.Y);
+        Qs2_values[i] = last_Qs2 = bracket_root(evaluate_pspace_threshold_criterion, &p, q2min, q2max);
     }
     if (Y_dimension_p > 1) {
         interp_Qs2_1D = gsl_interp_alloc(gsl_interp_cspline, Y_dimension_p);
@@ -533,6 +543,9 @@ void FileDataGluonDistribution::initialize_saturation_scale_from_momentum_space(
 }
 
 double FileDataGluonDistribution::S2(double r2, double Y) {
+    if (r2 < r2min || r2 > r2max || Y < Yminr || Y > Ymaxr) {
+        throw GluonDistributionS2RangeException(r2, Y);
+    }
     if (Y_dimension_r == 1) {
         return gsl_interp_eval(interp_dist_position_1D, r2_values, S_dist, r2, r2_accel);
     }
@@ -542,10 +555,16 @@ double FileDataGluonDistribution::S2(double r2, double Y) {
 }
 
 double FileDataGluonDistribution::S4(double r2, double s2, double t2, double Y) {
+    if (s2 < r2min || s2 > r2max || t2 < r2min || t2 > r2max || Y < Yminr || Y > Ymaxr) {
+        throw GluonDistributionS4RangeException(r2, s2, t2, Y);
+    }
     return S2(s2, Y) * S2(t2, Y);
 }
 
 double FileDataGluonDistribution::F(double q2, double Y) {
+    if (q2 < q2min || q2 > q2max || Y < Yminr || Y > Ymaxr) {
+        throw GluonDistributionFRangeException(q2, Y);
+    }
     if (Y_dimension_p == 1) {
         return gsl_interp_eval(interp_dist_momentum_1D, q2_values, F_dist, q2, q2_accel);
     }
@@ -555,6 +574,9 @@ double FileDataGluonDistribution::F(double q2, double Y) {
 }
 
 double FileDataGluonDistribution::Fprime(double q2, double Y) {
+    if (q2 < q2min || q2 > q2max || Y < Yminr || Y > Ymaxr) {
+        throw GluonDistributionFRangeException(q2, Y);
+    }
     if (Y_dimension_p == 1) {
         return gsl_interp_eval_deriv(interp_dist_momentum_1D, q2_values, F_dist, q2, q2_accel);
     }
@@ -564,6 +586,9 @@ double FileDataGluonDistribution::Fprime(double q2, double Y) {
 }
 
 double FileDataGluonDistribution::Fpprime(double q2, double Y) {
+    if (q2 < q2min || q2 > q2max || Y < Yminr || Y > Ymaxr) {
+        throw GluonDistributionFRangeException(q2, Y);
+    }
     if (Y_dimension_p == 1) {
         return gsl_interp_eval_deriv2(interp_dist_momentum_1D, q2_values, F_dist, q2, q2_accel);
     }
@@ -573,6 +598,9 @@ double FileDataGluonDistribution::Fpprime(double q2, double Y) {
 }
 
 double FileDataGluonDistribution::S2prime(double r2, double Y) {
+    if (r2 < r2min || r2 > r2max || Y < Yminr || Y > Ymaxr) {
+        throw GluonDistributionS2RangeException(r2, Y);
+    }
     if (Y_dimension_r == 1) {
         return gsl_interp_eval_deriv(interp_dist_position_1D, r2_values, S_dist, r2, r2_accel);
     }
@@ -582,6 +610,9 @@ double FileDataGluonDistribution::S2prime(double r2, double Y) {
 }
 
 double FileDataGluonDistribution::S2pprime(double r2, double Y) {
+    if (r2 < r2min || r2 > r2max || Y < Yminr || Y > Ymaxr) {
+        throw GluonDistributionS2RangeException(r2, Y);
+    }
     if (Y_dimension_r == 1) {
         return gsl_interp_eval_deriv2(interp_dist_position_1D, r2_values, S_dist, r2, r2_accel);
     }
