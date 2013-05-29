@@ -100,7 +100,7 @@ where the <options> can include any number of the following, in any order:
     gdist_subinterval_limit (default 10000)
         number of subdivisions to use when integrating a position gluon distribution
     gdist_type (default GBW)
-        the type of the gluon distribution, "GBW", "MV", "fMV", or "file"
+        the type of the gluon distribution, "GBW", "MV", "fMV", "file", or "gbw+file"
     hadron (no default)
         the type of hadron detected, "pi-", "pi0", or "pi+"
     integration_strategy (default VEGAS)
