@@ -493,6 +493,20 @@ private:
     double lambda;
     
     std::string _name;
+    
+    friend class HybridGBWFileDataGluonDistribution;
+};
+
+class HybridGBWFileDataGluonDistribution : public FileDataGluonDistribution {
+public:
+    HybridGBWFileDataGluonDistribution(std::string pos_filename, std::string mom_filename, double Q02, double x0, double lambda, double xinit, enum satscale_source satscale_source, double satscale_threshold);
+    HybridGBWFileDataGluonDistribution(std::string pos_filename, std::string mom_filename, double Q02, double x0, double lambda, double xinit);
+    ~HybridGBWFileDataGluonDistribution();
+    double S2(double r2, double Y);
+    double Qs2(const double Y) const;
+    double F(double q2, double Y);
+private:
+    GBWGluonDistribution gbw_dist;
 };
 
 /** Prints the name of the gluon distribution to the given output stream. */

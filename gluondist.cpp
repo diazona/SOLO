@@ -693,6 +693,56 @@ void FileDataGluonDistribution::write_satscale_grid(ostream& out) {
     }
 }
 
+HybridGBWFileDataGluonDistribution::HybridGBWFileDataGluonDistribution(
+ string pos_filename,
+ string mom_filename,
+ double Q02, double x0, double lambda,
+ double xinit,
+ enum satscale_source satscale_source,
+ double satscale_threshold) :
+  FileDataGluonDistribution(pos_filename, mom_filename, xinit, satscale_source, satscale_threshold),
+  gbw_dist(Q02, x0, lambda) {
+}
+
+HybridGBWFileDataGluonDistribution::HybridGBWFileDataGluonDistribution(
+ string pos_filename,
+ string mom_filename,
+ double Q02, double x0, double lambda,
+ double xinit) :
+  FileDataGluonDistribution(pos_filename, mom_filename, Q02, x0, lambda, xinit),
+  gbw_dist(Q02, x0, lambda) {
+}
+
+HybridGBWFileDataGluonDistribution::~HybridGBWFileDataGluonDistribution() {}
+
+double HybridGBWFileDataGluonDistribution::S2(double r2, double Y) {
+    if (r2 < r2min) {
+        return gbw_dist.S2(r2, Y);
+    }
+    else {
+        return FileDataGluonDistribution::S2(r2, Y);
+    }
+}
+
+double HybridGBWFileDataGluonDistribution::F(double q2, double Y) {
+    if (q2 < q2min) {
+        return gbw_dist.F(q2, Y);
+    }
+    else {
+        return FileDataGluonDistribution::F(q2, Y);
+    }
+}
+
+double HybridGBWFileDataGluonDistribution::Qs2(const double Y) const {
+    if (satscale_source == POSITION_THRESHOLD && Y < Yminr) {
+        return gbw_dist.Qs2(Y);
+    }
+    else if (satscale_source == MOMENTUM_THRESHOLD && Y < Yminp) {
+        return gbw_dist.Qs2(Y);
+    }
+    return FileDataGluonDistribution::Qs2(Y);
+}
+
 ostream& operator<<(ostream& out, GluonDistribution& gdist) {
     out << gdist.name();
     return out;
