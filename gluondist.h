@@ -93,10 +93,10 @@ private:
     double _q2, _Y;
     std::string _message;
 public:
-    GluonDistributionFRangeException(double r2, double Y) throw() :
-        _q2(r2), _Y(Y) {
+    GluonDistributionFRangeException(double q2, double Y) throw() :
+        _q2(q2), _Y(Y) {
         std::ostringstream s;
-        s << "Gluon distribution F evaluated at " << _q2 << "," << Y << " (out of range)";
+        s << "Gluon distribution F evaluated at " << _q2 << "," << _Y << " (out of range)";
         _message = s.str();
     }
     GluonDistributionFRangeException(const GluonDistributionFRangeException& e) throw() :
