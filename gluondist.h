@@ -503,6 +503,7 @@ public:
     HybridGBWFileDataGluonDistribution(std::string pos_filename, std::string mom_filename, double Q02, double x0, double lambda, double xinit);
     ~HybridGBWFileDataGluonDistribution();
     double S2(double r2, double Y);
+    double S4(double r2, double s2, double t2, double Y);
     double Qs2(const double Y) const;
     double F(double q2, double Y);
 private:

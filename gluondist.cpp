@@ -724,6 +724,16 @@ double HybridGBWFileDataGluonDistribution::S2(double r2, double Y) {
     }
 }
 
+double HybridGBWFileDataGluonDistribution::S4(double r2, double s2, double t2, double Y) {
+    if (Y < Yminr) {
+        return gbw_dist.S4(r2, s2, t2, Y);
+    }
+    else {
+        return FileDataGluonDistribution::S4(r2, s2, t2, Y);
+    }
+}
+
+
 double HybridGBWFileDataGluonDistribution::F(double q2, double Y) {
     if (Y < Yminp) {
         return gbw_dist.F(q2, Y);
