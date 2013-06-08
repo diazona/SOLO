@@ -716,7 +716,7 @@ HybridGBWFileDataGluonDistribution::HybridGBWFileDataGluonDistribution(
 HybridGBWFileDataGluonDistribution::~HybridGBWFileDataGluonDistribution() {}
 
 double HybridGBWFileDataGluonDistribution::S2(double r2, double Y) {
-    if (r2 < r2min) {
+    if (Y < Yminr) {
         return gbw_dist.S2(r2, Y);
     }
     else {
@@ -725,7 +725,7 @@ double HybridGBWFileDataGluonDistribution::S2(double r2, double Y) {
 }
 
 double HybridGBWFileDataGluonDistribution::F(double q2, double Y) {
-    if (q2 < q2min) {
+    if (Y < Yminp) {
         return gbw_dist.F(q2, Y);
     }
     else {
