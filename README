@@ -88,7 +88,9 @@ where the <options> can include any number of the following, in any order:
     cubature_iterations
         number of calls to use for cubature integration
     factorization_scale (default fixed)
-        "fixed" or "4pT2" or "c0r" to specify how to set the factorization scale
+        "fixed" or "4pT2" or "CpT2" or "c0r" to specify how to set the factorization scale
+    factorization_scale_coefficient (no default)
+        if factorization_scale is "CpT2", this is the coefficient to multiply by pT2 to get mu2
     ff_filename (default PINLO.DAT)
         filename to read DSS FF data from
     gammaMV

@@ -420,6 +420,10 @@ void ContextCollection::create_contexts() {
     else if (factorization_scale == "4pT2") {
         fs = new PTProportionalFactorizationScale(4);
     }
+    else if (factorization_scale == "CpT2") {
+        check_property(factorization_scale_coefficient, double, parse_double)
+        fs = new PTProportionalFactorizationScale(factorization_scale_coefficient);
+    }
     else if (factorization_scale == "c0r") {
         check_property_default(c0r_optimization, bool, parse_boolean, true)
         _c0r_optimization = c0r_optimization;
