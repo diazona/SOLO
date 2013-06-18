@@ -590,7 +590,17 @@ void ContextCollection::read_config_line(string& line) {
             return;
         }
         assert(kv.size() == 2);
-        string key = canonicalize(kv[0]);
+        bool replace_config = true;
+        string key = kv[0];
+        size_t keylen = key.length();
+        if (key[keylen-1] == '+') {
+            replace_config = false;
+            key = trim(key, " \n\t", 0, keylen-1);
+        }
+        key = canonicalize(key);
+        if (replace_config) {
+            erase(key);
+        }
         // split the value on commas
         vector<string> v = split(kv[1], ",");
         for (vector<string>::iterator it = v.begin(); it != v.end(); it++) {
