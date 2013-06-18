@@ -25,7 +25,7 @@ using namespace std;
 // Trim given characters from the beginning and end of a string.
 string trim(const string& str, const string& chars, size_t begin, size_t end) {
     size_t l_begin = str.find_first_not_of(chars, begin);
-    size_t l_end = str.find_last_not_of(chars, end);
+    size_t l_end = str.find_last_not_of(chars, end - 1);
     return str.substr(l_begin, l_end - l_begin + 1);
 }
 
@@ -61,6 +61,10 @@ int main(int argc, char** argv) {
     cout << "trim(' abcd e ', ' ') = '" << trim(" abcd e ", " ") << "'" << endl;
     cout << "trim('   abcd e   ', ' ') = '" << trim("   abcd e   ", " ") << "'" << endl;
     cout << "trim('abcdefghijk', 'afk') = '" << trim("abcdefghijk", "afk") << "'" << endl;
+
+    cout << "trim('abcdefghijk', 'f', 0, 6) = '" << trim("abcdefghijk", "f", 0, 6) << "'" << endl;
+    cout << "trim('abcdefghijk', 'afk', 0, 6) = '" << trim("abcdefghijk", "afk", 0, 6) << "'" << endl;
+    cout << "trim('abcdefghijk', 'ceg', 0, 6) = '" << trim("abcdefghijk", "ceg", 0, 6) << "'" << endl;
     
     vector<string> tokens = split("abc,def,ghi,jkl", ",");
     cout << "split('abc,def,ghi,jkl', ',') = ";
