@@ -721,10 +721,18 @@ ostream& logger = cerr;
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        cerr << "Usage: " << argv[0] << " <filename.cfg>" << endl;
+        cerr << "Usage: " << argv[0] << " <filename.cfg> ..." << endl;
         return 1;
     }
-    ContextCollection cc(argv[1]);
+    ContextCollection cc;
+    for (size_t i = 1; i < argc; i++) {
+        ifstream config;
+        config.open(argv[i]);
+        if (config.good()) {
+            config >> cc;
+        }
+        config.close();
+    }
     try {
         cc.create_contexts();
     }
