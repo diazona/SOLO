@@ -334,40 +334,149 @@ void ContextCollection::create_contexts() {
         check_property_default(gdist_subinterval_limit, size_t, parse_size, 10000)
         gdist = new FixedSaturationMVGluonDistribution(lambdaMV, gammaMV, q2minMV, q2maxMV, YMV, Q02, x0, lambda, gdist_subinterval_limit);
     }
-    else if (gdist_type == "file" || gdist_type == "gbw+file") {
+    else if (gdist_type == "file" || gdist_type == "gbw+file" || gdist_type == "mv+file") {
         check_property(gdist_position_filename, string, parse_string)
         check_property(gdist_momentum_filename, string, parse_string)
         check_property_default(satscale_source, string, parse_string, "analytic")
         check_property_default(xinit, double, parse_double, 0.01)
         logger << "Reading gluon distribution from " << gdist_position_filename << " (pos) and " << gdist_momentum_filename << " (mom)" << endl;
-        if (satscale_source == "analytic") {
-            if (gdist_type == "file") {
-                gdist = new FileDataGluonDistribution(gdist_position_filename, gdist_momentum_filename, Q02, x0, lambda, xinit);
+        if (gdist_type == "mv+file") {
+            double Ymin = min(Y);
+            double Ymax = max(Y);
+            double pTmin = min(pT);
+            check_property_default(lambdaMV, double, parse_double, 0.241)
+            check_property_default(gammaMV,  double, parse_double, 1)
+            check_property_default(q2minMV,  double, parse_double, 1e-6)
+            // q2max = (2 qxmax + sqrt(smax) / exp(Ymin))^2 + (2 qymax)^2
+            check_property_default(q2maxMV,  double, parse_double, gsl_pow_2(2 * inf + sqs / exp(Ymin)) + gsl_pow_2(2 * inf))
+            check_property_default(YminMV, double, parse_double, 2 * Ymin)
+            check_property_default(YmaxMV, double, parse_double, Ymax - log(pTmin) + log(sqs))
+            assert(q2minMV < q2maxMV);
+            assert(YminMV < YmaxMV);
+            check_property_default(gdist_subinterval_limit, size_t, parse_size, 10000)
+            logger << "Creating (hybrid) MV gluon distribution with " << q2minMV << " < k2 < " << q2maxMV << ", " << YminMV << " < Y < " << YmaxMV << endl;
+            if (satscale_source == "analytic") {
+                cerr << "At " << __FILE__ << ":" << __LINE__ << endl;
+                gdist = new HybridMVFileDataGluonDistribution(
+                    gdist_position_filename,
+                    gdist_momentum_filename, 
+                    lambdaMV,
+                    gammaMV,
+                    q2minMV,
+                    q2maxMV,
+                    YminMV,
+                    YmaxMV,
+                    Q02,
+                    x0,
+                    lambda,
+                    xinit,
+                    gdist_subinterval_limit);
+                cerr << "At " << __FILE__ << ":" << __LINE__ << endl;
+            }
+            else if (satscale_source == "extract from momentum" || satscale_source == "extract from position") {
+                check_property(satscale_threshold, double, parse_double)
+                FileDataGluonDistribution::satscale_source_type satscale_source_constant;
+                if (satscale_source == "extract from momentum") {
+                    satscale_source_constant = FileDataGluonDistribution::MOMENTUM_THRESHOLD;
+                }
+                else if (satscale_source == "extract from position") {
+                    satscale_source_constant = FileDataGluonDistribution::POSITION_THRESHOLD;
+                }
+                else {
+                    assert(false);
+                }
+                gdist = new HybridMVFileDataGluonDistribution(
+                    gdist_position_filename,
+                    gdist_momentum_filename, 
+                    lambdaMV,
+                    gammaMV,
+                    q2minMV,
+                    q2maxMV,
+                    YminMV,
+                    YmaxMV,
+                    Q02,
+                    x0,
+                    lambda,
+                    xinit,
+                    satscale_source_constant,
+                    satscale_threshold,
+                    gdist_subinterval_limit);
             }
             else {
-                gdist = new HybridGBWFileDataGluonDistribution(gdist_position_filename, gdist_momentum_filename, Q02, x0, lambda, xinit);
+                throw InvalidPropertyValueException<string>("satscale_source", satscale_source);
             }
         }
-        else if (satscale_source == "extract from momentum") {
-            check_property(satscale_threshold, double, parse_double)
-            if (gdist_type == "file") {
-                gdist = new FileDataGluonDistribution(gdist_position_filename, gdist_momentum_filename, xinit, FileDataGluonDistribution::MOMENTUM_THRESHOLD, satscale_threshold);
+        else if (gdist_type == "gbw+file") {
+            if (satscale_source == "analytic") {
+                gdist = new HybridGBWFileDataGluonDistribution(
+                    gdist_position_filename,
+                    gdist_momentum_filename,
+                    Q02,
+                    x0,
+                    lambda,
+                    xinit);
+            }
+            else if (satscale_source == "extract from momentum" || satscale_source == "extract from position") {
+                check_property(satscale_threshold, double, parse_double)
+                FileDataGluonDistribution::satscale_source_type satscale_source_constant;
+                if (satscale_source == "extract from momentum") {
+                    satscale_source_constant = FileDataGluonDistribution::MOMENTUM_THRESHOLD;
+                }
+                else if (satscale_source == "extract from position") {
+                    satscale_source_constant = FileDataGluonDistribution::POSITION_THRESHOLD;
+                }
+                else {
+                    assert(false);
+                }
+                gdist = new HybridGBWFileDataGluonDistribution(
+                    gdist_position_filename,
+                    gdist_momentum_filename,
+                    Q02,
+                    x0,
+                    lambda,
+                    xinit,
+                    satscale_source_constant,
+                    satscale_threshold);
             }
             else {
-                gdist = new HybridGBWFileDataGluonDistribution(gdist_position_filename, gdist_momentum_filename, Q02, x0, lambda, xinit, FileDataGluonDistribution::MOMENTUM_THRESHOLD, satscale_threshold);
+                throw InvalidPropertyValueException<string>("satscale_source", satscale_source);
             }
         }
-        else if (satscale_source == "extract from position") {
-            check_property(satscale_threshold, double, parse_double)
-            if (gdist_type == "file") {
-                gdist = new FileDataGluonDistribution(gdist_position_filename, gdist_momentum_filename, xinit, FileDataGluonDistribution::POSITION_THRESHOLD, satscale_threshold);
+        else if (gdist_type == "file") {
+            if (satscale_source == "analytic") {
+                gdist = new FileDataGluonDistribution(
+                    gdist_position_filename,
+                    gdist_momentum_filename,
+                    Q02,
+                    x0,
+                    lambda,
+                    xinit);
+            }
+            else if (satscale_source == "extract from momentum" || satscale_source == "extract from position") {
+                check_property(satscale_threshold, double, parse_double)
+                FileDataGluonDistribution::satscale_source_type satscale_source_constant;
+                if (satscale_source == "extract from momentum") {
+                    satscale_source_constant = FileDataGluonDistribution::MOMENTUM_THRESHOLD;
+                }
+                else if (satscale_source == "extract from position") {
+                    satscale_source_constant = FileDataGluonDistribution::POSITION_THRESHOLD;
+                }
+                else {
+                    assert(false);
+                }
+                gdist = new FileDataGluonDistribution(
+                    gdist_position_filename,
+                    gdist_momentum_filename,
+                    xinit,
+                    satscale_source_constant,
+                    satscale_threshold);
             }
             else {
-                gdist = new HybridGBWFileDataGluonDistribution(gdist_position_filename, gdist_momentum_filename, Q02, x0, lambda, xinit, FileDataGluonDistribution::POSITION_THRESHOLD, satscale_threshold);
+                throw InvalidPropertyValueException<string>("satscale_source", satscale_source);
             }
         }
         else {
-            throw InvalidPropertyValueException<string>("satscale_source", satscale_source);
+            assert(false);
         }
     }
     else {

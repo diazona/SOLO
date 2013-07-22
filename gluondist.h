@@ -325,7 +325,17 @@ public:
     /**
      * Constructs a new MV gluon distribution object.
      */
-    MVGluonDistribution(double LambdaMV, double gammaMV, double q2min, double q2max, double Ymin, double Ymax, double Q02, double x0, double lambda, size_t subinterval_limit = 10000);
+    MVGluonDistribution(
+        double LambdaMV,
+        double gammaMV,
+        double q2min,
+        double q2max,
+        double Ymin,
+        double Ymax,
+        double Q02,
+        double x0,
+        double lambda,
+        size_t subinterval_limit = 10000);
     ~MVGluonDistribution() {};
     
     /**
@@ -377,11 +387,11 @@ protected:
 
 class FileDataGluonDistribution : public GluonDistribution {
 public:
-    enum satscale_source {NONE, POSITION_THRESHOLD, MOMENTUM_THRESHOLD};
+    typedef enum satscale_source {NONE, POSITION_THRESHOLD, MOMENTUM_THRESHOLD} satscale_source_type;
     /**
      * Constructs a new gluon distribution reading from the specified file.
      */
-    FileDataGluonDistribution(std::string pos_filename, std::string mom_filename, double xinit, enum satscale_source satscale_source, double satscale_threshold);
+    FileDataGluonDistribution(std::string pos_filename, std::string mom_filename, double xinit, satscale_source_type satscale_source, double satscale_threshold);
     /**
      * Constructs a new gluon distribution reading from the specified file.
      * This constructor uses the default saturation scale.
@@ -463,7 +473,7 @@ private:
     /** Values of the momentum space gluon distribution for interpolation. */
     double* F_dist;
     
-    enum satscale_source satscale_source;
+    satscale_source_type satscale_source;
     
     // one of interp_dist_momentum_1D or interp_dist_momentum_2D will be NULL and the other one
     // will be used, depending on whether there is a range of Y values or just a single one
@@ -495,12 +505,27 @@ private:
     std::string _name;
     
     friend class HybridGBWFileDataGluonDistribution;
+    friend class HybridMVFileDataGluonDistribution;
 };
 
 class HybridGBWFileDataGluonDistribution : public FileDataGluonDistribution {
 public:
-    HybridGBWFileDataGluonDistribution(std::string pos_filename, std::string mom_filename, double Q02, double x0, double lambda, double xinit, enum satscale_source satscale_source, double satscale_threshold);
-    HybridGBWFileDataGluonDistribution(std::string pos_filename, std::string mom_filename, double Q02, double x0, double lambda, double xinit);
+    HybridGBWFileDataGluonDistribution(
+        std::string pos_filename,
+        std::string mom_filename,
+        double Q02,
+        double x0,
+        double lambda,
+        double xinit,
+        enum satscale_source satscale_source,
+        double satscale_threshold);
+    HybridGBWFileDataGluonDistribution(
+        std::string pos_filename,
+        std::string mom_filename,
+        double Q02,
+        double x0,
+        double lambda,
+        double xinit);
     ~HybridGBWFileDataGluonDistribution();
     double S2(double r2, double Y);
     double S4(double r2, double s2, double t2, double Y);
@@ -508,6 +533,47 @@ public:
     double F(double q2, double Y);
 private:
     GBWGluonDistribution gbw_dist;
+};
+
+class HybridMVFileDataGluonDistribution : public FileDataGluonDistribution {
+public:
+    HybridMVFileDataGluonDistribution(
+        std::string pos_filename,
+        std::string mom_filename,
+        double LambdaMV,
+        double gammaMV,
+        double q2min,
+        double q2max,
+        double Ymin,
+        double Ymax,
+        double Q02,
+        double x0,
+        double lambda,
+        double xinit,
+        enum satscale_source satscale_source,
+        double satscale_threshold,
+        size_t subinterval_limit = 10000);
+    HybridMVFileDataGluonDistribution(
+        std::string pos_filename,
+        std::string mom_filename,
+        double LambdaMV,
+        double gammaMV,
+        double q2min,
+        double q2max,
+        double Ymin,
+        double Ymax,
+        double Q02,
+        double x0,
+        double lambda,
+        double xinit,
+        size_t subinterval_limit = 10000);
+    ~HybridMVFileDataGluonDistribution();
+    double S2(double r2, double Y);
+    double S4(double r2, double s2, double t2, double Y);
+    double Qs2(const double Y) const;
+    double F(double q2, double Y);
+private:
+    MVGluonDistribution mv_dist;
 };
 
 /** Prints the name of the gluon distribution to the given output stream. */

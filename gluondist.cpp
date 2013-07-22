@@ -32,6 +32,9 @@
 #include "gluondist.h"
 #include "interp2d.h"
 
+// debugging
+#include <iostream>
+
 using namespace std;
 
 static NoGridException nogrid;
@@ -127,6 +130,7 @@ void AbstractPositionGluonDistribution::setup() {
         q2_dimension++;
     }
     if (Ymin != Ymax) {
+        assert(Ymax > Ymin);
         Y_dimension = (size_t)((Ymax - Ymin) / log_step) + 2;
         while (Y_dimension < 4) { // 4 points needed for bicubic interpolation
             Ymin -= log_step;
@@ -733,7 +737,6 @@ double HybridGBWFileDataGluonDistribution::S4(double r2, double s2, double t2, d
     }
 }
 
-
 double HybridGBWFileDataGluonDistribution::F(double q2, double Y) {
     if (Y < Yminp) {
         return gbw_dist.F(q2, Y);
@@ -752,6 +755,82 @@ double HybridGBWFileDataGluonDistribution::Qs2(const double Y) const {
     }
     return FileDataGluonDistribution::Qs2(Y);
 }
+
+HybridMVFileDataGluonDistribution::HybridMVFileDataGluonDistribution(
+ string pos_filename,
+ string mom_filename,
+ double LambdaMV,
+ double gammaMV,
+ double q2min,
+ double q2max,
+ double Ymin,
+ double Ymax,
+ double Q02,
+ double x0,
+ double lambda,
+ double xinit,
+ enum satscale_source satscale_source,
+ double satscale_threshold,
+ size_t subinterval_limit) :
+  FileDataGluonDistribution(pos_filename, mom_filename, xinit, satscale_source, satscale_threshold),
+  mv_dist(LambdaMV, gammaMV, q2min, q2max, min(Ymin, exp(-xinit)), min(Ymax, exp(-xinit)), Q02, x0, lambda) {
+}
+
+HybridMVFileDataGluonDistribution::HybridMVFileDataGluonDistribution(
+ string pos_filename,
+ string mom_filename,
+ double LambdaMV,
+ double gammaMV,
+ double q2min,
+ double q2max,
+ double Ymin,
+ double Ymax,
+ double Q02,
+ double x0,
+ double lambda,
+ double xinit,
+ size_t subinterval_limit) :
+  FileDataGluonDistribution(pos_filename, mom_filename, Q02, x0, lambda, xinit),
+  mv_dist(LambdaMV, gammaMV, q2min, q2max, min(Ymin, exp(-xinit)), min(Ymax, exp(-xinit)), Q02, x0, lambda) {
+}
+
+double HybridMVFileDataGluonDistribution::S2(double r2, double Y) {
+    if (Y < Yminr) {
+        return mv_dist.S2(r2, Y);
+    }
+    else {
+        return FileDataGluonDistribution::S2(r2, Y);
+    }
+}
+
+double HybridMVFileDataGluonDistribution::S4(double r2, double s2, double t2, double Y) {
+    if (Y < Yminr) {
+        return mv_dist.S4(r2, s2, t2, Y);
+    }
+    else {
+        return FileDataGluonDistribution::S4(r2, s2, t2, Y);
+    }
+}
+
+double HybridMVFileDataGluonDistribution::F(double q2, double Y) {
+    if (Y < Yminp) {
+        return mv_dist.F(q2, Y);
+    }
+    else {
+        return FileDataGluonDistribution::F(q2, Y);
+    }
+}
+
+double HybridMVFileDataGluonDistribution::Qs2(const double Y) const {
+    if (satscale_source == POSITION_THRESHOLD && Y < Yminr) {
+        return mv_dist.Qs2(Y);
+    }
+    else if (satscale_source == MOMENTUM_THRESHOLD && Y < Yminp) {
+        return mv_dist.Qs2(Y);
+    }
+    return FileDataGluonDistribution::Qs2(Y);
+}
+
 
 ostream& operator<<(ostream& out, GluonDistribution& gdist) {
     out << gdist.name();
