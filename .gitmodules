@@ -1,0 +1,6 @@
+[submodule "quasimontecarlo"]
+	path = quasimontecarlo
+	url = https://github.com/diazona/quasimontecarlo.git
+[submodule "interp2d"]
+	path = interp2d
+	url = https://github.com/diazona/interp2d.git
