@@ -17,7 +17,7 @@ add_custom_target(git_revision.h
     WORKING_DIRECTORY ${oneloopcalc_SOURCE_DIR} VERBATIM)
 
 include_directories(${interp2d_SOURCE_DIR} ${quasimontecarlo_SOURCE_DIR})
-    
+
 add_executable(oneloopcalc oneloopcalc.cpp integrator.cpp hardfactors_position.cpp hardfactors_radial.cpp hardfactors_momentum.cpp dss_pinlo.cpp mstwpdf.cc cubature.c gluondist.cpp coupling.cpp factorizationscale.cpp integrationcontext.cpp integrationtype.cpp context.cpp utils.cpp)
 target_link_libraries(oneloopcalc interp2d quasimontecarlo ${LIBS})
 add_dependencies(oneloopcalc git_revision.h)
@@ -37,3 +37,5 @@ target_link_libraries(gluondist interp2d ${LIBS})
 
 add_executable(kovr kov-position/gauleg.cpp kov-position/interr.cpp kov-position/kovr.cpp)
 target_link_libraries(kovr m)
+
+set_target_properties(oneloopcalc contextreader utils_test dss_pinlo_test gluondist kovr PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
