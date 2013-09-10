@@ -1,15 +1,64 @@
-Compiling
+SOLO: Saturation physics at One Loop Order
 ---------------
 
-If CMake is installed, and configured to be able to locate the GSL headers and libraries, this program can be compiled by running
-    cmake .
-    make
+This is the program used to calculate the complete next-to-leading cross section
+for inclusive hadron production in pA collisions, described in the paper
 
-If CMake is not installed, something like the following command should do it:
-    g++ -o oneloopcalc oneloopcalc.cpp integrator.cpp hardfactors_position.cpp \
-        hardfactors_momentum.cpp dss_pinlo.cpp mstwpdf.cc gluondist.cpp coupling.cpp \
-        integrationcontext.cpp integrationtype.cpp context.cpp utils.cpp libinterp2d.a \
-        libquasimontecarlo.a -lgsl -lgslcblas -lm
+ Anna M. Stasto, Bo-Wen Xiao, David Zaslavsky
+ "Towards the Test of Saturation Physics Beyond Leading Logarithm"
+ arXiv:1307.4057 [hep-ph]
+
+Please cite this paper if you use the results of the code in a publication.
+
+
+Quick start
+---------------
+
+The quickest and intended way to compile the code is as follows: first, ensure
+that git, GSL and CMake are properly installed (as well as a C++ compiler; GCC
+is recommended). Then run the following commands:
+
+    git clone https://github.com/diazona/SOLO.git
+    cd SOLO
+    git submodule init
+    git submodule update
+    
+At this point you will need to manually download the MSTW PDF interface from
+http://mstwpdf.hepforge.org/code/code.html. Extract the files `mstwpdf.cc` and
+`mstwpdf.h` from the tarball and place them in SOLO's `src/` directory. (We are
+not authorized to distribute the MSTW PDF interface as part of SOLO, which is
+why this has to be done manually.) Then, from the directory `SOLO/` (the parent
+directory of `src/`), run these commands:
+    
+    mkdir build
+    cd build
+    cmake .. && make
+
+At the end of this you should have a `build/` directory containing the programs.
+
+In order to run the program, you will need two additional files:
+
+- The grid file for the MSTW 2008 PDF at NLO, from the paper
+    
+  A. D. Martin, W. J. Stirling, R. S. Thorne and G. Watt,
+  "Parton distributions for the LHC",
+  Eur. Phys. J. C 63 (2009) 189-285
+  arXiv:0901.0002 [hep-ph].
+
+The filename is `mstw2008nlo.00.dat`, and it can be downloaded as part of an
+archive at the MSTW PDF site http://mstwpdf.hepforge.org/code/code.html.
+
+- The data file for the DSS fragmentation functions at NLO, from the paper
+
+  Daniel de Florian, Rodolfo Sassot, Marco Stratmann
+  "Global analysis of fragmentation functions for pions and kaons and their
+  uncertainties"
+  Phys. Rev. D 75, 114010 (2007)
+  arXiv:hep-ph/0703242
+
+The filename is `PINLO.DAT`. Unfortunately we (authors of SOLO) are not aware of
+a website where this file is directly available.
+
 
 Running
 ---------------
@@ -52,10 +101,11 @@ where the <options> can include any number of the following, in any order:
         
     using the shortcut "lo", and the group of all next-to-leading order terms,
     
-        r:h12qq,m:h14qq,r:h12gg,m:h12qqbar,m:h16gg,r:h112gq,r:h122gq,m:h14gq,r:h112qg,r:h122qg,m:h14qg
+        r:h12qq,m:h14qq,r:h12gg,m:h12qqbar,m:h16gg,r:h112gq,r:h122gq,m:h14gq,
+        r:h112qg,r:h122qg,m:h14qg
         
-    using the shortcut "nlo". These are defined in oneloopcalc.cpp. The default if
-    no hard factor groups are specified on the command line is
+    using the shortcut "nlo". These are defined in oneloopcalc.cpp. The default
+    if no hard factor groups are specified on the command line is
     
         lo nlo
 
@@ -72,7 +122,8 @@ where the <options> can include any number of the following, in any order:
     A (no default)
         the mass number
     abserr (default 1e-20)
-        the absolute error at which to stop an integration, for strategies which use this termination condition
+        the absolute error at which to stop an integration, for strategies which
+        use this termination condition
     alphas (default 0.2)
         value for the fixed coupling
     beta (default 11 - 2*Nf/3)
@@ -80,7 +131,8 @@ where the <options> can include any number of the following, in any order:
     c (no default)
         the centrality coefficient, 0-1
     c0r_optimization (default true)
-        if the factorization scale scheme is c0r, whether to skip calculating terms that should be zero
+        if the factorization scale scheme is c0r, whether to skip calculating
+        terms that should be zero
     CF (default 1.5)
         the color factor
     coupling_type (default fixed)
@@ -88,9 +140,11 @@ where the <options> can include any number of the following, in any order:
     cubature_iterations
         number of calls to use for cubature integration
     factorization_scale (default fixed)
-        "fixed" or "4pT2" or "CpT2" or "c0r" to specify how to set the factorization scale
+        "fixed" or "4pT2" or "CpT2" or "c0r" to specify how to set the
+        factorization scale
     factorization_scale_coefficient (no default)
-        if factorization_scale is "CpT2", this is the coefficient to multiply by pT2 to get mu2
+        if factorization_scale is "CpT2", this is the coefficient to multiply by
+        pT2 to get mu2
     ff_filename (default PINLO.DAT)
         filename to read DSS FF data from
     gammaMV
@@ -100,9 +154,11 @@ where the <options> can include any number of the following, in any order:
     gdist_position_filename
         file to read the position data for a gluon distribution from
     gdist_subinterval_limit (default 10000)
-        number of subdivisions to use when integrating a position gluon distribution
+        number of subdivisions to use when integrating a position gluon
+        distribution
     gdist_type (default GBW)
-        the type of the gluon distribution, "GBW", "MV", "fMV", "file", or "gbw+file"
+        the type of the gluon distribution, "GBW", "MV", "fMV", "file", or
+        "gbw+file"
     hadron (no default)
         the type of hadron detected, "pi-", "pi0", or "pi+"
     integration_strategy (default VEGAS)
@@ -128,26 +184,32 @@ where the <options> can include any number of the following, in any order:
     pseudorandom_generator_seed (default 0)
         seed for the GSL random number generator
     pseudorandom_generator_type (default mt19937)
-        algorithm to use for generating random numbers; allowed values are in the GSL documentation
+        algorithm to use for generating random numbers; allowed values are in
+        the GSL documentation
     pT (no default)
         comma-separated list of transverse momenta
     quasirandom_generator_type (default halten)
-        algorithm to use for generating quasirandom numbers for QMC integration; allowed values are in the GSL documentation
+        algorithm to use for generating quasirandom numbers for QMC integration;
+        allowed values are in the GSL documentation
     quasi_iterations (default 1000000)
         the number of iterations at which to stop quasi Monte Carlo integration
     regulator (default 1)
         the position of the Landau pole for the regulated LO running coupling
     relerr (default 0)
-        the relative error at which to stop an integration, for strategies which use this termination condition
+        the relative error at which to stop an integration, for strategies which
+        use this termination condition
     satscale_source (default extract from momentum)
-        for a file gluon distribution, how to extract the saturation scale; allowed values are "analytic" (Q0²(x0/x)^λ),
-        "extract from momentum" which determines the saturation scale by finding the momentum where the gluon distribution
-        equals a fixed fraction of its value at a reference momentum, and "extract from position" which finds the radius
-        where the gluon distribution equals a fixed threshold value
+        for a file gluon distribution, how to extract the saturation scale;
+        allowed values are "analytic" (Q0²(x0/x)^λ), "extract from momentum"
+        which determines the saturation scale by finding the momentum where the
+        gluon distribution equals a fixed fraction of its value at a reference
+        momentum, and "extract from position" which finds the radius where the
+        gluon distribution equals a fixed threshold value
     satscale_threshold (no default)
-        if satscale_source is "extract from momentum" or "extract from position", this is the fixed threshold value
-        (or fraction of its value at a reference point, in the momentum case) that the gluon distribution should equal
-        at the saturation scale
+        if satscale_source is "extract from momentum" or
+        "extract from position", this is the fixed threshold value (or fraction
+        of its value at a reference point, in the momentum case) that the gluon
+        distribution should equal at the saturation scale
     Sperp (default 1)
         cross-sectional area of the hadron
     sqs (no default)
@@ -155,9 +217,11 @@ where the <options> can include any number of the following, in any order:
     TR (default 0.5)
         group coefficient
     vegas_incremental_iterations (default 1000000)
-        number of function evaluations to use in each step of the VEGAS Monte Carlo algorithm after the first
+        number of function evaluations to use in each step of the VEGAS Monte
+        Carlo algorithm after the first
     vegas_initial_iterations (default 100000)
-        number of function evaluations to use to refine the grid in the first step of the VEGAS algorithm
+        number of function evaluations to use to refine the grid in the first
+        step of the VEGAS algorithm
     x0 (default 0.000304)
         the fit parameter from the definition of the saturation scale
     Y (no default)
@@ -168,13 +232,14 @@ where the <options> can include any number of the following, in any order:
         
 - Transverse momentum values
 
-    Any numbers given as command line arguments are put together into one big list
-    of transverse momentum values to run the calculation at. If a comma-separated
-    list of numbers is given, then it will be split apart and each number added to
-    the one big list. There's no significance to putting certain pT values together
-    and others not. (`0.5 0.7 0.8,0.9` and `0.5,0.7 0.8 0.9` are exactly equivalent.)
-    Any pT values specified on the command line will _replace_ pT values specified
-    in the config file, if there is one.
+    Any numbers given as command line arguments are put together into one big
+    list of transverse momentum values to run the calculation at. If a
+    comma-separated list of numbers is given, then it will be split apart and
+    each number added to the one big list. There's no significance to putting
+    certain pT values together and others not. (`0.5 0.7 0.8,0.9` and
+    `0.5,0.7 0.8 0.9` are exactly equivalent.) Any pT values specified on the
+    command line will _replace_ pT values specified in the config file, if there
+    is one.
 
 - Literal options
 
@@ -192,9 +257,10 @@ where the <options> can include any number of the following, in any order:
                 every single evaluation of the function. The output goes to the
                 file trace.output in the working directory. (Expect this file to
                 grow to several megabytes.) The allowable variables are those
-                in ictx_var_list.inc, or you can use "--trace=all" or "--trace=*"
-                to print out all available variables.
-        
+                in ictx_var_list.inc, or you can use "--trace=all" or
+                "--trace=*" to print out all available variables.
+
+
 Structure
 ---------------
 
@@ -214,6 +280,7 @@ Basically the code runs as follows:
     d. Store the value and error bound returned from the Monte Carlo
 3. Print out all the results
 
+
 Files
 ---------------
 
@@ -226,7 +293,8 @@ log.h
 gsl_exception.h
     Declares an exception to be thrown when GSL reports an error
 hardfactors.h
-    A class that abstractly represents a hard factor (i.e. an expression to be integrated)
+    A class that abstractly represents a hard factor (i.e. an expression to be
+    integrated)
 hardfactors_momentum.h
 hardfactors_momentum.cpp
     Implementation of the momentum space hard factors (terms)
@@ -277,7 +345,7 @@ libinterp2d.a
 quasimontecarlo.h
 libquasimontecarlo.a
     A library for quasi Monte Carlo integration compatible with the GSL
-    Source code to be posted at GitHub eventually
+    Full source code at https://github.com/diazona/quasimontecarlo
 
 Source code for other things used by the program, written by other people:
     
@@ -296,6 +364,8 @@ CMakeFiles.txt
 PINLO.DAT
     DSS fragmentation function data
 pinlo_extended.dat
-    DSS fragmentation function data with extrapolation to lower z
+    DSS fragmentation function data with extrapolation to lower z (the
+    significance of this file will be described in an upcoming long paper
+    about SOLO)
 mstw2008nlo.00.dat
     MSTW PDF data
