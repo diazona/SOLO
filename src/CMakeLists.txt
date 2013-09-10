@@ -14,24 +14,26 @@ set(LIBS ${LIBS} m)
 add_custom_target(git_revision.h
     git log -1 "--format=format:#define GIT_REVISION \"%H\"%n" HEAD > git_revision.h 
     COMMAND git diff-index --quiet HEAD || echo "#define GIT_DIRTY" >> git_revision.h
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} VERBATIM)
+    WORKING_DIRECTORY ${oneloopcalc_SOURCE_DIR} VERBATIM)
 
+include_directories(${SOLO_SOURCE_DIR}/interp2d ${SOLO_SOURCE_DIR}/quasimontecarlo)
+    
 add_executable(oneloopcalc oneloopcalc.cpp integrator.cpp hardfactors_position.cpp hardfactors_radial.cpp hardfactors_momentum.cpp dss_pinlo.cpp mstwpdf.cc cubature.c gluondist.cpp coupling.cpp factorizationscale.cpp integrationcontext.cpp integrationtype.cpp context.cpp utils.cpp)
-target_link_libraries(oneloopcalc ${CMAKE_SOURCE_DIR}/libinterp2d.a ${CMAKE_SOURCE_DIR}/libquasimontecarlo.a ${LIBS})
+target_link_libraries(oneloopcalc interp2d quasimontecarlo ${LIBS})
 add_dependencies(oneloopcalc git_revision.h)
 
 add_executable(contextreader context.cpp utils.cpp coupling.cpp gluondist.cpp factorizationscale.cpp)
-target_link_libraries(contextreader ${CMAKE_SOURCE_DIR}/libinterp2d.a ${LIBS})
+target_link_libraries(contextreader interp2d ${LIBS})
 set_target_properties(contextreader PROPERTIES COMPILE_DEFINITIONS CONTEXT_TEST)
 
 add_executable(utils_test utils.cpp)
 set_target_properties(utils_test PROPERTIES COMPILE_DEFINITIONS UTILS_TEST)
 
 add_executable(dss_pinlo_test dss_pinlo_test.cpp dss_pinlo.cpp)
-target_link_libraries(dss_pinlo_test ${CMAKE_SOURCE_DIR}/libinterp2d.a ${LIBS})
+target_link_libraries(dss_pinlo_test interp2d ${LIBS})
 
 add_executable(gluondist gluondist_driver.cpp gluondist.cpp context.cpp utils.cpp coupling.cpp factorizationscale.cpp)
-target_link_libraries(gluondist ${CMAKE_SOURCE_DIR}/libinterp2d.a ${LIBS})
+target_link_libraries(gluondist interp2d ${LIBS})
 
 add_executable(kovr kov-position/gauleg.cpp kov-position/interr.cpp kov-position/kovr.cpp)
 target_link_libraries(kovr m)
