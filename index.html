@@ -30,579 +30,501 @@
 
       </header>
       <section>
-        <p>This is the program used to calculate the complete next-to-leading cross section
-for inclusive hadron production in pA collisions, described in the paper</p>
+        <p>This is the program used to calculate the complete next-to-leading cross section for inclusive hadron production in pA collisions, described in the paper</p>
+        <blockquote>
+            <p>Anna M. Stasto, Bo-Wen Xiao, David Zaslavsky<br>
+            "Towards the Test of Saturation Physics Beyond Leading Logarithm"<br>
+            <a href="http://arxiv.org/abs/arXiv:1307.4057">arXiv:1307.4057</a> [hep-ph]</p>
+        </blockquote>
+        <p>Please cite this paper if you use the results of the code in a publication.</p>
 
-<blockquote>
-<p>Anna M. Stasto, Bo-Wen Xiao, David Zaslavsky<br>
-"Towards the Test of Saturation Physics Beyond Leading Logarithm"<br>
-arXiv:1307.4057 [hep-ph]</p>
-</blockquote>
-
-<p>Please cite this paper if you use the results of the code in a publication.</p>
-
-<h1>
-<a name="quick-start" class="anchor" href="#quick-start"><span class="octicon octicon-link"></span></a>Quick start</h1>
-
-<p>The quickest and intended way to compile the code is as follows: first, ensure
-that git, GSL and CMake are properly installed (as well as a C++ compiler; GCC
-is recommended). Then run the following commands:</p>
-
-<pre><code>git clone https://github.com/diazona/SOLO.git
+        <h1><a name="quick-start" class="anchor" href="#quick-start"><span class="octicon octicon-link"></span></a>Quick start</h1>
+        
+        <h2><a name="downloading-the-code" class="anchor" href="#downloading-the-code"><span class="octicon octicon-link"></span></a>Downloading the code</h2>
+        
+        <h3><a name="with-git" class="anchor" href="#with-git"><span class="octicon octicon-link"></span></a>If you have git installed</h3>
+        
+        <p>The quickest way to obtain the code is to use <a href="http://git-scm.com/">git</a>. Run the following commands:</p>
+        <pre><code>git clone https://github.com/diazona/SOLO.git
 cd SOLO
 git submodule init
-git submodule update
-</code></pre>
+git submodule update</code></pre>
 
-<p>At this point you will need to manually download the MSTW PDF interface from
-<a href="http://mstwpdf.hepforge.org/code/code.html">http://mstwpdf.hepforge.org/code/code.html</a>. Extract the files <code>mstwpdf.cc</code> and
-<code>mstwpdf.h</code> from the tarball and place them in SOLO's <code>src/</code> directory. (We are
-not authorized to distribute the MSTW PDF interface as part of SOLO, which is
-why this has to be done manually.) Then, from the directory <code>SOLO/</code> (the parent
-directory of <code>src/</code>), run these commands:</p>
-
-<pre><code>mkdir build
+        <h3><a name="without-git" class="anchor" href="#without-git"><span class="octicon octicon-link"></span></a>If you don't have git installed</h3>
+        
+        <p>If you don't have git (and don't want to download it), you can download the source code manually.</p>
+        <ol>
+            <li>Download the latest designated release as a
+            <a href="https://github.com/diazona/SOLO/archive/v0.1.tar.gz">GZIP'd TAR</a>
+            file or a
+            <a href="https://github.com/diazona/SOLO/archive/v0.1.zip">ZIP</a>
+            file. It contains the following directory structure:
+            <ul>
+                <li>
+                <code>SOLO-0.1/</code>
+                <ul>
+                    <li><code>cmake/</code> (contains files)</li>
+                    <li><code>interp2d/</code> (empty)</li>
+                    <li><code>quasimontecarlo/</code> (empty)</li>
+                    <li><code>src/</code> (contains files)</li>
+                    <li><code>README</code></li>
+                    <li><code>CMakeLists.txt</code></li>
+                    <li><code>.gitmodules</code></li>
+                </ul>
+                </li>
+            </ul>
+            Extract this into a folder of your choice.</li>
+            <li>Download the latest release of <a href="https://github.com/diazona/interp2d">interp2d</a> as a
+            <a href="https://github.com/diazona/interp2d/archive/v0.1.tar.gz">GZIP'd TAR</a>
+            file or a
+            <a href="https://github.com/diazona/interp2d/archive/v0.1.zip">ZIP</a>
+            file. It contains the following directory structure:
+            <ul>
+                <li>
+                <code>interp2d-0.1/</code>
+                <ul>
+                    <li><code>CMakeLists.txt</code></li>
+                    <li><code>COPYING</code></li>
+                    <li><code>Doxyfile.in</code></li>
+                    <li><code>README.md</code></li>
+                    <li><code>bicubic.c</code></li>
+                    <li><code>bilinear.c</code></li>
+                    <li><code>interp2d.c</code></li>
+                    <li><code>interp2d.h</code></li>
+                    <li><code>interp2d.kdev4</code></li>
+                    <li><code>interp2d_spline.c</code></li>
+                    <li><code>interp2d_spline.h</code></li>
+                    <li><code>test.c</code></li>
+                </ul>
+                </li>
+            </ul>
+            Move the files from <code>interp2d-0.1/</code> into <code>SOLO-0.1/interp2d/</code>.</li>
+            <li>Download the latest release of <a href="https://github.com/diazona/quasimontecarlo">quasimontecarlo</a> as a
+            <a href="https://github.com/diazona/quasimontecarlo/archive/v0.1.tar.gz">GZIP'd TAR</a>
+            file or a
+            <a href="https://github.com/diazona/quasimontecarlo/archive/v0.1.zip">ZIP</a>
+            file. It contains the following directory structure:
+            <ul>
+                <li>
+                <code>quasimontecarlo-0.1/</code>
+                <ul>
+                    <li><code>CMakeLists.txt</code></li>
+                    <li><code>README.md</code></li>
+                    <li><code>cmake/</code> (contains files)</li>
+                    <li><code>quasimontecarlo.c</code></li>
+                    <li><code>quasimontecarlo.h</code></li>
+                    <li><code>quasimontecarlo.kdev4</code></li>
+                    <li><code>test.c</code></li>
+                </ul>
+                </li>
+            </ul>
+            Move the files from <code>quasimontecarlo-0.1/</code> into <code>SOLO-0.1/quasimontecarlo/</code>.</li>
+        </ol>
+        
+        <h2><a name="downloading-external-files" class="anchor" href="#downloading-external-files"><span class="octicon octicon-link"></span></a>Downloading external files</h2>
+        
+        <p>At this point you will need to manually download the MSTW PDF interface from <a href="http://mstwpdf.hepforge.org/code/code.html">http://mstwpdf.hepforge.org/code/code.html</a>. Extract the files <code>mstwpdf.cc</code> and <code>mstwpdf.h</code> from the tarball and place them in SOLO's <code>src/</code> directory. (We are not authorized to distribute the MSTW PDF interface as part of SOLO, which is why this has to be done manually.)</p>
+        
+        <h2><a name="compiling" class="anchor" href="#compiling"><span class="octicon octicon-link"></span></a>Compiling</h2>
+        
+        <p>You will need to have the following dependencies already installed:</p>
+        <ul>
+            <li>A C++ compiler and runtime environment (GCC and glibc are recommended)</li>
+            <li><a href="http://www.gnu.org/software/gsl/">GSL</a>, the GNU Scientific Library</li>
+            <li><a href="http://www.openssl.org/">OpenSSL</a></li>
+        </ul>
+        
+        <h3><a name="with-cmake" class="anchor" href="#with-cmake"><span class="octicon octicon-link"></span></a>If you have CMake installed</h3>
+        
+        <p><a href="http://www.cmake.org/">CMake</a> is a cross-platform build system that fills roughly the same role as <code>configure</code> from GNU autotools. If you have it installed, it will check that a C++ compiler and GSL are available, and show an error message if they are not.</p>
+        
+        <p>To compile with CMake: from the directory <code>SOLO/</code> or <code>SOLO-0.1/</code> (the parent directory of <code>src/</code>), run these commands:</p>
+        <pre><code>mkdir build
 cd build
-cmake .. &amp;&amp; make
-</code></pre>
-
-<p>At the end of this you should have a <code>build/</code> directory containing the programs.</p>
-
-<p>In order to run the program, you will need two additional files:</p>
-
-<ul>
-<li>
-<p>The grid file for the MSTW 2008 PDF at NLO, from the paper</p>
-
-<blockquote>
-<p>A. D. Martin, W. J. Stirling, R. S. Thorne and G. Watt,<br>
-"Parton distributions for the LHC",<br>
-Eur. Phys. J. C 63 (2009) 189-285<br>
-arXiv:0901.0002 [hep-ph].</p>
-</blockquote>
-<p>The filename is <code>mstw2008nlo.00.dat</code>, and it can be downloaded as part of an
-archive at the MSTW PDF site <a href="http://mstwpdf.hepforge.org/code/code.html">http://mstwpdf.hepforge.org/code/code.html</a>.</p>
-</li>
-<li>
-<p>The data file for the DSS fragmentation functions at NLO, from the paper</p>
-
-<blockquote>
-<p>Daniel de Florian, Rodolfo Sassot, Marco Stratmann<br>
-"Global analysis of fragmentation functions for pions and kaons and their uncertainties"<br>
-Phys. Rev. D 75, 114010 (2007)<br>
-arXiv:hep-ph/0703242</p>
-</blockquote>
-<p>The filename is <code>PINLO.DAT</code>, and it is reportedly available on request from the authors of the DSS paper. Unfortunately we (authors of SOLO) are not aware of
-a website where this file is directly downloadable.</p></li>
-</ul>
-
-<h1>
-<a name="running" class="anchor" href="#running"><span class="octicon octicon-link"></span></a>Running</h1>
-
-<p>The program is invoked as</p>
-
-<pre><code>./oneloopcalc &lt;options&gt;
-</code></pre>
-
-<p>where the  can include any number of the following, in any order:</p>
-
-<ul>
-<li>
-<p>Hard factor group specifications</p>
-
-<p>These tell the program which terms to calculate. A hard factor <em>group</em>
-specification is made of any number of individual hard factor specifications
-separated by commas. The program will calculate the results for all the
-terms in the group and display a total for each group.</p>
-
-<p>An <em>individual</em> hard factor specification is a string like "p:h02qq" or
-"m:h16gg". The "p:" at the beginning specifies the position space
-implementation, "r:" specifies a position space implementation with the
-angular integral already done, and the "m:" specifies the momentum space
-implementation. The prefix can be omitted, in which case position space
-is taken as the default. (Not recommended, as position space is highly
-inaccurate for some terms.)</p>
-
-<p>The rest of the string gives the name of a hard factor. The canonical set
-of possible names that can be used with a "p:" prefix are all the return
-values from the get_name() methods in hardfactors_position.h, and similarly
-for "r:" with hardfactors_radial.h and "m:" with hardfactors_momentum.h.
-Here's a near-complete list:</p>
-
-<pre><code>p:h02qq m:h02qq p:h12qq r:h12qq p:h14qq m:h14qq
-p:h02gg m:h02gg p:h12gg r:h12gg p:h12qqbar m:h12qqbar p:h16gg m:h16gg
-p:h112qg r:h112qg p:h122qg r:h122qg p:h14qg m:h14qg
-p:h112gq r:h112gq p:h122gq r:h122gq p:h14gq m:h14gq
-</code></pre>
-
-<p>The names are case-insensitive.</p>
-
-<p>It's also possible to specify the group of all leading order terms,</p>
-
-<pre><code>m:h02qq,m:h02gg
-</code></pre>
-
-<p>using the shortcut "lo", and the group of all next-to-leading order terms,</p>
-
-<pre><code>r:h12qq,m:h14qq,r:h12gg,m:h12qqbar,m:h16gg,r:h112gq,r:h122gq,m:h14gq,
-r:h112qg,r:h122qg,m:h14qg
-</code></pre>
-
-<p>using the shortcut "nlo". These are defined in oneloopcalc.cpp. The default
-if no hard factor groups are specified on the command line is</p>
-
-<pre><code>lo nlo
-</code></pre>
-</li>
-<li>
-<p>Configuration file names</p>
-
-<p>Configuration files contain parameters for the program, in the format</p>
-
-<pre><code>key1=value1
-key2=value2
-</code></pre>
-
-<p>and so on. Keys are case-insensitive. The canonical list of keys which
-are used is the code in context.cpp. Here's a mostly-complete list:</p>
-
-<ul>
-<li>
-<p><code>A</code> (no default)</p>
-
-<p>the mass number</p>
-</li>
-<li>
-<p><code>abserr</code> (default 1e-20)</p>
-
-<p>the absolute error at which to stop an integration, for strategies which
-use this termination condition</p>
-</li>
-<li>
-<p><code>alphas</code> (default 0.2)</p>
-
-<p>value for the fixed coupling</p>
-</li>
-<li>
-<p><code>beta</code> (default 11 - 2*Nf/3)</p>
-
-<p>coefficient for the LO running coupling</p>
-</li>
-<li>
-<p><code>c</code> (no default)</p>
-
-<p>the centrality coefficient, 0-1</p>
-</li>
-<li>
-<p><code>c0r_optimization</code> (default true)</p>
-
-<p>if the factorization scale scheme is c0r, whether to skip calculating
-terms that should be zero</p>
-</li>
-<li>
-<p><code>CF</code> (default 1.5)</p>
-
-<p>the color factor</p>
-</li>
-<li>
-<p><code>coupling_type</code> (default fixed)</p>
-
-<p>"fixed" or "running"</p>
-</li>
-<li>
-<p><code>cubature_iterations</code></p>
-
-<p>number of calls to use for cubature integration</p>
-</li>
-<li>
-<p><code>factorization_scale</code> (default fixed)</p>
-
-<p>"fixed" or "4pT2" or "CpT2" or "c0r" to specify how to set the factorization scale</p>
-</li>
-<li>
-<p><code>factorization_scale_coefficient</code> (no default)</p>
-
-<p>if factorization_scale is "CpT2", this is the coefficient to multiply by <code>pT2</code> to get <code>mu2</code></p>
-</li>
-<li>
-<p><code>ff_filename</code> (default PINLO.DAT)</p>
-
-<p>filename to read DSS FF data from</p>
-</li>
-<li>
-<p><code>gammaMV</code></p>
-
-<p>the anomalous dimension in the MV gluon distribution</p>
-</li>
-<li>
-<p><code>gdist_momentum_filename</code></p>
-
-<p>file to read the momentum data for a gluon distribution from</p>
-</li>
-<li>
-<p><code>gdist_position_filename</code></p>
-
-<p>file to read the position data for a gluon distribution from</p>
-</li>
-<li>
-<p><code>gdist_subinterval_limit</code> (default 10000)</p>
-
-<p>number of subdivisions to use when integrating a position gluon distribution</p>
-</li>
-<li>
-<p><code>gdist_type</code> (default GBW)</p>
-
-<p>the type of the gluon distribution, "GBW", "MV", "fMV", "file", or "gbw+file"</p>
-</li>
-<li>
-<p><code>hadron</code> (no default)</p>
-
-<p>the type of hadron detected, "pi-", "pi0", or "pi+"</p>
-</li>
-<li>
-<p><code>integration_strategy</code> (default VEGAS)</p>
-
-<p>the integration type to use, "MISER", "VEGAS" (best), or "QUASI"</p>
-</li>
-<li>
-<p><code>lambda</code> (default 0.288)</p>
-
-<p>the exponent in the definition of the saturation scale</p>
-</li>
-<li>
-<p><code>lambdaMV</code> (default 0.241)</p>
-
-<p>the parameter in the MV gluon distribution, in GeV</p>
-</li>
-<li>
-<p><code>lambdaQCD</code> (default 0.2428711 = sqrt(0.0588))</p>
-
-<p>QCD lambda in GeV, used in the running coupling</p>
-</li>
-<li>
-<p><code>miser_iterations</code> (default 10000000 = 1e7)</p>
-
-<p>number of iterations to use in MISER integration</p>
-</li>
-<li>
-<p><code>mu2</code> (default 10)</p>
-
-<p>factorization scale in GeV, if factorization_scale is "fixed"</p>
-</li>
-<li>
-<p><code>Nc</code> (default 3)</p>
-
-<p>number of colors</p>
-</li>
-<li>
-<p><code>Nf</code> (default 3)</p>
-
-<p>number of flavors</p>
-</li>
-<li>
-<p><code>pdf_filename</code> (default mstw2008nlo.00.dat)</p>
-
-<p>filename to read MSTW PDF from</p>
-</li>
-<li>
-<p><code>projectile</code> (no default)</p>
-
-<p>the type of projectile, "deuteron" or "proton"</p>
-</li>
-<li>
-<p><code>pseudorandom_generator_seed</code> (default 0)</p>
-
-<p>seed for the GSL random number generator</p>
-</li>
-<li>
-<p><code>pseudorandom_generator_type</code> (default mt19937)</p>
-
-<p>algorithm to use for generating random numbers; allowed values are in the GSL documentation</p>
-</li>
-<li>
-<p><code>pT</code> (no default)</p>
-
-<p>comma-separated list of transverse momenta</p>
-</li>
-<li>
-<p><code>quasirandom_generator_type</code> (default halten)</p>
-
-<p>algorithm to use for generating quasirandom numbers for QMC integration;
-allowed values are in the GSL documentation</p>
-</li>
-<li>
-<p><code>quasi_iterations</code> (default 1000000)</p>
-
-<p>the number of iterations at which to stop quasi Monte Carlo integration</p>
-</li>
-<li>
-<p><code>regulator</code> (default 1)</p>
-
-<p>the position of the Landau pole for the regulated LO running coupling</p>
-</li>
-<li>
-<p><code>relerr</code> (default 0)</p>
-
-<p>the relative error at which to stop an integration, for strategies which use this termination condition</p>
-</li>
-<li>
-<p><code>satscale_source</code> (default extract from momentum)</p>
-
-<p>for a file gluon distribution, how to extract the saturation scale;
-allowed values are "analytic" (Q0²(x0/x)^λ), "extract from momentum"
-which determines the saturation scale by finding the momentum where the
-gluon distribution equals a fixed fraction of its value at a reference
-momentum, and "extract from position" which finds the radius where the
-gluon distribution equals a fixed threshold value</p>
-</li>
-<li>
-<p><code>satscale_threshold</code> (no default)</p>
-
-<p>if satscale_source is "extract from momentum" or
-"extract from position", this is the fixed threshold value (or fraction
-of its value at a reference point, in the momentum case) that the gluon
-distribution should equal at the saturation scale</p>
-</li>
-<li>
-<p><code>Sperp</code> (default 1)</p>
-
-<p>cross-sectional area of the hadron</p>
-</li>
-<li>
-<p><code>sqs</code> (no default)</p>
-
-<p>sqrt(s), the collider's CM energy</p>
-</li>
-<li>
-<p><code>TR</code> (default 0.5)</p>
-
-<p>group coefficient</p>
-</li>
-<li>
-<p><code>vegas_incremental_iterations</code> (default 1000000)</p>
-
-<p>number of function evaluations to use in each step of the VEGAS Monte Carlo algorithm after the first</p>
-</li>
-<li>
-<p><code>vegas_initial_iterations</code> (default 100000)</p>
-
-<p>number of function evaluations to use to refine the grid in the first step of the VEGAS algorithm</p>
-</li>
-<li>
-<p><code>x0</code> (default 0.000304)</p>
-
-<p>the fit parameter from the definition of the saturation scale</p>
-</li>
-<li>
-<p><code>Y</code> (no default)</p>
-
-<p>comma-separated list of rapidities to calculate at</p>
-</li>
-</ul>
-<p>The configuration files have to at least set <code>A</code>, <code>c</code>, <code>sqs</code>, and <code>Y</code>, and also <code>pT</code> if no transverse momenta are specified as command line arguments.</p>
-</li>
-<li>
-<p>Transverse momentum values</p>
-
-<p>Any numbers given as command line arguments are put together into one big
-list of transverse momentum values to run the calculation at. If a
-comma-separated list of numbers is given, then it will be split apart and
-each number added to the one big list. There's no significance to putting
-certain pT values together and others not. (<code>0.5 0.7 0.8,0.9</code> and
-<code>0.5,0.7 0.8 0.9</code> are exactly equivalent.) Any <code>pT</code> values specified on the
-command line will <em>replace</em> <code>pT</code> values specified in the config file, if there
-is one.</p>
-</li>
-<li>
-<p>Literal options</p>
-
-<p>--separate  Print out the results for each individual hard factor, not just
-            the total for each hard factor groups
---minmax    Track and print out the minimum and maximum values of kinematic
-            variables
---trace-gdist
-            Print out parameters and values for every call to the gluon
-            distribution. Output goes to the file trace_gdist.output in the
-            working directory. (Expect this file to grow to several hundred
-            megabytes.)
---trace=var1,var2,...
-            Print out selected variables from the integration context after
-            every single evaluation of the function. The output goes to the
-            file trace.output in the working directory. (Expect this file to
-            grow to several megabytes.) The allowable variables are those
-            in ictx_var_list.inc, or you can use "--trace=all" or
-            "--trace=*" to print out all available variables.</p>
-</li>
-</ul><h1>
-<a name="structure" class="anchor" href="#structure"><span class="octicon octicon-link"></span></a>Structure</h1>
-
-<p>Basically the code runs as follows:</p>
-
-<ol>
-<li>Collect the command line options and settings from configuration files and
-put everything into a <code>ResultsCalculator</code>
-</li>
-<li>For each combination of <code>pT</code> and <code>Y</code>, and for each hard factor group:
-a. Create an <code>Integrator</code> with the current values of <code>pT</code> and <code>Y</code> and the current
-   hard factor group
-b. The <code>Integrator</code> calls the GSL Monte Carlo integration routine
-c. For each time the MC routine evaluates the function
-    i.  Update the variables in the <code>IntegrationContext</code>
-    ii. Go through the list of <code>HardFactor</code> instances in the current group
-        and get a value from each one
-    iii.Return the total value
-d. Store the value and error bound returned from the Monte Carlo</li>
-<li>Print out all the results</li>
-</ol><h1>
-<a name="files" class="anchor" href="#files"><span class="octicon octicon-link"></span></a>Files</h1>
-
-<p>Source code for the program itself:</p>
-
-<ul>
-<li>
-<p><code>oneloopcalc.cpp</code></p>
-
-<p>Main program</p>
-</li>
-<li>
-<p><code>log.h</code></p>
-
-<p>Declares an output stream to write status messages to</p>
-</li>
-<li>
-<p><code>gsl_exception.h</code></p>
-
-<p>Declares an exception to be thrown when GSL reports an error</p>
-</li>
-<li>
-<p><code>hardfactors.h</code></p>
-
-<p>A class that abstractly represents a hard factor (i.e. an expression to be integrated)</p>
-</li>
-<li>
-<p><code>hardfactors_momentum.h</code><br><code>hardfactors_momentum.cpp</code></p>
-
-<p>Implementation of the momentum space hard factors (terms)</p>
-</li>
-<li>
-<p><code>hardfactors_position.h</code><br><code>hardfactors_position.cpp</code></p>
-
-<p>Implementation of the position space hard factors (terms)</p>
-</li>
-<li>
-<p><code>gluondist.h</code><br><code>gluondist.cpp</code></p>
-
-<p>Implementations of the gluon distributions</p>
-</li>
-<li>
-<p><code>gluondist_driver.cpp</code></p>
-
-<p>A program to print out values from the gluon distributions</p>
-</li>
-<li>
-<p><code>coupling.h</code><br><code>coupling.cpp</code></p>
-
-<p>Implementations of the fixed and LO running couplings</p>
-</li>
-<li>
-<p><code>factorizationscale.h</code><br><code>factorizationscale.cpp</code></p>
-
-<p>Implementations of the various schemes for the factorization scale</p>
-</li>
-<li>
-<p><code>integrationcontext.h</code><br><code>integrationcontext.cpp</code></p>
-
-<p>A class that stores the kinematic variables used in the calculation. The
-values stored in this get updated every time the function is evaluated.</p>
-</li>
-<li>
-<p><code>integrator.h</code><br><code>integrator.cpp</code></p>
-
-<p>A class that stores the parameters for the integral and actually calls the
-GSL Monte Carlo integration functions</p>
-</li>
-<li>
-<p><code>integrationtype.h</code><br><code>integrationtype.cpp</code></p>
-
-<p>Definitions of integration types. An integration type specifies how many
-dimensions are in the Monte Carlo integral and what the limits are.</p>
-</li>
-<li>
-<p><code>utils.h</code><br><code>utils.cpp</code></p>
-
-<p>Some string and list processing functions</p>
-</li>
-<li>
-<p><code>ictx_var_list.inc</code></p>
-
-<p>Variables from the integration context, listed in a separate file as a
-preprocessor hack of sorts</p>
-</li>
-</ul><p>Source code and object code for other things used by the program:</p>
-
-<ul>
-<li>
-<p><code>dss_pinlo.h</code><br><code>dss_pinlo.cpp</code></p>
-
-<p>A C++ interface to the DSS fragmentation functions</p>
-</li>
-<li>
-<p><code>dss_pinlo_test.cpp</code></p>
-
-<p>Test program for the DSS FF interface</p>
-</li>
-<li>
-<p><code>interp2d.h</code><br><code>libinterp2d.a</code></p>
-
-<p>A 2D interpolation library compatible with the GSL
-Full source code at <a href="https://github.com/diazona/interp2d">https://github.com/diazona/interp2d</a></p>
-</li>
-<li>
-<p><code>quasimontecarlo.h</code><br><code>libquasimontecarlo.a</code></p>
-
-<p>A library for quasi Monte Carlo integration compatible with the GSL
-Full source code at <a href="https://github.com/diazona/quasimontecarlo">https://github.com/diazona/quasimontecarlo</a></p>
-</li>
-</ul><p>Source code for other things used by the program, written by other people:</p>
-
-<ul>
-<li>
-<p><code>mstwpdf.h</code><br><code>mstwpdf.cc</code></p>
-
-<p>A C++ interface to the MSTW PDFs</p>
-</li>
-<li>
-<p><code>cubature.h</code><br><code>cubature.c</code></p>
-
-<p>A library for multidimensional cubature (deterministic integration)
-Not currently used</p>
-</li>
-</ul><p>Non-source code files:</p>
-
-<ul>
-<li>
-<p><code>CMakeFiles.txt</code></p>
-
-<p>Instructions for the build system, CMake</p>
-</li>
-<li>
-<p><code>PINLO.DAT</code></p>
-
-<p>DSS fragmentation function data</p>
-</li>
-<li>
-<p><code>pinlo_extended.dat</code></p>
-
-<p>DSS fragmentation function data with extrapolation to lower z (the
-significance of this file will be described in an upcoming long paper
-about SOLO)</p>
-</li>
-<li>
-<p><code>mstw2008nlo.00.dat</code></p>
-
-<p>MSTW PDF data</p>
-</li>
-</ul>
+cmake .. &amp;&amp; make</code></pre>
+        <p>At the end of this you should have a <code>build/</code> directory containing the executable files.</p>
+
+        <h3><a name="without-cmake" class="anchor" href="#without-cmake"><span class="octicon octicon-link"></span></a>If you don't have CMake installed</h3>
+        
+        <p>If you don't have CMake installed (and don't want to download it), you can compile the source code manually, but it is up to you to make sure all the dependencies are properly installed. In the directory <code>src/</code>, make an empty file named <code>git_revision.h</code>. Then, from the parent directory of <code>src/</code>, run this command:</p>
+        <pre><code>
+c++ src/oneloopcalc.cpp src/integrator.cpp src/hardfactors_position.cpp \
+src/hardfactors_radial.cpp src/hardfactors_momentum.cpp src/dss_pinlo.cpp \
+src/mstwpdf.cc src/cubature.c src/gluondist.cpp src/coupling.cpp \
+src/factorizationscale.cpp src/integrationcontext.cpp \
+src/integrationtype.cpp src/context.cpp src/utils.cpp interp2d/interp2d.c \
+interp2d/bilinear.c interp2d/bicubic.c quasimontecarlo/quasimontecarlo.c \
+-I interp2d/ -I quasimontecarlo/ -lgsl -lgslcblas -lm -lssl -lcrypto \
+-o oneloopcalc
+        </code></pre>
+        <p>At least, this is the command for GCC; if you are using a different compiler, adjust it accordingly.</p>
+        
+        <h2><a name="extra-runtime-files" class="anchor" href="#extra-runtime-files"><span class="octicon octicon-link"></span></a>Extra runtime files</h2>
+        
+        <p>In order to <em>run</em> the program, you will need two additional files:</p>
+        <ul>
+            <li>
+            <p>The grid file for the MSTW 2008 PDF at NLO, from the paper</p>
+            <blockquote>
+                <p>A. D. Martin, W. J. Stirling, R. S. Thorne and G. Watt,<br>
+                "Parton distributions for the LHC",<br>
+                <a href="http://link.springer.com/article/10.1140%2Fepjc%2Fs10052-009-1072-5">Eur. Phys. J. C 63 (2009) 189-285</a><br>
+                <a href="http://arxiv.org/abs/0901.0002">arXiv:0901.0002</a> [hep-ph].</p>
+            </blockquote>
+            <p>The filename is <code>mstw2008nlo.00.dat</code>, and it can be downloaded as part of an archive at the <a href="http://mstwpdf.hepforge.org/code/code.html">MSTW PDF site</a>.</p>
+            </li>
+            <li>
+            <p>The data file for the DSS fragmentation functions at NLO, from the paper</p>
+            <blockquote>
+                <p>Daniel de Florian, Rodolfo Sassot, Marco Stratmann<br>
+                "Global analysis of fragmentation functions for pions and kaons and their uncertainties"<br>
+                <a href="http://prd.aps.org/abstract/PRD/v75/i11/e114010">Phys. Rev. D 75, 114010 (2007)</a><br>
+                <a href="http://arxiv.org/abs/hep-ph/0703242">arXiv:hep-ph/0703242</a></p>
+            </blockquote>
+            <p>The filename is <code>PINLO.DAT</code>, and it is reportedly available on request from the authors of the DSS paper. Unfortunately we (authors of SOLO) are not aware of a website where this file is directly downloadable.</p>
+            </li>
+        </ul>
+
+        <h1><a name="running" class="anchor" href="#running"><span class="octicon octicon-link"></span></a>Running</h1>
+
+        <p>The main executable is called <code>oneloopcalc</code>. It should be invoked as</p>
+        <pre><code>./oneloopcalc &lt;options&gt;</code></pre>
+        <p>where the &lt;options&gt; can include any number of the following, in any order:</p>
+
+        <h2><a name="hard-factor-group-specifications" class="anchor" href="#hard-factor-group-specifications"><span class="octicon octicon-link"></span></a>Hard factor group specifications</h2>
+
+        <p>Hard factor specifications and hard factor group specifications tell the program which terms to calculate out of the complete NLO expression.</p>
+        <ul>
+            <li>
+                <p>A hard factor specification is a string like "p:h02qq" or "m:h16gg". The "p:" at the beginning specifies the position space implementation, "r:" specifies a position space implementation with the angular integral already done, and the "m:" specifies the momentum space implementation. The prefix can be omitted, in which case position space is taken as the default. (Not recommended, as position space is highly inaccurate for some terms.)</p>
+                <p>The rest of the string gives the name of a hard factor. The set of possible names that can be used with a "p:" prefix are all the return values from the <code>get_name()</code> methods in <a href="https://github.com/diazona/SOLO/blob/master/src/hardfactors_position.h"><code>hardfactors_position.h</code></a>, and similarly for "r:" with <a href="https://github.com/diazona/SOLO/blob/master/src/hardfactors_radial.h"><code>hardfactors_radial.h</code></a> and "m:" with <a href="https://github.com/diazona/SOLO/blob/master/src/hardfactors_momentum.h"><code>hardfactors_momentum.h</code></a>. Here's a list transcribed from those files (but check the source code because this could be out of date):</p>
+                <p><code>p:h02qq m:h02qq p:h12qq r:h12qq p:h14qq m:h14qq p:h02gg m:h02gg p:h12gg r:h12gg p:h12qqbar m:h12qqbar p:h16gg m:h16gg p:h112qg r:h112qg p:h122qg r:h122qg p:h14qg m:h14qg p:h112gq r:h112gq p:h122gq r:h122gq p:h14gq m:h14gq</code></p>
+                <p>The names are case-insensitive.</p>
+            </li>
+            <li>
+                <p>A hard factor <em>group</em> specification is made of any number of individual hard factor specifications separated by commas. The program will report only the total of all terms in the group. (A hard factor specification as in the last paragraph can be considered a group of one.)</p>
+                <p>There are some hard factor groups that have abbreviated names:</p>
+                <ul>
+                    <li>
+                        <code>lo</code> is equivalent to <code>m:h02qq,m:h02gg</code>
+                    </li>
+                    <li>
+                        <code>nlo</code> is equivalent to <code>r:h12qq,m:h14qq,r:h12gg,m:h12qqbar,m:h16gg,r:h112gq, r:h122gq,m:h14gq,r:h112qg,r:h122qg,m:h14qg</code>
+                    </li>
+                </ul>
+                <p>These are defined <a href="https://github.com/diazona/SOLO/blob/master/src/oneloopcalc.cpp#L395">in <code>oneloopcalc.cpp</code></a>.</p>
+            </li>
+        </ul>
+        <p>If no hard factor groups are specified on the command line, the program behaves as if <code>lo nlo</code> was given, which prints out the total of the LO terms and the total of the NLO terms, as well as the overall total.</p>
+        <p>Note that specifying several hard factors as a group (with commas) is considerably more efficient than specifying them individually and having the program print out the results for each one separately.</p>
+
+        <h2><a name="configuration-file-names" class="anchor" href="#configuration-file-names"><span class="octicon octicon-link"></span></a>Configuration file names</h2>
+
+        <p>Command-line arguments can also include the names of any number of configuration files, which contain parameters for the program in the format</p>
+        <pre><code>key1=value1
+key2=value2</code></pre>
+        <p>and so on. Keys are case-insensitive. All the possible keys are defined throughout the file <a href="https://github.com/diazona/SOLO/blob/master/src/context.cpp"><code>context.cpp</code></a>. Here's a list which should be complete:</p>
+        <dl>
+            <dt><code>A</code> (no default)</dt>
+            <dd>the mass number of the target nucleus</dd>
+
+            <dt><code>abserr</code> (default 10<sup>-20</sup>)</dt>
+            <dd>the absolute error at which to stop an integration, for integration strategies which use this termination condition</dd>
+            
+            <dt><code>alphas</code> (default 0.2)</dt>
+            <dd>if fixed coupling is being used, value for the coupling</dd>
+            
+            <dt><code>beta</code> (default 11-2*Nf/3)</dt>
+            <dd>if running coupling is being used, coefficient for the LO running coupling</dd>
+            
+            <dt><code>c</code> (no default)</dt>
+            <dd>the centrality coefficient, in the range 0 (central) to 1 (peripheral)</dd>
+
+            <dt><code>c0r_optimization</code> (default true)</dt>
+            <dd>if the factorization scale scheme is <code>c0r</code>, whether to skip calculating terms that should be zero</dd>
+
+            <dt><code>CF</code> (default 1.5)</dt>
+            <dd>the color factor</dd>
+
+            <dt><code>coupling_type</code> (default <code>fixed</code>)</dt>
+            <dd><code>fixed</code> or <code>running</code></dd>
+
+            <dt><code>cubature_iterations</code> (default 1000000)</dt>
+            <dd>number of calls to use for cubature integration</dd>
+
+            <dt><code>factorization_scale</code> (default fixed)</dt>
+            <dd>"fixed" to set the factorization scale to a fixed value, or "4pT2" or "CpT2" to set it to a multiple of hadron transverse momentum, or "c0r" to set it to be inversely proportional to transverse position</dd>
+
+            <dt><code>factorization_scale_coefficient</code> (no default)</dt>
+            <dd>if <code>factorization_scale</code> is "CpT2", this is the coefficient to multiply by <code>pT2</code> to get <code>mu2</code> (setting this to 4 is equivalent to specifying <code>factorization_scale = 4pT2</code>)</dd>
+
+            <dt><code>ff_filename</code> (default <code>PINLO.DAT</code>)</dt>
+            <dd>filename to read DSS fragmentation function data from</dd>
+
+            <dt><code>gammaMV</code> (default 1)</dt>
+            <dd>if <code>gdist_type</code> is set to <code>MV</code>, the anomalous dimension in the MV gluon distribution</dd>
+
+            <dt><code>gdist_momentum_filename</code> (no default)</dt>
+            <dd>file to read the momentum-space gluon distribution from, which should contain three columns of space-separated numbers: Q^2, ln(1/x), and F(x,Q^2)</dd>
+
+            <dt><code>gdist_position_filename</code> (no default)</dt>
+            <dd>file to read the position-space gluon distribution from, which should contain three columns of space-separated numbers: r^2, ln(1/x), and S(x,r^2)</dd>
+
+            <dt><code>gdist_subinterval_limit</code> (default 10000)</dt>
+            <dd>if <code>gdist_type</code> is set to <code>MV</code>, the number of subdivisions to use when performing the Fourier integral of the position-space gluon distribution</dd>
+
+            <dt><code>gdist_type</code> (default <code>GBW</code>)</dt>
+            <dd>the type of the gluon distribution: <code>GBW</code>, <code>MV</code>, <code>fMV</code>, <code>file</code>, <code>GBW+file</code> (which uses the GBW distribution at large x and data from a file at small x), or <code>MV+file</code> (same but with MV)</dd>
+
+            <dt><code>hadron</code> (no default)</dt>
+            <dd>the type of hadron to be detected, <code>pi-</code>, <code>pi0</code>, or <code>pi+</code> (this influences which fragmentation function is used)</dd>
+
+            <dt><code>integration_strategy</code> (default <code>VEGAS</code>)</dt>
+            <dd>the integration type to use for Monte Carlo integrals: <code>MISER</code>, <code>VEGAS</code> (best), or <code>QUASI</code></dd>
+
+            <dt><code>lambda</code> (default 0.288)</dt>
+            <dd>if <code>gdist_type</code> is <code>GBW</code>, <code>MV</code>, <code>GBW+file</code>, or <code>MV+file</code>, the exponent in the definition of the saturation scale</dd>
+
+            <dt><code>lambdaMV</code> (default 0.241)</dt>
+            <dd>if <code>gdist_type</code> is <code>MV</code> or <code>MV+file</code>, the scale for 1/r in the MV gluon distribution, in GeV</dd>
+
+            <dt><code>lambdaQCD</code> (default 0.2428711 = sqrt(0.0588))</dt>
+            <dd>if <code>coupling_type</code> is <code>running</code>, the QCD scale in GeV</dd>
+
+            <dt><code>miser_iterations</code> (default 10000000)</dt>
+            <dd>if <code>integration_strategy</code> is <code>MISER</code>, the number of iterations to use in MISER integration</dd>
+
+            <dt><code>mu2</code> (default 10)</dt>
+            <dd>if <code>factorization_scale</code> is <code>fixed</code>, the factorization scale in GeV</dd>
+
+            <dt><code>Nc</code> (default 3)</dt>
+            <dd>number of colors</dd>
+
+            <dt><code>Nf</code> (default 3)</dt>
+            <dd>number of flavors</dd>
+
+            <dt><code>pdf_filename</code> (default <code>mstw2008nlo.00.dat</code>)</dt>
+            <dd>filename to read MSTW PDF from</dd>
+
+            <dt><code>projectile</code> (no default)</dt>
+            <dd>the type of projectile, <code>deuteron</code> or <code>proton</code></dd>
+
+            <dt><code>pseudorandom_generator_seed</code> (default 0)</dt>
+            <dd>seed for the GSL random number generator (0 tells GSL to use a system-dependent default; see the <a href="http://www.gnu.org/software/gsl/manual/html_node/Random-Number-Generation.html">GSL documentation</a> for details)</dd>
+
+            <dt><code>pseudorandom_generator_type</code> (default mt19937)</dt>
+            <dd>algorithm to use for generating random numbers; allowed values are in the <a href="http://www.gnu.org/software/gsl/manual/html_node/Random-Number-Generation.html">GSL documentation</a></dd>
+
+            <dt><code>pT</code> (no default)</dt>
+            <dd>comma-separated list of transverse momenta</dd>
+
+            <dt><code>quasirandom_generator_type</code> (default <code>halten</code>)</dt>
+            <dd>algorithm to use for generating quasirandom numbers for QMC integration; allowed values are in the <a href="http://www.gnu.org/software/gsl/manual/html_node/Random-Number-Generation.html">GSL documentation</a></dd>
+
+            <dt><code>quasi_iterations</code> (default 1000000)</dt>
+            <dd>the number of iterations at which to stop quasi Monte Carlo integration</dd>
+
+            <dt><code>regulator</code> (default 1)</dt>
+            <dd>if <code>coupling</code> is <code>running</code>, the position of the Landau pole for the regulated LO running coupling</dd>
+
+            <dt><code>relerr</code> (default 0)</dt>
+            <dd>the relative error at which to stop an integration, for strategies which use this termination condition</dd>
+
+            <dt><code>satscale_source</code> (default <code>extract from momentum</code>)</dt>
+            <dd>for a file gluon distribution, how to extract the saturation scale; allowed values are <code>analytic</code> (Q0²(x0/x)^λ), <code>extract from momentum</code>, which determines the saturation scale by finding the momentum where the gluon distribution equals a fixed fraction of its value at a reference momentum, and <code>extract from position</code>, which finds the radius where the gluon distribution equals a fixed threshold value</dd>
+
+            <dt><code>satscale_threshold</code> (no default)</dt>
+            <dd>if satscale_source is <code>extract from momentum</code> or <code>extract from position</code>, this is the fixed threshold value (or fraction of its value at a reference point, in the momentum case) that the gluon distribution should equal at the saturation scale</dd>
+
+            <dt><code>Sperp</code> (default 1)</dt>
+            <dd>cross-sectional area of the hadron</dd>
+
+            <dt><code>sqs</code> (no default)</dt>
+            <dd>sqrt(s), the collider's CM energy</dd>
+
+            <dt><code>TR</code> (default 0.5)</dt>
+            <dd>group coefficient</dd>
+
+            <dt><code>vegas_incremental_iterations</code> (default 1000000)</dt>
+            <dd>number of function evaluations to use in each step of the VEGAS Monte Carlo algorithm after the first</dd>
+
+            <dt><code>vegas_initial_iterations</code> (default 100000)</dt>
+            <dd>number of function evaluations to use to refine the grid in the first step of the VEGAS algorithm</dd>
+
+            <dt><code>x0</code> (default 0.000304)</dt>
+            <dd>the fit parameter from the definition of the saturation scale</dd>
+
+            <dt><code>Y</code> (no default)</dt>
+            <dd>comma-separated list of rapidities to calculate at</dd>
+        </dl>
+        <p>The configuration files have to at least set <code>A</code>, <code>c</code>, <code>sqs</code>, and <code>Y</code>, and also <code>pT</code> if no transverse momenta are specified as command line arguments.</p>
+
+        <h2><a name="transverse-momentum-values" class="anchor" href="#transverse-momentum-values"><span class="octicon octicon-link"></span></a>Transverse momentum values</h2>
+        <p>Any numbers given as command line arguments are put together into one big list of transverse momentum values to run the calculation at. If a comma-separated list of numbers is given, then it will be split apart and each number added to the one big list. There's no significance to putting certain pT values together and others not. (<code>0.5 0.7 0.8,0.9</code> and <code>0.5,0.7 0.8 0.9</code> are exactly equivalent.) Any <code>pT</code> values specified on the command line will <em>replace</em> <code>pT</code> values specified in configuration files.</p>
+        
+        <h2><a name="literal-options" class="anchor" href="#literal-options"><span class="octicon octicon-link"></span></a>Literal options</h2>
+        
+        <dl>
+            <dt><code>--separate</code></dt>
+            <dd>Print out the results for each individual hard factor, not just the total for each hard factor groups</dd>
+            
+            <dt><code>--minmax</code></dt>
+            <dd>Track and print out the minimum and maximum values of kinematic variables</dd>
+            
+            <dt><code>--trace-gdist</code></dt>
+            <dd>Print out parameters and values for every call to the gluon distribution. Output goes to the file <code>trace_gdist.output</code> in the working directory. (Expect this file to grow to several hundred megabytes.)</dd>
+            
+            <dt><code>--trace=var1,var2,...</code></dt>
+            <dd>Print out selected variables from the integration context after every single evaluation of the function. The output goes to the file <code>trace.output</code> in the working directory. (Expect this file to grow to several megabytes.) The allowable variables are those in ictx_var_list.inc, or you can use <code>--trace=all</code> or <code>--trace=*</code> to print out all available variables.</dd>
+        </dl>
+
+        <h1><a name="structure" class="anchor" href="#structure"><span class="octicon octicon-link"></span></a>Structure</h1>
+
+        <p>Basically the code runs as follows:</p>
+
+        <ol>
+            <li>Collect the command line options and settings from configuration files and put everything into a <code>ResultsCalculator</code></li>
+            <li>
+            <p>For each combination of <code>pT</code> and <code>Y</code>, and for each hard factor group:</p>
+            <ol>
+                <li>Create an <code>Integrator</code> with the current values of <code>pT</code> and <code>Y</code> and the current hard factor group</li>
+                <li>The <code>Integrator</code> calls the GSL Monte Carlo integration routine</li>
+                <li>For each time the MC routine evaluates the function
+                <ol>
+                    <li>Update the variables in the <code>IntegrationContext</code></li>
+                    <li>Go through the list of <code>HardFactor</code> instances in the current group and get a value from each one</li>
+                    <li>Return the total value</li>
+                </ol>
+                <li>Store the value and error bound returned from the Monte Carlo</li>
+            </ol>
+            <li>Print out all the results</li>
+        </ol>
+        
+        <h1><a name="files" class="anchor" href="#files"><span class="octicon octicon-link"></span></a>Files</h1>
+
+        <h2><a name="source-code" class="anchor" href="#source-code"><span class="octicon octicon-link"></span></a>Source code for the program itself</h2>
+
+        <dl>
+            <dt><code>oneloopcalc.cpp</code></dt>
+            <dd>Main program</dd>
+
+            <dt><code>log.h</code></dt>
+            <dd>Declares an output stream to write status messages to</dd>
+
+            <dt><code>gsl_exception.h</code></dt>
+            <dd>Declares an exception to be thrown when GSL reports an error</dd>
+
+            <dt><code>hardfactors.h</code></dt>
+            <dd>A class that abstractly represents a hard factor (i.e. an expression to be integrated)</dd>
+
+            <dt>
+                <code>hardfactors_momentum.h</code><br>
+                <code>hardfactors_momentum.cpp</code>
+            </dt>
+            <dd>Implementation of the momentum space hard factors (terms)</dd>
+            
+            <dt>
+                <code>hardfactors_position.h</code><br>
+                <code>hardfactors_position.cpp</code>
+            </dt>
+            <dd>Implementation of the position space hard factors (terms)</dd>
+
+            <dt>
+                <code>gluondist.h</code><br>
+                <code>gluondist.cpp</code>
+            </dt>
+            <dd>Implementations of the gluon distributions</dd>
+
+            <dt><code>gluondist_driver.cpp</code></dt>
+            <dd>A program to print out values from the gluon distributions</dd>
+
+            <dt>
+                <code>coupling.h</code><br>
+                <code>coupling.cpp</code>
+            </dt>
+            <dd>Implementations of the fixed and LO running couplings</dd>
+
+            <dt>
+                <code>dss_pinlo.h</code><br>
+                <code>dss_pinlo.cpp</code>
+            </dt>
+            <dd>A C++ interface to the DSS fragmentation functions</dd>
+
+            <dt>
+                <code>factorizationscale.h</code><br>
+                <code>factorizationscale.cpp</code>
+            </dt>
+            <dd>Implementations of the various schemes for the factorization scale</dd>
+
+            <dt>
+                <code>integrationcontext.h</code><br>
+                <code>integrationcontext.cpp</code>
+            </dt>
+            <dd>A class that stores the kinematic variables used in the calculation. The values stored in this get updated every time the function is evaluated.</dd>
+
+            <dt>
+                <code>integrator.h</code><br>
+                <code>integrator.cpp</code>
+            </dt>
+            <dd>A class that stores the parameters for the integral and actually calls the GSL Monte Carlo integration functions</dd>
+
+            <dt>
+                <code>integrationtype.h</code><br>
+                <code>integrationtype.cpp</code>
+            </dt>
+            <dd>Definitions of integration types. An integration type specifies how many dimensions are in the Monte Carlo integral and what the limits are.</dd>
+
+            <dt>
+                <code>utils.h</code><br>
+                <code>utils.cpp</code>
+            </dt>
+            <dd>Some string and list processing functions</dd>
+
+            <dt><code>ictx_var_list.inc</code></dt>
+            <dd>Variables from the integration context, listed in a separate file as a preprocessor hack of sorts</dd>
+        </dl>
+        
+        <h2><a name="additional-source-code" class="anchor" href="#additional-source-code"><span class="octicon octicon-link"></span></a>Source code provided separately</h2>
+        <dl>
+            <dt>
+                <code>interp2d.h</code><br>
+                <code>libinterp2d.a</code>
+            </dt>
+            <dd>A 2D interpolation library compatible with the GSL. Full source code at <a href="https://github.com/diazona/interp2d">https://github.com/diazona/interp2d</a></dd>
+
+            <dt>
+                <code>quasimontecarlo.h</code><br>
+                <code>libquasimontecarlo.a</code>
+            </dt>
+            <dd>A library for quasi Monte Carlo integration compatible with the GSL. Full source code at <a href="https://github.com/diazona/quasimontecarlo">https://github.com/diazona/quasimontecarlo</a></dd>
+
+            <dt>
+                <code>mstwpdf.h</code><br>
+                <code>mstwpdf.cc</code>
+            </dt>
+            <dd>A C++ interface to the MSTW PDFs</dd>
+
+            <dt>
+                <code>cubature.h</code><br>
+                <code>cubature.c</code>
+            </dt>
+            <dd>A library for multidimensional cubature (deterministic integration)</dd>
+        </dl>
+
+        <h2><a name="non-code" class="anchor" href="#non-code"><span class="octicon octicon-link"></span></a>Other files</h2>
+        <dl>
+            <dt><code>CMakeFiles.txt</code></dt>
+            <dd>Instructions for the build system, CMake</dd>
+
+            <dt><code>PINLO.DAT</code></dt>
+            <dd>DSS fragmentation function data</dd>
+
+            <dt><code>pinlo_extended.dat</code></dt>
+            <dd>DSS fragmentation function data with extrapolation to lower z (the significance of this file will be described in an upcoming long paper about SOLO)</dd>
+
+            <dt><code>mstw2008nlo.00.dat</code></dt>
+            <dd>MSTW PDF data</dd>
+        </dl>
       </section>
       <footer>
         <p><small>Hosted on <a href="https://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>

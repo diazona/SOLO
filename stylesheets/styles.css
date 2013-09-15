@@ -42,8 +42,12 @@ h1, h2, h3, h4, h5, h6 {
   margin:36px 0 10px;
 }
 
-p, ul, ol, table, dl {
+p, table, dl {
   margin:0 0 22px;
+}
+
+ul, ol {
+    margin: 5px;
 }
 
 h1, h2, h3 {
@@ -52,10 +56,19 @@ h1, h2, h3 {
 	font-weight: normal;
 }
 
-h1,h2, h3 {
+h1, h2, h3 {
 	display: block;
-	border-bottom: 1px solid #ccc;
 	padding-bottom: 5px;
+}
+
+section h1 {
+    background: rgb(210, 210, 214);
+    border-left: 5px solid rgb(200, 100, 100);
+    padding: 5px;
+}
+
+h2 {
+    border-bottom: 1px solid #ccc;
 }
 
 h1 {
@@ -97,12 +110,12 @@ strong {
   font-weight:700;
 }
 
-ul li {
+ul > li {
   list-style: inside;
   padding-left: 25px;
 }
 
-ol li {
+ol > li {
   list-style: decimal inside;
   padding-left: 20px;
 }
