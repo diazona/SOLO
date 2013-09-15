@@ -14,6 +14,8 @@ Please cite this paper if you use the results of the code in a publication.
 Quick start
 ---------------
 
+                              With git and CMake
+
 The quickest and intended way to compile the code is as follows: first, ensure
 that git, GSL and CMake are properly installed (as well as a C++ compiler; GCC
 is recommended). Then run the following commands:
@@ -22,7 +24,38 @@ is recommended). Then run the following commands:
     cd SOLO
     git submodule init
     git submodule update
-    
+
+Skip to the section entitled "Additional downloads and compilation" below.
+
+                             Without git and CMake
+
+If you are on a computer without git or CMake available, you can download the
+source code manually. Go to
+
+    https://github.com/diazona/SOLO/releases
+
+Click on the link to download the latest release as either a ZIP or GZIP TAR
+file. When you extract it, you will see (among other things) empty directories
+named `interp2d` and `quasimontecarlo`. These will need to be filled with the
+source files for the interp2d and quasimontecarlo libraries respectively.
+
+To obtain interp2d, go to
+
+    https://github.com/diazona/interp2d/releases
+
+and download the latest release. The archive contains a folder named something
+like `interp2d-0.1` which contains the source files for the library; move all
+those files into the `interp2d` folder from the extracted SOLO download.
+Similarly, to obtain quasimontecarlo, go to
+
+    https://github.com/diazona/quasimontecarlo/releases
+
+and download the latest release, then move the files that are in the directory
+`quasimontecarlo-0.1` or similar to the `quasimontecarlo` folder from the SOLO
+download.
+
+                     Additional downloads and compilation
+
 At this point you will need to manually download the MSTW PDF interface from
 http://mstwpdf.hepforge.org/code/code.html. Extract the files `mstwpdf.cc` and
 `mstwpdf.h` from the tarball and place them in SOLO's `src/` directory. (We are
@@ -35,6 +68,8 @@ directory of `src/`), run these commands:
     cmake .. && make
 
 At the end of this you should have a `build/` directory containing the programs.
+
+                               Additional files
 
 In order to run the program, you will need two additional files:
 
