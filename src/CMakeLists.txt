@@ -11,10 +11,15 @@ set(LIBS ${LIBS} ${GSL_LIBRARIES})
 
 set(LIBS ${LIBS} m)
 
-add_custom_target(git_revision.h
-    git log -1 "--format=format:#define GIT_REVISION \"%H\"%n" HEAD > git_revision.h 
-    COMMAND git diff-index --quiet HEAD || echo "#define GIT_DIRTY" >> git_revision.h
-    WORKING_DIRECTORY ${oneloopcalc_SOURCE_DIR} VERBATIM)
+find_package(Git)
+if(GIT_FOUND)
+    add_custom_target(git_revision.h
+        ${GIT_EXECUTABLE} log -1 "--format=format:#define GIT_REVISION \"%H\"%n" HEAD > git_revision.h 
+        COMMAND git diff-index --quiet HEAD || echo "#define GIT_DIRTY" >> git_revision.h
+        WORKING_DIRECTORY ${oneloopcalc_SOURCE_DIR} VERBATIM)
+else()
+    add_custom_target(git_revision.h echo >> git_revision.h WORKING_DIRECTORY ${oneloopcalc_SOURCE_DIR} VERBATIM)
+endif()
 
 include_directories(${interp2d_SOURCE_DIR} ${quasimontecarlo_SOURCE_DIR})
 
