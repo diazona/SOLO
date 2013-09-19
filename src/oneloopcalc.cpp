@@ -343,7 +343,7 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
         else if (a == "MV" || a == "fMV" ||  a == "GBW") {
             gdist_type = a;
         }
-        else if (a[0] == 'h' || a[1] == ':' || a == "lo" || a == "nlo") {
+        else if (a[0] == 'h' || a[0] == 'H' || a[1] == ':' || a == "lo" || a == "nlo") {
             parse_hf_spec(a);
         }
         else if (::isdigit(a[0])) {
