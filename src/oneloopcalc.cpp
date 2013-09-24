@@ -421,26 +421,42 @@ void ProgramConfiguration::parse_hf_spec(const string& spec) {
     for (vector<string>::iterator it = splitspec.begin(); it != splitspec.end(); it++) {
         string orig_s = *it;
         string s = orig_s;
-        // The default is to create a position-space hard factor
-        const HardFactorRegistry* registry = position::registry::get_instance();
+
+        const HardFactor* hf;
+        char hf_type = 'x'; // dummy value, as a default
+        
+        // If the hard factor specification takes the form [letter]:[stuff],
+        // consider the first letter to indicate the type, and remove it and
+        // the colon
         if (s[1] == ':') {
-            switch (s[0]) {
-                case 'm':
-                    registry = momentum::registry::get_instance();
-                    break;
-                case 'r':
-                    registry = radial::registry::get_instance();
-                    break;
-                case 'p':
-                    registry = position::registry::get_instance();
-                    break;
-            }
-            // chop off prefix
+            hf_type = s[0];
             s = s.substr(2);
         }
         // Pass the remaining name (e.g. "h02qq") to the hard factor registry
         // to get the actual hard factor object
-        const HardFactor* hf = registry->get_hard_factor(s);
+        switch (hf_type) {
+            case 'm':
+                hf = momentum::registry::get_instance()->get_hard_factor(s);
+                break;
+            case 'r':
+                hf = radial::registry::get_instance()->get_hard_factor(s);
+                break;
+            case 'p':
+                hf = position::registry::get_instance()->get_hard_factor(s);
+                break;
+            default:
+                // by default try momentum first, then radial, then position
+                hf = momentum::registry::get_instance()->get_hard_factor(s);
+                if (hf != NULL) {
+                    break;
+                }
+                hf = radial::registry::get_instance()->get_hard_factor(s);
+                if (hf != NULL) {
+                    break;
+                }
+                hf = position::registry::get_instance()->get_hard_factor(s);
+                break;
+        }
         if (hf == NULL) {
             logger << "No such hard factor " << orig_s << endl;
         }
