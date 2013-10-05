@@ -50,6 +50,75 @@ public:
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
 
+//BEGIN individual H12qq terms
+// Equation numbers refer to arXiv:1203.6139 (Chirilli, Xiao, Yuan)
+
+// The first term in equation 43, including only the plus-regulated part
+// of the splitting function
+class H12qq1 : public HardFactorTerm {
+public:
+    const char* get_name() const {
+        return "H12qq.1";
+    }
+    const IntegrationType* get_type() const {
+        return RadialDipoleIntegrationType::get_instance();
+    }
+    void Fs(const IntegrationContext* ictx, double* real, double* imag) const;
+};
+
+// The first phase of the first term in equation 43
+class H12qq1A : public HardFactorTerm {
+public:
+    const char* get_name() const {
+        return "H12qq.1A";
+    }
+    const IntegrationType* get_type() const {
+        return RadialDipoleIntegrationType::get_instance();
+    }
+    void Fs(const IntegrationContext* ictx, double* real, double* imag) const;
+};
+
+// The first phase of the first term in equation 43
+class H12qq1B : public HardFactorTerm {
+public:
+    const char* get_name() const {
+        return "H12qq.1B";
+    }
+    const IntegrationType* get_type() const {
+        return RadialDipoleIntegrationType::get_instance();
+    }
+    void Fs(const IntegrationContext* ictx, double* real, double* imag) const;
+};
+
+// The first term in equation 43, including only the delta function part
+// of the splitting function
+class H12qq2 : public HardFactorTerm {
+public:
+    const char* get_name() const {
+        return "H12qq.2";
+    }
+    const IntegrationType* get_type() const {
+        return RadialDipoleIntegrationType::get_instance();
+    }
+    void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
+};
+
+// The second term in equation 43
+class H12qq3 : public HardFactorTerm {
+public:
+    const char* get_name() const {
+        return "H12qq.3";
+    }
+    const IntegrationType* get_type() const {
+        return RadialDipoleIntegrationType::get_instance();
+    }
+    void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
+};
+
+// The third term in equation 43 (the second line) vanishes in the large Nc limit so we don't implement it
+
+//END individual H12qq terms
+
 class H012qqExp : public HardFactorTerm {
 public:
     const char* get_name() const {
@@ -305,6 +374,11 @@ private:
     registry() {
         add_hard_factor(new H02qq(), true);
         add_hard_factor(new H12qq(), true);
+        add_hard_factor(new H12qq1(), true);
+        add_hard_factor(new H12qq1A(), true);
+        add_hard_factor(new H12qq1B(), true);
+        add_hard_factor(new H12qq2(), true);
+        add_hard_factor(new H12qq3(), true);
         add_hard_factor(new H012qqExp(), true);
 //         add_hard_factor(new H14qq(), true);
 //         add_hard_factor(new H02gg(), true);

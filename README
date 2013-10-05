@@ -128,6 +128,10 @@ where the <options> can include any number of the following, in any order:
         p:h112qg r:h112qg p:h122qg r:h122qg p:h14qg m:h14qg
         p:h112gq r:h112gq p:h122gq r:h122gq p:h14gq m:h14gq
         
+    and also these, which go beyond what is in the paper:
+        
+        r:h12qq.1 r:h12qq.1A r:h12qq.1B r:h12qq.2 r:h12qq.3 r:h012qqexp
+        
     The names are case-insensitive.
 
     It's also possible to specify the group of all leading order terms,

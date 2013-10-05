@@ -78,6 +78,80 @@ void H12qq::Fd(const IntegrationContext* ictx, double* real, double* imag) const
     }
 }
 
+void H12qq1::Fs(const IntegrationContext* ictx, double* real, double* imag) const {
+    // implementation is the same as H12qq:Fs
+    if (ictx->ctx->c0r_optimization) {
+        *real = *imag = 0;
+        return;
+    }
+    double amplitude = 0.25*M_1_PI*M_1_PI * ictx->alphas_2pi * ictx->ctx->CF * ictx->ctx->Sperp / ictx->z2 * ictx->qqfactor * ictx->S2r *
+        (1 + ictx->xi2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->mu2));
+    double r = sqrt(ictx->r2);
+    double b_phase1 = ictx->kT * r;
+    double b_phase2 = ictx->kT * r / ictx->xi;
+    *real = 2*M_PI*r * amplitude * (gsl_sf_bessel_J0(b_phase1) + gsl_sf_bessel_J0(b_phase2) / ictx->xi2);
+    *imag = 0;
+}
+
+void H12qq1A::Fs(const IntegrationContext* ictx, double* real, double* imag) const {
+    if (ictx->ctx->c0r_optimization) {
+        *real = *imag = 0;
+        return;
+    }
+    double amplitude = 0.25*M_1_PI*M_1_PI * ictx->alphas_2pi * ictx->ctx->CF * ictx->ctx->Sperp / ictx->z2 * ictx->qqfactor * ictx->S2r *
+        (1 + ictx->xi2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->mu2));
+    double r = sqrt(ictx->r2);
+    double b_phase1 = ictx->kT * r;
+    *real = 2*M_PI*r * amplitude * gsl_sf_bessel_J0(b_phase1);
+    *imag = 0;
+}
+
+void H12qq1B::Fs(const IntegrationContext* ictx, double* real, double* imag) const {
+    // implementation is the same as H12qq:Fs
+    if (ictx->ctx->c0r_optimization) {
+        *real = *imag = 0;
+        return;
+    }
+    double amplitude = 0.25*M_1_PI*M_1_PI * ictx->alphas_2pi * ictx->ctx->CF * ictx->ctx->Sperp / ictx->z2 * ictx->qqfactor * ictx->S2r *
+        (1 + ictx->xi2) * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->mu2));
+    double r = sqrt(ictx->r2);
+    double b_phase2 = ictx->kT * r / ictx->xi;
+    *real = 2*M_PI*r * amplitude * gsl_sf_bessel_J0(b_phase2) / ictx->xi2;
+    *imag = 0;
+}
+
+void H12qq2::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
+    // implemented the same as H12qq:Fd setting term2 to zero
+    double amplitude = 0.75*M_1_PI*M_1_PI * ictx->alphas_2pi * ictx->ctx->CF * ictx->ctx->Sperp / ictx->z2 * ictx->qqfactor * ictx->S2r;
+    assert(ictx->xi == 1);
+    assert(ictx->xi2 == 1);
+    if (ictx->ctx->c0r_optimization) {
+        *real = 0;
+        *imag = 0;
+    }
+    else {
+        double term1 = 0.5 * (-2*M_EULER + log(4) - log(ictx->r2 * ictx->mu2));
+        double r = sqrt(ictx->r2);
+        double phase1 = ictx->kT * r;
+        double phase2 = ictx->kT * r / ictx->xi;
+        *real = 2*M_PI*r * amplitude * term1 * (gsl_sf_bessel_J0(phase1) + gsl_sf_bessel_J0(phase2) / ictx->xi2);
+        *imag = 0;
+    }
+}
+
+void H12qq3::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
+    // implemented the same as H12qq:Fd setting term1 to zero
+    double amplitude = 0.75*M_1_PI*M_1_PI * ictx->alphas_2pi * ictx->ctx->CF * ictx->ctx->Sperp / ictx->z2 * ictx->qqfactor * ictx->S2r;
+    assert(ictx->xi == 1);
+    assert(ictx->xi2 == 1);
+    double term2 = -(-2*M_EULER + log(4) - log(ictx->r2 * ictx->kT2));
+    double r = sqrt(ictx->r2);
+    double phase1 = ictx->kT * r;
+    *real = 2*M_PI*r * amplitude * term2 * gsl_sf_bessel_J0(phase1);
+    *imag = 0;
+}
+
+
 void H012qqExp::Fs(const IntegrationContext* ictx, double* real, double* imag) const {
     if (ictx->ctx->c0r_optimization) {
         *real = *imag = 0;
