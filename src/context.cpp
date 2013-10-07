@@ -55,9 +55,14 @@ using namespace std;
         p = parse(itit);\
     }
 
+const string trim_lower(const string& i_str) {
+    string str = trim(i_str, " \t\n");
+    transform(str.begin(), str.end(), str.begin(), ::tolower);
+    return str;
+}
+    
 const string canonicalize(const string& i_key) {
-    string key = trim(i_key, " \t\n");
-    transform(key.begin(), key.end(), key.begin(), ::tolower);
+    const string key = trim_lower(i_key);
     if (key == "lambda_qcd") {
         return "lambdaqcd";
     }
@@ -169,8 +174,7 @@ projectile_type parse_projectile_type(pair<multimap<string, string>::iterator, m
 DSSpiNLO::hadron parse_hadron(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
     multimap<string, string>::iterator el = range.first;
     assert(++el == range.second);
-    string val = range.first->second;
-    transform(val.begin(), val.end(), val.begin(), ::tolower);
+    string val = trim_lower(range.first->second);
     if (val == "pim" || val == "pi-" || val == "pi minus") {
         return DSSpiNLO::pi_minus;
     }
@@ -188,8 +192,7 @@ DSSpiNLO::hadron parse_hadron(pair<multimap<string, string>::iterator, multimap<
 integration_strategy parse_strategy(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
     multimap<string, string>::iterator el = range.first;
     assert(++el == range.second);
-    string val = range.first->second;
-    transform(val.begin(), val.end(), val.begin(), ::tolower);
+    string val = trim_lower(range.first->second);
     if (val == "miser") {
         return MC_MISER;
     }
@@ -220,16 +223,17 @@ const gsl_rng_type* parse_rng_type(pair<multimap<string, string>::iterator, mult
 const gsl_qrng_type* parse_qrng_type(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
     multimap<string, string>::iterator el = range.first;
     assert(++el == range.second);
-    if (range.first->second == "niederreiter_2") {
+    string val = trim_lower(range.first->second);
+    if (val == "niederreiter_2") {
         return gsl_qrng_niederreiter_2;
     }
-    else if (range.first->second == "sobol") {
+    else if (val == "sobol") {
         return gsl_qrng_sobol;
     }
-    else if (range.first->second == "halton") {
+    else if (val == "halton") {
         return gsl_qrng_halton;
     }
-    else if (range.first->second == "reversehalton") {
+    else if (val == "reversehalton") {
         return gsl_qrng_reversehalton;
     }
     else {
@@ -301,10 +305,11 @@ void ContextCollection::create_contexts() {
     // create gluon distribution
     assert (gdist == NULL);
     check_property(gdist_type, string, parse_string)
-    if (gdist_type == "GBW") {
+    gdist_type = trim_lower(gdist_type);
+    if (gdist_type == "gbw") {
         gdist = new GBWGluonDistribution(Q02, x0, lambda);
     }
-    else if (gdist_type == "MV") {
+    else if (gdist_type == "mv") {
         double Ymin = min(Y);
         double Ymax = max(Y);
         double pTmin = min(pT);
@@ -321,7 +326,7 @@ void ContextCollection::create_contexts() {
         logger << "Creating MV gluon distribution with " << q2minMV << " < k2 < " << q2maxMV << ", " << YminMV << " < Y < " << YmaxMV << endl;
         gdist = new MVGluonDistribution(lambdaMV, gammaMV, q2minMV, q2maxMV, YminMV, YmaxMV, Q02, x0, lambda, gdist_subinterval_limit);
     }
-    else if (gdist_type == "fMV") {
+    else if (gdist_type == "fmv") {
         double Ymin = min(Y);
         check_property_default(lambdaMV, double, parse_double, 0.241)
         check_property_default(gammaMV,  double, parse_double, 1)
@@ -510,6 +515,7 @@ void ContextCollection::create_contexts() {
     // create factorization scale strategy
     assert(fs == NULL);
     check_property_default(factorization_scale, string, parse_string, "fixed")
+    factorization_scale = trim_lower(factorization_scale);
     if (factorization_scale == "fixed") {
         /* special case: check for old config file format with
          *  mu2 = 4pT2
@@ -517,7 +523,7 @@ void ContextCollection::create_contexts() {
          *  factorization_scale = 4pT2
          */
         itit = options.equal_range(canonicalize("mu2"));
-        if (itit.first->second == "4pT2") {
+        if (trim_lower(itit.first->second) == "4pt2") {
             fs = new PTProportionalFactorizationScale(4);
         }
         else {
@@ -526,10 +532,10 @@ void ContextCollection::create_contexts() {
             fs = new FixedFactorizationScale(mu2);
         }
     }
-    else if (factorization_scale == "4pT2") {
+    else if (factorization_scale == "4pt2") {
         fs = new PTProportionalFactorizationScale(4);
     }
-    else if (factorization_scale == "CpT2") {
+    else if (factorization_scale == "cpt2") {
         check_property(factorization_scale_coefficient, double, parse_double)
         fs = new PTProportionalFactorizationScale(factorization_scale_coefficient);
     }
