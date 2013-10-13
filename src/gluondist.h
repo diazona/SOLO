@@ -470,6 +470,46 @@ protected:
     double YMV;
 };
 
+/**
+ * An unintegrated gluon distribution that is flat below Qs and has a power
+ * tail above it.
+ */
+class PlateauPowerGluonDistribution : public AbstractMomentumGluonDistribution {
+public:
+    PlateauPowerGluonDistribution(
+        double gamma,
+        double r2min,
+        double r2max,
+        double Ymin,
+        double Ymax,
+        double Q02,
+        double x0,
+        double lambda,
+        size_t subinterval_limit = 10000);
+    virtual ~PlateauPowerGluonDistribution();
+    /**
+     * Returns the value of the dipole gluon distribution,
+     * exp(-(r2 Qs02MV)^gammaMV ln(e + 1 / (LambdaMV r)) / 4)
+     */
+    double F(double q2, double Y);
+    /**
+     * Returns the standard saturation scale, Q0^2(x0/x)^λ
+     */
+    double Qs2(const double Y) const;
+    /**
+     * Returns the name of the distribution, which incorporates
+     * the values of the parameters.
+     */
+    const char* name();
+protected:
+    double gammaPP;
+    
+    std::string _name;
+private:
+    double Q02x0lambda;
+    double lambda;
+};
+
 class FileDataGluonDistribution : public GluonDistribution {
 public:
     typedef enum satscale_source {NONE, POSITION_THRESHOLD, MOMENTUM_THRESHOLD} satscale_source_type;

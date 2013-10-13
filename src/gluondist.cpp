@@ -134,7 +134,7 @@ void AbstractTransformGluonDistribution::setup() {
     double error; // throwaway
     
     // calculate the coefficients for the series approximation
-    func.function = gdist_series_term_integrand; // TODO make this pos. or mom.
+    func.function = gdist_series_term_integrand;
     G_dist_leading_u2 = new double[Y_dimension]; // zeroth order term in series around u2 = 0
     G_dist_subleading_u2 = new double[Y_dimension]; // second order term in series around u2 = 0
     for (size_t i_Y = 0; i_Y < Y_dimension; i_Y++) {
@@ -149,7 +149,7 @@ void AbstractTransformGluonDistribution::setup() {
     }
     
     // calculate the values for the 2D interpolation
-    func.function = gdist_integrand; // TODO make this pos. or mom.
+    func.function = gdist_integrand;
     G_dist = new double[u2_dimension * Y_dimension];
     for (size_t i_u2 = 0; i_u2 < u2_dimension; i_u2++) {
         log_u2_values[i_u2] = log_u2min + i_u2 * log_step;
@@ -297,14 +297,14 @@ static double momentum_gdist_series_term_integrand(double q, void* closure) {
         case 0:
             return 2 * M_PI * q * params->gdist->F(q*q, params->Qs2);
         case 2:
-            return -0.5 * M_PI * gsl_pow_3(q) * params->gdist->S2(q*q, params->Qs2);
+            return -0.5 * M_PI * gsl_pow_3(q) * params->gdist->F(q*q, params->Qs2);
         default: // a term not in the series
             return 0;
     }
 }
 
 AbstractMomentumGluonDistribution::AbstractMomentumGluonDistribution(double r2min, double r2max, double Ymin, double Ymax, size_t subinterval_limit) :
-  AbstractTransformGluonDistribution(Ymax, Ymax, Ymin, Ymax, subinterval_limit, momentum_gdist_integrand, momentum_gdist_series_term_integrand) {
+  AbstractTransformGluonDistribution(r2min, r2max, Ymin, Ymax, subinterval_limit, momentum_gdist_integrand, momentum_gdist_series_term_integrand) {
 }
 
 
@@ -347,6 +347,42 @@ FixedSaturationMVGluonDistribution::FixedSaturationMVGluonDistribution(double La
 double FixedSaturationMVGluonDistribution::S2(double r2, double Y) {
     return MVGluonDistribution::S2(r2, YMV);
 }
+
+PlateauPowerGluonDistribution::PlateauPowerGluonDistribution(
+    double gamma,
+    double r2min, double r2max,
+    double Ymin, double Ymax,
+    double Q02, double x0, double lambda,
+    size_t subinterval_limit) :
+ AbstractMomentumGluonDistribution(r2min, r2max, Ymin, Ymax, subinterval_limit),
+ gammaPP(gamma),
+ Q02x0lambda(Q02 * pow(x0, lambda)),
+ lambda(lambda) {
+    ostringstream s;
+    s << "PlateauPower(gammaPP = " << gamma << ", r2min = " << r2min << ", r2max = " << r2max << ", Ymin = " << Ymin << ", Ymax = " << Ymax << ", Q02 = " << Q02 << ", x0 = " << x0 << ", lambda = " << lambda << ")";
+    _name = s.str();
+    setup();
+}
+
+PlateauPowerGluonDistribution::~PlateauPowerGluonDistribution() {}
+
+double PlateauPowerGluonDistribution::F(double q2, double Y) {
+    double _Qs2 = Qs2(Y);
+    double F = M_1_PI * _Qs2; // same low-q limit as GBW
+    if (q2 > _Qs2) {
+        F *= pow(q2 / _Qs2, -0.5*gammaPP);
+    }
+    return F;
+}
+
+double PlateauPowerGluonDistribution::Qs2(const double Y) const {
+    return Q02x0lambda * exp(lambda * Y);
+}
+
+const char* PlateauPowerGluonDistribution::name() {
+    return _name.c_str();
+}
+
 
 struct double_triplet {
     double x, y, z;

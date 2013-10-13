@@ -339,6 +339,21 @@ void ContextCollection::create_contexts() {
         check_property_default(gdist_subinterval_limit, size_t, parse_size, 10000)
         gdist = new FixedSaturationMVGluonDistribution(lambdaMV, gammaMV, q2minMV, q2maxMV, YMV, Q02, x0, lambda, gdist_subinterval_limit);
     }
+    else if (gdist_type == "plateau-power" || gdist_type == "pp") {
+        double Ymin = min(Y);
+        double Ymax = max(Y);
+        double pTmin = min(pT);
+        check_property_default(gammaPP, double, parse_double, 4)
+        check_property_default(r2minPP, double, parse_double, 1e-6)
+        check_property_default(r2maxPP, double, parse_double, 2 * gsl_pow_2(2 * inf))
+        check_property_default(YminPP,  double, parse_double, 2 * Ymin)
+        check_property_default(YmaxPP,  double, parse_double, Ymax - log(pTmin) + log(sqs))
+        assert(r2minPP < r2maxPP);
+        assert(YminPP < YmaxPP);
+        check_property_default(gdist_subinterval_limit, size_t, parse_size, 10000)
+        logger << "Creating plateau-power gluon distribution with " << r2minPP << " < r2 < " << r2maxPP << ", " << YminPP << " < Y < " << YmaxPP << endl;
+        gdist = new PlateauPowerGluonDistribution(gammaPP, r2minPP, r2maxPP, YminPP, YmaxPP, Q02, x0, lambda, gdist_subinterval_limit);
+    }
     else if (gdist_type == "file" || gdist_type == "gbw+file" || gdist_type == "mv+file") {
         check_property(gdist_position_filename, string, parse_string)
         check_property(gdist_momentum_filename, string, parse_string)
