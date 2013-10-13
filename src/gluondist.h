@@ -126,6 +126,7 @@ public:
 class GluonDistribution {
 public:
     GluonDistribution() {};
+    virtual ~GluonDistribution() {};
     /**
      * Return the value of the dipole gluon distribution at the given
      * values of r^2 and Y. r2 is the squared magnitude of the
@@ -210,39 +211,37 @@ private:
 };
 
 /**
- * An abstract gluon distribution which has only a position space
- * definition, and the values in momentum space are computed
- * automatically.
+ * An abstract base class for gluon distributions which only have a position
+ * space or momentum space definition - that is, for when you have an analytic
+ * expression for S(r2, Qs2) or F(q2, Qs2), but not both. The values in the
+ * other space are computed automatically via a numerical integral.
  * 
- * This is a base class for gluon distributions which have no
- * analytic expression or other direct definition in momentum
- * space. Only the position space data is available - that is,
- * for when you have S(r, Qs) but not F(k, Qs). This means the
- * value of the distribution in momentum space has to be determined
- * numerically.
+ * This is not meant to be subclassed directly. Gluon distributions should be
+ * subclasses of either AbstractPositionGluonDistribution or
+ * AbstractMomentumGluonDistribution. This just encapsulates the behavior
+ * common to both.
  * 
- * This implementation establishes a 2D grid in ln(q2) and ln(Qs2)
- * and computes the value of the distribution at the grid points
- * via a numerical integral. When F(q2, Qs2) is called, if the
- * values of q2 and Qs2 are within the boundaries of the grid,
- * the value of the distribution F is computed by 2D interpolation.
- * If q2 is smaller than the lower boundary of the grid, then
- * the value of the distribution F is computed from a series
- * expansion around q2 = 0. The series coefficients are
- * interpolated in Qs2 only.
+ * This implementation establishes a 2D grid in ln(u2) and ln(Qs2), where u
+ * represents either r or q, and numerically integrates to get the values of
+ * the gluon distribution at the grid points. When F(q2, Qs2) or S2(r2, Qs2) is
+ * called, if the values of u2 and Qs2 are within the boundaries of the grid,
+ * the value of the distribution S2 or F is computed by 2D interpolation. If u2
+ * is smaller than the lower boundary of the grid, then the value of the gluon
+ * distribution is computed from a series expansion around u2 = 0. The series
+ * coefficients are interpolated in Qs2 only.
  */
-class AbstractPositionGluonDistribution : public GluonDistribution {
+class AbstractTransformGluonDistribution : public GluonDistribution {
 public:
     /**
-     * Constructs a new position gluon distribution object.
+     * Constructs a new transform gluon distribution object.
      * 
-     * `q2min`, `q2max`, `Ymin`, and `Ymax` specify the boundaries
+     * `u2min`, `u2max`, `Ymin`, and `Ymax` specify the boundaries
      * of the region in which to interpolate the momentum space
      * distribution. The grid will be set up using these boundaries,
      * with a spacing automatically chosen to be reasonably accurate.
-     * The series expansion used for `q2` < `q2min` is accurate to three
-     * digits up to around `q2` = 1e-3 or so, but it's probably safer
-     * to pass `q2min` around 1e-6. The other limits should be chosen
+     * The series expansion used for `u2` < `u2min` is accurate to three
+     * digits up to around `u2` = 1e-3 or so, but it's probably safer
+     * to pass `u2min` around 1e-6. The other limits should be chosen
      * to include the range of values that will be needed.
      * 
      * `subinterval_limit` specifies the maximum number of subdivisions
@@ -250,8 +249,8 @@ public:
      * extreme parameters if the program crashes with a subdivision
      * error.
      */
-    AbstractPositionGluonDistribution(double q2min, double q2max, double Ymin, double Ymax, size_t subinterval_limit = 10000);
-    ~AbstractPositionGluonDistribution();
+    AbstractTransformGluonDistribution(double u2min, double u2max, double Ymin, double Ymax, size_t subinterval_limit, double (*gdist_integrand)(double, void*), double (*gdist_series_term_integrand)(double, void*));
+    virtual ~AbstractTransformGluonDistribution();
 
     /**
      * Returns the value of the position space quadrupole gluon distribution,
@@ -260,56 +259,142 @@ public:
      * limit.
      */
     virtual double S4(double r2, double s2, double t2, double Y);
-    /**
-     * Returns the value of the MV momentum space dipole gluon
-     * distribution.
-     */
-    double F(double q2, double Y);
+
     /**
      * Returns the name of the distribution, which should incorporate
      * the values of the parameters.
      */
     virtual const char* name() = 0;
 
-    void write_pspace_grid(std::ostream& out);
 protected:
     /**
      * Handles the actual calculation of the points to use for interpolation.
      * This should be called from the constructor of each subclass that
-     * implements S2.
+     * implements F or S2.
      */
     void setup();
     
+    /**
+     * Returns the value of the dipole distribution, F or S2.
+     */
+    double dipole_distribution(double u2, double Y);
+    /**
+     * Write a representation of the internal interpolation grid to the given
+     * output stream.
+     */
+    void write_grid(std::ostream& out);
+    
 private:
-    double q2min, q2max;
+    double u2min, u2max;
     double Ymin, Ymax;
-    /** Values of ln(q2) for the interpolation. */
-    double* log_q2_values;
+    /** Values of ln(u2) for the interpolation. */
+    double* log_u2_values;
     /** Values of Y for the interpolation. */
     double* Y_values;
-    /** Values of the leading coefficient in the series for small q2. */
-    double* F_dist_leading_q2;
-    /** Values of the subleading coefficient in the series for small q2. */
-    double* F_dist_subleading_q2;
-    /** Values of the gluon distribution for interpolation when q2 > q2min. */
-    double* F_dist;
+    
+    // G stands for either F or S2
+    /** Values of the leading coefficient in the series for small u2. */
+    double* G_dist_leading_u2;
+    /** Values of the subleading coefficient in the series for small u2. */
+    double* G_dist_subleading_u2;
+    /** Values of the gluon distribution for interpolation when u2 > u2min. */
+    double* G_dist;
+
+    // The functions used to compute the transformed distribution
+    double (*gdist_integrand)(double, void*);
+    double (*gdist_series_term_integrand)(double, void*);
     
     // Structures used to do the interpolation
-    gsl_interp* interp_dist_leading_q2;
-    gsl_interp* interp_dist_subleading_q2;
-    // one of interp_dist_momentum_1D or interp_dist_momentum_2D will be NULL and the other one
+    gsl_interp* interp_dist_leading_u2;
+    gsl_interp* interp_dist_subleading_u2;
+    // one of interp_dist_1D or interp_dist_2D will be NULL and the other one
     // will be used, depending on whether there is a range of Y values or
     // just a single one
-    gsl_interp* interp_dist_momentum_1D;
-    interp2d* interp_dist_momentum_2D;
+    gsl_interp* interp_dist_1D;
+    interp2d* interp_dist_2D;
     
-    gsl_interp_accel* q2_accel;
+    gsl_interp_accel* u2_accel;
     gsl_interp_accel* Y_accel;
     
-    size_t q2_dimension;
+    size_t u2_dimension;
     size_t Y_dimension;
     
     size_t subinterval_limit;
+};
+
+/**
+ * An abstract base class for gluon distributions which only have an analytic
+ * definition in position space. The momentum space distribution is computed
+ * automatically via a numerical integral. See the documentation for
+ * AbstractTransformGluonDistribution for details.
+ */
+class AbstractPositionGluonDistribution : public AbstractTransformGluonDistribution {
+public:
+    /**
+     * Constructs a new position space gluon distribution object.
+     * 
+     * `q2min`, `q2max`, `Ymin`, and `Ymax` specify the boundaries
+     * of the region in which to interpolate the momentum space
+     * distribution in two dimensions. Calls to F(q2, Y) will succeed
+     * for `q2 <= q2max` and `Ymin <= Y <= Ymax`.
+     */
+    AbstractPositionGluonDistribution(double q2min, double q2max, double Ymin, double Ymax, size_t subinterval_limit = 10000);
+    virtual ~AbstractPositionGluonDistribution() {};
+    
+    /**
+     * Returns the value of the momentum space dipole gluon distribution.
+     * 
+     * If `q2min <= q2 <= q2max` and `Ymin <= Y <= Ymax` (where `q2min`,
+     * `q2max`, `Ymin`, and `Ymax` are the values passed to the constructor),
+     * the result for `F` is computed using a 2D interpolation. Otherwise, if
+     * `q2 < q2min` and `Ymin <= Y <= Ymax`, it is computed using a two-term
+     * series expansion in `q2` with coefficients obtained by 1D interpolation
+     * in `Y`. Otherwise, this throws a GluonDistributionFRangeException.
+     */
+    double F(double q2, double Y);
+    /**
+     * Write a representation of the internal momentum space grid to the
+     * given output stream.
+     */
+    void write_pspace_grid(std::ostream& out);
+};
+
+/**
+ * An abstract base class for gluon distributions which only have an analytic
+ * definition in momentum space. The position space distribution is computed
+ * automatically via a numerical integral. See the documentation for
+ * AbstractTransformGluonDistribution for details.
+ */
+class AbstractMomentumGluonDistribution : public AbstractTransformGluonDistribution {
+public:
+    /**
+     * Constructs a new momentum space gluon distribution object.
+     * 
+     * `r2min`, `r2max`, `Ymin`, and `Ymax` specify the boundaries
+     * of the region in which to interpolate the momentum space
+     * distribution in two dimensions. Calls to S2(r2, Y) will succeed
+     * for `r2 <= r2max` and `Ymin <= Y <= Ymax`.
+     */
+    AbstractMomentumGluonDistribution(double r2min, double r2max, double Ymin, double Ymax, size_t subinterval_limit = 10000);
+    virtual ~AbstractMomentumGluonDistribution() {};
+
+    /**
+     * Returns the value of the position space dipole gluon distribution.
+     * 
+     * If `r2min <= r2 <= r2max` and `Ymin <= Y <= Ymax` (where `r2min`,
+     * `r2max`, `Ymin`, and `Ymax` are the values passed to the constructor),
+     * the result for `S2` is computed using a 2D interpolation. Otherwise, if
+     * `r2 < r2min` and `Ymin <= Y <= Ymax`, it is computed using a two-term
+     * series expansion in `r2` with coefficients obtained by 1D interpolation
+     * in `Y`. Otherwise, this throws a GluonDistributionS2RangeException.
+     */
+    double S2(double r2, double Y);
+
+    /**
+     * Write a representation of the internal position space grid to the
+     * given output stream.
+     */
+    void write_rspace_grid(std::ostream& out);
 };
 
 /**
@@ -336,7 +421,7 @@ public:
         double x0,
         double lambda,
         size_t subinterval_limit = 10000);
-    ~MVGluonDistribution() {};
+    virtual ~MVGluonDistribution() {};
     
     /**
      * Returns the value of the MV dipole gluon distribution,
@@ -372,7 +457,7 @@ public:
      * Constructs a new modified gluon distribution object.
      */
     FixedSaturationMVGluonDistribution(double LambdaMV, double gammaMV, double q2min, double q2max, double YMV, double Q02, double x0, double lambda, size_t subinterval_limit = 10000);
-    ~FixedSaturationMVGluonDistribution() {};
+    virtual ~FixedSaturationMVGluonDistribution() {};
     
     /**
      * Returns the value of the dipole gluon distribution,
@@ -397,7 +482,7 @@ public:
      * This constructor uses the default saturation scale.
      */
     FileDataGluonDistribution(std::string pos_filename, std::string mom_filename, double Q02, double x0, double lambda, double xinit);
-    ~FileDataGluonDistribution();
+    virtual ~FileDataGluonDistribution();
     
     /**
      * Returns the interpolated value of the gluon distribution at the specified values.
