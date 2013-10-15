@@ -67,7 +67,8 @@ directory of `src/`), run these commands:
     cd build
     cmake .. && make
 
-At the end of this you should have a `build/` directory containing the programs.
+At the end of this you should have a `build/src/` directory containing the
+programs.
 
                                Additional files
 
@@ -99,7 +100,7 @@ Running
 ---------------
 
 The program is invoked as
-    ./oneloopcalc <options>
+    oneloopcalc <options>
 where the <options> can include any number of the following, in any order:
 
 - Hard factor group specifications

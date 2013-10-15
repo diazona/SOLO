@@ -42,5 +42,3 @@ target_link_libraries(gluondist interp2d ${LIBS})
 
 add_executable(kovr kov-position/gauleg.cpp kov-position/interr.cpp kov-position/kovr.cpp)
 target_link_libraries(kovr m)
-
-set_target_properties(oneloopcalc contextreader utils_test dss_pinlo_test gluondist kovr PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
