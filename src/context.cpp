@@ -266,35 +266,35 @@ void ContextCollection::create_contexts() {
     bool _c0r_optimization = false;
     pair<multimap<string, string>::iterator, multimap<string, string>::iterator> itit;
 
-    check_property(x0,           double, parse_double)
-    check_property(A,            double, parse_double)
-    check_property(c,            double, parse_double)
-    check_property(lambda,       double, parse_double)
-    check_property(Nc,           double, parse_double)
-    check_property(Nf,           double, parse_double)
-    check_property(CF,           double, parse_double)
-    check_property(TR,           double, parse_double)
-    check_property(Sperp,        double, parse_double)
-    check_property(sqs,          double, parse_double)
-    check_property(pT,           vector<double>, parse_vector)
-    check_property(Y,            vector<double>, parse_vector)
-    check_property(projectile,   projectile_type, parse_projectile_type)
-    check_property(hadron,       DSSpiNLO::hadron, parse_hadron)
-    check_property(pdf_filename, string, parse_string)
-    check_property(ff_filename,  string, parse_string)
-    check_property(integration_strategy, integration_strategy, parse_strategy)
-    check_property(cubature_iterations, size_t, parse_size)
-    check_property(miser_iterations, size_t, parse_size)
-    check_property(vegas_initial_iterations, size_t, parse_size)
-    check_property(vegas_incremental_iterations, size_t, parse_size)
-    check_property(quasi_iterations, size_t, parse_size)
-    check_property(abserr, double, parse_double)
-    check_property(relerr, double, parse_double)
-    check_property(quasirandom_generator_type, const gsl_qrng_type*, parse_qrng_type)
-    check_property(pseudorandom_generator_type, const gsl_rng_type*, parse_rng_type)
-    check_property(pseudorandom_generator_seed, unsigned long int, parse_ulong)
-    check_property_default(css_r_regularization, bool, parse_boolean, false)
-    check_property_default(css_r2_max, double, parse_double, 0) // 0 is a dummy value for when the regularization is not being used
+    check_property_default( x0,           double, parse_double, 0.000304)
+    check_property(         A,            double, parse_double)
+    check_property(         c,            double, parse_double)
+    check_property_default( lambda,       double, parse_double, 0.288)
+    check_property_default( Nc,           double, parse_double, 3)
+    check_property_default( Nf,           double, parse_double, 3)
+    check_property_default( CF,           double, parse_double, 1.5)
+    check_property_default( TR,           double, parse_double, 0.5)
+    check_property(         Sperp,        double, parse_double)
+    check_property(         sqs,          double, parse_double)
+    check_property(         pT,           vector<double>, parse_vector)
+    check_property(         Y,            vector<double>, parse_vector)
+    check_property(         projectile,   projectile_type, parse_projectile_type)
+    check_property(         hadron,       DSSpiNLO::hadron, parse_hadron)
+    check_property_default( pdf_filename, string, parse_string, "mstw2008nlo.00.dat")
+    check_property_default( ff_filename,  string, parse_string, "PINLO.DAT")
+    check_property_default( integration_strategy, integration_strategy, parse_strategy, MC_VEGAS)
+    check_property_default( cubature_iterations, size_t, parse_size, 1000000)
+    check_property_default( miser_iterations, size_t, parse_size, 1000000)
+    check_property_default( vegas_initial_iterations, size_t, parse_size, 100000)
+    check_property_default( vegas_incremental_iterations, size_t, parse_size, 100000)
+    check_property_default( quasi_iterations, size_t, parse_size, 1000000)
+    check_property_default( abserr, double, parse_double, 1e-20)
+    check_property_default( relerr, double, parse_double, 0)
+    check_property(         quasirandom_generator_type, const gsl_qrng_type*, parse_qrng_type)
+    check_property(         pseudorandom_generator_type, const gsl_rng_type*, parse_rng_type)
+    check_property(         pseudorandom_generator_seed, unsigned long int, parse_ulong)
+    check_property_default( css_r_regularization, bool, parse_boolean, false)
+    check_property_default( css_r2_max, double, parse_double, 0) // 0 is a dummy value for when the regularization is not being used
     
     double Q02 = c * pow(A, 1./3.);
     
@@ -513,12 +513,12 @@ void ContextCollection::create_contexts() {
     assert(cpl == NULL);
     check_property(coupling_type, string, parse_string)
     if (coupling_type == "fixed") {
-        check_property(alphas, double, parse_double)
+        check_property_default(alphas, double, parse_double, 0.2)
         cpl = new FixedCoupling(alphas);
     }
     else if (coupling_type == "running") {
-        check_property(lambdaQCD, double, parse_double)
-        check_property(regulator, double, parse_double)
+        check_property_default(lambdaQCD, double, parse_double, sqrt(0.0588))
+        check_property_default(regulator, double, parse_double, 1.0)
         check_property_default(Ncbeta, double, parse_double, (11.0 * Nc - 2.0 * Nf) / 12.0)
         cpl = new LORunningCoupling(lambdaQCD, Ncbeta, regulator);
     }
@@ -543,7 +543,7 @@ void ContextCollection::create_contexts() {
         }
         else {
             // this is the normal case
-            check_property(mu2, double, parse_double)
+            check_property_default(mu2, double, parse_double, 10)
             fs = new FixedFactorizationScale(mu2);
         }
     }
@@ -673,27 +673,6 @@ void ContextCollection::add(string key, string value) {
 }
 
 void ContextCollection::setup_defaults() {
-    // This includes only those default values which are static
-    options.insert(pair<string, string>("x0", "0.000304"));
-    options.insert(pair<string, string>("lambda", "0.288"));
-    options.insert(pair<string, string>("lambdaqcd", "0.24248711")); // sqrt(0.0588)
-    options.insert(pair<string, string>("regulator", "1"));
-    options.insert(pair<string, string>("mu2", "10"));
-    options.insert(pair<string, string>("nc", "3"));
-    options.insert(pair<string, string>("nf", "3"));
-    options.insert(pair<string, string>("cf", "1.5"));
-    options.insert(pair<string, string>("tr", "0.5"));
-    options.insert(pair<string, string>("alphas", "0.2"));
-    options.insert(pair<string, string>("pdf_filename", "mstw2008nlo.00.dat"));
-    options.insert(pair<string, string>("ff_filename", "PINLO.DAT"));
-    options.insert(pair<string, string>("integration_strategy", "VEGAS"));
-    options.insert(pair<string, string>("cubature_iterations", "1000000"));
-    options.insert(pair<string, string>("miser_iterations", "10000000"));
-    options.insert(pair<string, string>("vegas_initial_iterations", "100000"));
-    options.insert(pair<string, string>("vegas_incremental_iterations", "100000"));
-    options.insert(pair<string, string>("quasi_iterations", "1000000"));
-    options.insert(pair<string, string>("abserr", "1e-20"));
-    options.insert(pair<string, string>("relerr", "0"));
     // Adapted from the GSL source code - basically this reimplements gsl_rng_env_setup
     const char* qtype = getenv("GSL_QRNG_TYPE");
     options.insert(pair<string, string>("quasirandom_generator_type", qtype == NULL ? "halton" : qtype));
