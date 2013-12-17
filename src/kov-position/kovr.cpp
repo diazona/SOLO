@@ -40,7 +40,7 @@ enum evtype {BK,BFKL};
 enum RegType {CUTOFF,FROZEN};
 enum startstatus {NEW,OLD};
 enum alphtype {FIX,RUNBAL,RUNPAR,RUNMIN};
-enum inptype { GBW, MODEL1 };
+enum inptype { GBW, MV, MODEL1 };
 inptype inpmodel;
 alphtype alphas;
 evtype eqtype;
@@ -80,8 +80,9 @@ main()
     eqtype = BK;
     //what kind of initial condition
     // GBW 
+    // MV
     // MODEL1 some sample model
-    inpmodel  = GBW;
+    inpmodel  = MV;
     
     // initialisation of the vectors needed for the Gaussian integration
     
@@ -241,7 +242,9 @@ double input(double logr,double x)
         case GBW:
             return 1.0 - exp( - r * r * Qsat2(x) / 4.0);
             break;
-            // some other model for testing
+        case MV:
+            return 1.0 - pow(M_E + 1 / (r * LambdaMV), - r * r * Qsat2(x) / 4.0);
+        // some other model for testing
         case MODEL1:
             Qs2 = 0.01; 
             return r * r * Qs2 / 4.0 / ( 1.0 + r * r * Qs2 / 4.0);

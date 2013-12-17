@@ -21,3 +21,4 @@ const double Lambda2 = 0.0588;
 const int NN=5001;
 const double bmin = 1.0e-4;
 const double bmax = 30.0;
+const double LambdaMV = 0.24;
