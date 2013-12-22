@@ -193,7 +193,10 @@ integration_strategy parse_strategy(pair<multimap<string, string>::iterator, mul
     multimap<string, string>::iterator el = range.first;
     assert(++el == range.second);
     string val = trim_lower(range.first->second);
-    if (val == "miser") {
+    if (val == "plain") {
+        return MC_PLAIN;
+    }
+    else if (val == "miser") {
         return MC_MISER;
     }
     else if (val == "vegas") {
@@ -725,6 +728,24 @@ void ContextCollection::read_config_line(string& line) {
             string value = trim(*it, " \n\t");
             add(key, value);
         }
+    }
+}
+
+
+std::ostream& operator<<(std::ostream& out, const integration_strategy& strategy) {
+    switch (strategy) {
+        case MC_PLAIN:
+            out << "plain";
+            break;
+        case MC_MISER:
+            out << "miser";
+            break;
+        case MC_VEGAS:
+            out << "vegas";
+            break;
+        case MC_QUASI:
+            out << "quasi";
+            break;
     }
 }
 
