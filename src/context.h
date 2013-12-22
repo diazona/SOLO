@@ -208,11 +208,14 @@ public:
      * (unusued unless integration strategy is QUASI) */
     size_t quasi_iterations;
 
+    /** The limit of integration over infinite regions */
+    double inf;
+
     /** The precomputed value of c A^(1/3) Q_0^2 x_0^(lambda) */
     double Q02x0lambda;
     /** The precomputed value of tau = pT / sqs * exp(Y) */
     double tau;
-
+    
     Context(
         double x0,
         double A,
@@ -246,7 +249,8 @@ public:
         FactorizationScale* fs,
         bool c0r_optimization,
         bool css_r_regularization,
-        double css_r2_max) :
+        double css_r2_max,
+        double inf) :
      x0(x0),
      A(A),
      c(c),
@@ -280,6 +284,7 @@ public:
      c0r_optimization(c0r_optimization),
      css_r_regularization(css_r_regularization),
      css_r2_max(css_r2_max),
+     inf(inf),
      Q02x0lambda(c * pow(A, 1.0d/3.0d) * pow(x0, lambda)),
      tau(sqrt(pT2)/sqs*exp(Y)) {
         if (tau > 1) {
@@ -323,6 +328,7 @@ public:
      c0r_optimization(other.c0r_optimization),
      css_r_regularization(other.css_r_regularization),
      css_r2_max(other.css_r2_max),
+     inf(other.inf),
      Q02x0lambda(other.Q02x0lambda),
      tau(other.tau) {}
 };

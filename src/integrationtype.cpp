@@ -20,15 +20,6 @@
 #include <cassert>
 #include "integrationtype.h"
 
-/**
- * For dimensions in which the lower and upper bounds are -infinity and +infinity,
- * we have to pick a finite value to cut off the integral. Using 10 seems to be
- * quite sufficient but this can always be raised. It shouldn't be made too large,
- * though, because if it is, the Monte Carlo sampling will miss the peak in the
- * integrand entirely and just output zero all the time.
- */
-const double inf = 10;
-
 /*
  * In general, the values passed as the third argument to update() are interpreted as
  *  values[0]: z
@@ -43,12 +34,12 @@ void PlainIntegrationType::fill_min(IntegrationContext& ictx, const size_t core_
     assert(ictx.ctx->tau < 1);
     size_t i = 0;
     while (i < core_dimensions) { min[i++] = ictx.ctx->tau; }
-    while (i < core_dimensions + extra_dimensions) { min[i++] = -inf; }
+    while (i < core_dimensions + extra_dimensions) { min[i++] = -ictx.ctx->inf; }
 }
 void PlainIntegrationType::fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const {
     size_t i = 0;
     while (i < core_dimensions) { max[i++] = 1; }
-    while (i < core_dimensions + extra_dimensions) { max[i++] = inf; }
+    while (i < core_dimensions + extra_dimensions) { max[i++] = ictx.ctx->inf; }
 }
 
 void NoIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
@@ -137,13 +128,13 @@ void XiPIntegrationType::fill_min(IntegrationContext& ictx, const size_t core_di
     size_t i = 0;
     while (i < core_dimensions) { min[i++] = ictx.ctx->tau; }
     min[i++] = 0;
-    while (i < core_dimensions + extra_dimensions) { min[i++] = -inf; }
+    while (i < core_dimensions + extra_dimensions) { min[i++] = -ictx.ctx->inf; }
 }
 void XiPIntegrationType::fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const {
     size_t i = 0;
     while (i < core_dimensions) { max[i++] = 1; }
     max[i++] = 1;
-    while (i < core_dimensions + extra_dimensions) { max[i++] = inf; }
+    while (i < core_dimensions + extra_dimensions) { max[i++] = ictx.ctx->inf; }
 }
 
 void Momentum1XiPIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
@@ -189,7 +180,7 @@ void RadialIntegrationType::fill_min(IntegrationContext& ictx, const size_t core
 void RadialIntegrationType::fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const {
     size_t i = 0;
     while (i < core_dimensions) { max[i++] = 1; }
-    while (i < core_dimensions + extra_dimensions) { max[i++] = inf; }
+    while (i < core_dimensions + extra_dimensions) { max[i++] = ictx.ctx->inf; }
 }
 
 void RadialDipoleIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {

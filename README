@@ -201,6 +201,8 @@ where the <options> can include any number of the following, in any order:
         "gbw+file"
     hadron (no default)
         the type of hadron detected, "pi-", "pi0", or "pi+"
+    inf (default 40)
+        the cutoff used for integration over a theoretically infinite region
     integration_strategy (default VEGAS)
         the integration type to use, "MISER", "VEGAS" (best), or "QUASI"
     lambda (default 0.288)

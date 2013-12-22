@@ -235,6 +235,4 @@ private:
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };
 
-extern const double inf;
-
 #endif

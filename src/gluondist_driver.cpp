@@ -3,9 +3,6 @@
 #include "context.h"
 #include "gluondist.h"
 
-// http://stackoverflow.com/a/1404473/56541
-// use "extern" explicitly to achieve external linkage
-extern const double inf = 10;
 ostream& logger = cerr;
 
 void momentum_space_query(GluonDistribution* gdist) {

@@ -295,6 +295,14 @@ void ContextCollection::create_contexts() {
     check_property(         pseudorandom_generator_seed, unsigned long int, parse_ulong)
     check_property_default( css_r_regularization, bool, parse_boolean, false)
     check_property_default( css_r2_max, double, parse_double, 0) // 0 is a dummy value for when the regularization is not being used
+    /*
+     * For dimensions in which the lower and upper bounds are -infinity and +infinity,
+     * we have to pick a finite value to cut off the integral. Using 10 seems to be
+     * quite sufficient but this can always be raised. It shouldn't be made too large,
+     * though, because if it is, the Monte Carlo sampling will miss the peak in the
+     * integrand entirely and just output zero all the time.
+     */
+    check_property_default( inf, double, parse_double, 40)
     
     double Q02 = c * pow(A, 1./3.);
     
@@ -600,7 +608,8 @@ void ContextCollection::create_contexts() {
                         fs,
                         _c0r_optimization,
                         css_r_regularization,
-                        css_r2_max));
+                        css_r2_max,
+                        inf));
             }
             catch (const InvalidKinematicsException& e) {
                 logger << "Failed to create context at pT = " << *pTit << ", Y = " << *Yit << ": " << e.what() << endl;
