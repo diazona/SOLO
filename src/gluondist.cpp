@@ -269,7 +269,7 @@ static double position_gdist_series_term_integrand(double r, void* closure) {
 }
 
 AbstractPositionGluonDistribution::AbstractPositionGluonDistribution(double q2min, double q2max, double Ymin, double Ymax, size_t subinterval_limit) :
-  AbstractTransformGluonDistribution(Ymax, Ymax, Ymin, Ymax, subinterval_limit, position_gdist_integrand, position_gdist_series_term_integrand) {
+  AbstractTransformGluonDistribution(q2min, q2max, Ymin, Ymax, subinterval_limit, position_gdist_integrand, position_gdist_series_term_integrand) {
 }
 
 double AbstractPositionGluonDistribution::F(double q2, double Y) {
