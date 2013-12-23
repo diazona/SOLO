@@ -377,6 +377,9 @@ public:
       contexts_created(false) {
         setup_defaults();
         ifstream in(filename.c_str());
+        if (!in.good()) {
+            throw ios_base::failure("Unable to read file " + filename);
+        }
         read_config(in);
         in.close();
     }

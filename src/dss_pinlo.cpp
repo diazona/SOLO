@@ -42,6 +42,9 @@ DSSpiNLO::DSSpiNLO(const char* filename) :
     std::set<double> lnqs2_values;
     
     input.open(filename);
+    if (!input.good()) {
+        throw std::ios_base::failure("Unable to read file");
+    }
     
     // Read through once to identify unique lnz and lnQs2 values
     input >> lnz >> lnqs2;

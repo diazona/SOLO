@@ -407,6 +407,9 @@ void read_from_file(const string filename, size_t& x_dimension, size_t& y_dimens
     set<double> xvals, yvals;
 
     ifstream in(filename.c_str());
+    if (!in.good()) {
+        throw ios_base::failure("Unable to read file " + filename);
+    }
     double_triplet point;
     point.processed = false;
     while (in >> point.x >> point.y >> point.z) {
