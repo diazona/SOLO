@@ -797,143 +797,107 @@ void FileDataGluonDistribution::write_satscale_grid(ostream& out) {
     }
 }
 
-HybridGBWFileDataGluonDistribution::HybridGBWFileDataGluonDistribution(
+ExtendedFileDataGluonDistribution::ExtendedFileDataGluonDistribution(
  string pos_filename,
  string mom_filename,
- double Q02, double x0, double lambda,
  double xinit,
- enum satscale_source satscale_source,
- double satscale_threshold) :
-  FileDataGluonDistribution(pos_filename, mom_filename, xinit, satscale_source, satscale_threshold),
-  gbw_dist(Q02, x0, lambda) {
-}
-
-HybridGBWFileDataGluonDistribution::HybridGBWFileDataGluonDistribution(
- string pos_filename,
- string mom_filename,
- double Q02, double x0, double lambda,
- double xinit) :
-  FileDataGluonDistribution(pos_filename, mom_filename, Q02, x0, lambda, xinit),
-  gbw_dist(Q02, x0, lambda) {
-}
-
-HybridGBWFileDataGluonDistribution::~HybridGBWFileDataGluonDistribution() {}
-
-double HybridGBWFileDataGluonDistribution::S2(double r2, double Y) {
-    if (Y < Yminr) {
-        return gbw_dist.S2(r2, Y);
-    }
-    else {
-        return FileDataGluonDistribution::S2(r2, Y);
-    }
-}
-
-double HybridGBWFileDataGluonDistribution::S4(double r2, double s2, double t2, double Y) {
-    if (Y < Yminr) {
-        return gbw_dist.S4(r2, s2, t2, Y);
-    }
-    else {
-        return FileDataGluonDistribution::S4(r2, s2, t2, Y);
-    }
-}
-
-double HybridGBWFileDataGluonDistribution::F(double q2, double Y) {
-    if (Y < Yminp) {
-        return gbw_dist.F(q2, Y);
-    }
-    else {
-        return FileDataGluonDistribution::F(q2, Y);
-    }
-}
-
-double HybridGBWFileDataGluonDistribution::Qs2(const double Y) const {
-    if (satscale_source == POSITION_THRESHOLD && Y < Yminr) {
-        return gbw_dist.Qs2(Y);
-    }
-    else if (satscale_source == MOMENTUM_THRESHOLD && Y < Yminp) {
-        return gbw_dist.Qs2(Y);
-    }
-    return FileDataGluonDistribution::Qs2(Y);
-}
-
-HybridMVFileDataGluonDistribution::HybridMVFileDataGluonDistribution(
- string pos_filename,
- string mom_filename,
- double LambdaMV,
- double gammaMV,
- double q2min,
- double q2max,
- double Ymin,
- double Ymax,
- double Q02,
- double x0,
- double lambda,
- double xinit,
- enum satscale_source satscale_source,
+ FileDataGluonDistribution::satscale_source_type satscale_source,
  double satscale_threshold,
- size_t subinterval_limit) :
-  FileDataGluonDistribution(pos_filename, mom_filename, xinit, satscale_source, satscale_threshold),
-  mv_dist(LambdaMV, gammaMV, q2min, q2max, min(Ymin, exp(-xinit)), min(Ymax, exp(-xinit)), Q02, x0, lambda) {
+ GluonDistribution* lower_dist,
+ GluonDistribution* upper_dist
+) :
+  FileDataGluonDistribution(pos_filename, mom_filename, xinit, satscale_source, satscale_threshold), lower_dist(lower_dist), upper_dist(upper_dist) {
 }
 
-HybridMVFileDataGluonDistribution::HybridMVFileDataGluonDistribution(
+ExtendedFileDataGluonDistribution::ExtendedFileDataGluonDistribution(
  string pos_filename,
  string mom_filename,
- double LambdaMV,
- double gammaMV,
- double q2min,
- double q2max,
- double Ymin,
- double Ymax,
- double Q02,
- double x0,
- double lambda,
+ double Q02, double x0, double lambda,
  double xinit,
- size_t subinterval_limit) :
-  FileDataGluonDistribution(pos_filename, mom_filename, Q02, x0, lambda, xinit),
-  mv_dist(LambdaMV, gammaMV, q2min, q2max, min(Ymin, exp(-xinit)), min(Ymax, exp(-xinit)), Q02, x0, lambda) {
+ GluonDistribution* lower_dist,
+ GluonDistribution* upper_dist
+) :
+  FileDataGluonDistribution(pos_filename, mom_filename, Q02, x0, lambda, xinit), lower_dist(lower_dist), upper_dist(upper_dist) {
 }
 
-HybridMVFileDataGluonDistribution::~HybridMVFileDataGluonDistribution() {}
+ExtendedFileDataGluonDistribution::~ExtendedFileDataGluonDistribution() {}
 
+// reimplements gsl_interp_eval without the boundary check
+static inline double gsl_interp_eval_no_boundary_check(const gsl_interp* interp, const double x_values[], const double y_values[], double x, gsl_interp_accel* accel) {
+    double y;
+    int status = interp->type->eval(interp->state, x_values, y_values, interp->size, x, accel, &y);
+    // what follows is a reimplementation of GSL's DISCARD_STATUS
+    if (status != GSL_SUCCESS) {
+        GSL_ERROR_VAL("interpolation error", status, GSL_NAN);
+    }
+    return y;
+}
 
-double HybridMVFileDataGluonDistribution::S2(double r2, double Y) {
-    if (Y < Yminr) {
-        return mv_dist.S2(r2, Y);
+double ExtendedFileDataGluonDistribution::S2(double r2, double Y) {
+    if (Y < Yminr && lower_dist != NULL) {
+        return lower_dist->S2(r2, Y);
+    }
+    else if (Y > Ymaxr && upper_dist != NULL) {
+        return upper_dist->S2(r2, Y);
     }
     else {
-        return FileDataGluonDistribution::S2(r2, Y);
+        if (Y_dimension_r == 1) {
+            return gsl_interp_eval_no_boundary_check(interp_dist_position_1D, r2_values, S_dist, r2, r2_accel);
+        }
+        else {
+            return interp2d_eval_no_boundary_check(interp_dist_position_2D, r2_values, Y_values_rspace, S_dist, r2, Y, r2_accel, Y_accel_r);
+        }
     }
 }
 
-double HybridMVFileDataGluonDistribution::S4(double r2, double s2, double t2, double Y) {
+double ExtendedFileDataGluonDistribution::S4(double r2, double s2, double t2, double Y) {
     if (Y < Yminr) {
-        return mv_dist.S4(r2, s2, t2, Y);
+        return lower_dist->S4(r2, s2, t2, Y);
+    }
+    else if (Y > Ymaxr) {
+        return upper_dist->S4(r2, s2, t2, Y);
     }
     else {
-        return FileDataGluonDistribution::S4(r2, s2, t2, Y);
+        return S2(s2, Y) * S2(t2, Y);
     }
 }
 
-double HybridMVFileDataGluonDistribution::F(double q2, double Y) {
+double ExtendedFileDataGluonDistribution::F(double q2, double Y) {
     if (Y < Yminp) {
-        return mv_dist.F(q2, Y);
+        return lower_dist->F(q2, Y);
+    }
+    else if (Y > Ymaxp) {
+        return upper_dist->F(q2, Y);
     }
     else {
-        return FileDataGluonDistribution::F(q2, Y);
+        if (Y_dimension_p == 1) {
+            return gsl_interp_eval_no_boundary_check(interp_dist_momentum_1D, q2_values, F_dist, q2, q2_accel);
+        }
+        else {
+            return interp2d_eval_no_boundary_check(interp_dist_momentum_2D, q2_values, Y_values_pspace, F_dist, q2, Y, q2_accel, Y_accel_p);
+        }
     }
 }
 
-double HybridMVFileDataGluonDistribution::Qs2(const double Y) const {
-    if (satscale_source == POSITION_THRESHOLD && Y < Yminr) {
-        return mv_dist.Qs2(Y);
+double ExtendedFileDataGluonDistribution::Qs2(const double Y) const {
+    if (satscale_source == POSITION_THRESHOLD) {
+        if (Y < Yminr) {
+            return lower_dist->Qs2(Y);
+        }
+        else if (Y > Ymaxr) {
+            return upper_dist->Qs2(Y);
+        }
     }
-    else if (satscale_source == MOMENTUM_THRESHOLD && Y < Yminp) {
-        return mv_dist.Qs2(Y);
+    else if (satscale_source == MOMENTUM_THRESHOLD) {
+        if (Y < Yminp) {
+            return lower_dist->Qs2(Y);
+        }
+        else if (Y > Ymaxp) {
+            return upper_dist->Qs2(Y);
+        }
     }
     return FileDataGluonDistribution::Qs2(Y);
 }
-
 
 ostream& operator<<(ostream& out, GluonDistribution& gdist) {
     out << gdist.name();

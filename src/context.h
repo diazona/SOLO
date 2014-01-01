@@ -77,11 +77,11 @@ public:
 template<typename T>
 class InvalidPropertyValueException : public exception {
 private:
-    string _property;
-    T _value;
+    const string _property;
+    const T _value;
     string _message;
 public:
-    InvalidPropertyValueException(const char* property, T& value) throw() : _property(property), _value(value) {
+    InvalidPropertyValueException(const char* property, const T& value) throw() : _property(property), _value(value) {
         std::ostringstream s;
         s << "Invalid value '" << value << "' for " << property << "!" << std::endl;
         _message = s.str();
@@ -520,6 +520,16 @@ private:
      * Called from the constructor to set default values.
      */
     void setup_defaults();
+    
+    /* Auxiliary methods and variables used to create gluon distributions */
+    double Q02, x0, lambda, sqs, inf;
+    vector<double> pT, Y;
+    GBWGluonDistribution* create_gbw_gluon_distribution();
+    MVGluonDistribution* create_mv_gluon_distribution();
+    FixedSaturationMVGluonDistribution* create_fmv_gluon_distribution();
+    PlateauPowerGluonDistribution* create_pp_gluon_distribution();
+    FileDataGluonDistribution* create_file_gluon_distribution(GluonDistribution* lower_dist, GluonDistribution* upper_dist, const bool extended);
+    GluonDistribution* create_gluon_distribution(const string&);
 };
 
 /**

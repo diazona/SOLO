@@ -629,76 +629,48 @@ private:
     
     std::string _name;
     
-    friend class HybridGBWFileDataGluonDistribution;
-    friend class HybridMVFileDataGluonDistribution;
+    friend class ExtendedFileDataGluonDistribution;
 };
 
-class HybridGBWFileDataGluonDistribution : public FileDataGluonDistribution {
+/**
+ * A variant of FileDataGluonDistribution that works outside the bounds of the
+ * grid given in the file.
+ * 
+ * This extends FileDataGluonDistribution in two ways: first, it allows you to
+ * specify upper and lower gluon distributions to use as backups when
+ * `Y > Ymax` or `Y < Ymin`, respectively. Also, when `Ymin <= Y <= Ymax`, if
+ * `r2` or `q2` (depending on whether the position or momentum space gluon
+ * distribution is being requested) is outside the range of data provided by
+ * the file, it will extrapolate in `r2` or `q2`, rather than throwing an error.
+ * Note that extrapolation is not performed in `Y`.
+ */
+class ExtendedFileDataGluonDistribution : public FileDataGluonDistribution {
 public:
-    HybridGBWFileDataGluonDistribution(
+    ExtendedFileDataGluonDistribution(
         std::string pos_filename,
         std::string mom_filename,
-        double Q02,
-        double x0,
-        double lambda,
         double xinit,
-        enum satscale_source satscale_source,
-        double satscale_threshold);
-    HybridGBWFileDataGluonDistribution(
-        std::string pos_filename,
-        std::string mom_filename,
-        double Q02,
-        double x0,
-        double lambda,
-        double xinit);
-    ~HybridGBWFileDataGluonDistribution();
-    double S2(double r2, double Y);
-    double S4(double r2, double s2, double t2, double Y);
-    double Qs2(const double Y) const;
-    double F(double q2, double Y);
-private:
-    GBWGluonDistribution gbw_dist;
-};
-
-class HybridMVFileDataGluonDistribution : public FileDataGluonDistribution {
-public:
-    HybridMVFileDataGluonDistribution(
-        std::string pos_filename,
-        std::string mom_filename,
-        double LambdaMV,
-        double gammaMV,
-        double q2min,
-        double q2max,
-        double Ymin,
-        double Ymax,
-        double Q02,
-        double x0,
-        double lambda,
-        double xinit,
-        enum satscale_source satscale_source,
+        FileDataGluonDistribution::satscale_source_type satscale_source,
         double satscale_threshold,
-        size_t subinterval_limit = 10000);
-    HybridMVFileDataGluonDistribution(
+        GluonDistribution* lower_dist,
+        GluonDistribution* upper_dist);
+    ExtendedFileDataGluonDistribution(
         std::string pos_filename,
         std::string mom_filename,
-        double LambdaMV,
-        double gammaMV,
-        double q2min,
-        double q2max,
-        double Ymin,
-        double Ymax,
         double Q02,
         double x0,
         double lambda,
         double xinit,
-        size_t subinterval_limit = 10000);
-    ~HybridMVFileDataGluonDistribution();
+        GluonDistribution* lower_dist,
+        GluonDistribution* upper_dist);
+    ~ExtendedFileDataGluonDistribution();
     double S2(double r2, double Y);
     double S4(double r2, double s2, double t2, double Y);
     double Qs2(const double Y) const;
     double F(double q2, double Y);
 private:
-    MVGluonDistribution mv_dist;
+    GluonDistribution* lower_dist;
+    GluonDistribution* upper_dist;
 };
 
 /** Prints the name of the gluon distribution to the given output stream. */
