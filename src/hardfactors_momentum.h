@@ -211,6 +211,17 @@ private:
     const HardFactorTerm* terms[2];
 };
 
+class H1ggCorrection : public HardFactorTerm {
+public:
+    const char* get_name() const {
+        return "H1ggCo";
+    }
+    const IntegrationType* get_type() const {
+        return Momentum1IntegrationType::get_instance();
+    }
+    void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
+};
+
 // class H112gq : public HardFactorTerm {
 // public:
 //     const char* get_name() {
@@ -295,6 +306,7 @@ private:
 //         add_hard_factor(new H12gg(), true);
         add_hard_factor(new H12qqbar(), true);
         add_hard_factor(new H16gg(), true);
+        add_hard_factor(new H1ggCorrection(), true);
 //         add_hard_factor(new H112gq(), true);
 //         add_hard_factor(new H122gq(), true);
         add_hard_factor(new H14gq(), true);
