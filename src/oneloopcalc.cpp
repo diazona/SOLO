@@ -727,11 +727,6 @@ int run(int argc, char** argv) {
         logger << "No momenta or no rapidities specified!" << endl;
         return 1;
     }
-    cc.create_contexts();
-    if (cc.empty()) {
-        logger << "No valid momentum/rapidity combinations specified!" << endl;
-        return 1;
-    }
     
     ThreadLocalContext tlctx(cc);
 
@@ -758,6 +753,12 @@ int run(int argc, char** argv) {
 
     cout << cc << "------------" << endl;
     
+    cc.create_contexts();
+    if (cc.empty()) {
+        logger << "No valid momentum/rapidity combinations specified!" << endl;
+        return 1;
+    }
+
     ResultsCalculator rc(cc, tlctx, pc);
     p_rc = &rc;
 
