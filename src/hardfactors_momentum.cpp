@@ -60,6 +60,36 @@ void H14qqDelta::Fd(const IntegrationContext* ictx, double* real, double* imag) 
     *imag = 0;
 }
 
+void H1qqCorrection::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
+    double Iq = -61./12. + 3 * ictx->xp + 1.5 * gsl_pow_2(ictx->xp) + gsl_pow_3(ictx->xp) / 3. + 0.25 * gsl_pow_4(ictx->xp) + 4 * log(1 - ictx->xp);
+    double resummation_factor = /* c */ ictx->alphas_2pi * ictx->ctx->Nc * 0.5 * Iq;
+    double value = ictx->qqfactor / ictx->z2 * ictx->q12 * ictx->Fq1 / (M_PI * gsl_pow_2(ictx->kT2))
+        * (exp(resummation_factor) - 1 - resummation_factor);
+    checkfinite(value);
+    *real = value;
+    *imag = 0;
+}
+
+void H1qqCorrectionA::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
+    double Iq = -61./12. + 3 * ictx->xp + 1.5 * gsl_pow_2(ictx->xp) + gsl_pow_3(ictx->xp) / 3. + 0.25 * gsl_pow_4(ictx->xp) + 4 * log(1 - ictx->xp);
+    double resummation_factor = /* c */ ictx->alphas_2pi * ictx->ctx->Nc * 0.5 * Iq;
+    double value = ictx->qqfactor / ictx->z2 * ictx->q12 * ictx->Fq1 / (M_PI * gsl_pow_2(ictx->kT2))
+        * (-resummation_factor);
+    checkfinite(value);
+    *real = value;
+    *imag = 0;
+}
+
+void H1qqCorrectionB::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
+    double Iq = -61./12. + 3 * ictx->xp + 1.5 * gsl_pow_2(ictx->xp) + gsl_pow_3(ictx->xp) / 3. + 0.25 * gsl_pow_4(ictx->xp) + 4 * log(1 - ictx->xp);
+    double resummation_factor = /* c */ ictx->alphas_2pi * ictx->ctx->Nc * 0.5 * Iq;
+    double value = ictx->qqfactor / ictx->z2 * ictx->q12 * ictx->Fq1 / (M_PI * gsl_pow_2(ictx->kT2))
+        * (exp(resummation_factor) - 1);
+    checkfinite(value);
+    *real = value;
+    *imag = 0;
+}
+
 void H02gg::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
     double kA2 = gsl_pow_2(ictx->q1x - ictx->kT) + gsl_pow_2(ictx->q1y); // (q - k)^2
     double value = ictx->ctx->Sperp * ictx->ggfactor / ictx->z2 * ictx->Fq1 * ictx->Fkq1;
@@ -110,6 +140,17 @@ void H16ggDelta::Fd(const IntegrationContext* ictx, double* real, double* imag) 
     *real = value;
     *imag = 0;
 }
+
+void H1ggCorrection::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
+    double Ig = -152./15. + 12 * ictx->xp - 6 * gsl_pow_2(ictx->xp) + 16 * gsl_pow_3(ictx->xp) / 3. - 2 * gsl_pow_4(ictx->xp) + 4 * gsl_pow_5(ictx->xp) / 5. + 8 * gsl_atanh(1 - 2 * ictx->xp);
+    double resummation_factor = /* c */ ictx->alphas_2pi * ictx->ctx->Nc * Ig;
+    double value = ictx->ggfactor / ictx->z2 * ictx->q12 * ictx->Fq1 / (M_PI * gsl_pow_2(ictx->kT2))
+        * (exp(resummation_factor) - 1 - resummation_factor);
+    checkfinite(value);
+    *real = value;
+    *imag = 0;
+}
+
 
 void H14gq::Fn(const IntegrationContext* ictx, double* real, double* imag) const {
     double Pfac = (2 - 2 * ictx->xi + ictx->xi2) / ictx->xi2; // Pgq(xi) / xi
