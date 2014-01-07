@@ -478,6 +478,7 @@ void ContextCollection::create_contexts() {
     this->lambda = lambda;
     this->pT = pT;
     this->Y = Y;
+    this->sqs = sqs;
     this->inf = inf;
     
     if (css_r_regularization && css_r2_max <= 0) {
