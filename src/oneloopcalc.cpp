@@ -728,8 +728,6 @@ int run(int argc, char** argv) {
         return 1;
     }
     
-    ThreadLocalContext tlctx(cc);
-
     /* First write out all the configuration variables. Having the configuration written
      * out as part of the output file makes it easy to tell what parameters were used in
      * and given run, and is also useful in case we want to reproduce a run.
@@ -758,6 +756,11 @@ int run(int argc, char** argv) {
         logger << "No valid momentum/rapidity combinations specified!" << endl;
         return 1;
     }
+
+    // Only create ThreadLocalContext here because cc may not have
+    // values for pdf_filename and ff_filename before create_contexts
+    // is called
+    ThreadLocalContext tlctx(cc);
 
     ResultsCalculator rc(cc, tlctx, pc);
     p_rc = &rc;
