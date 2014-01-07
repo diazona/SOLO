@@ -56,7 +56,7 @@ private:
 public:
     MissingPropertyException(const char* property) throw() : _property(property) {
         std::ostringstream s;
-        s << "No value for " << property << "!" << std::endl;
+        s << "No value for " << property << "!";
         _message = s.str();
     }
     MissingPropertyException(const MissingPropertyException& other) throw() : _property(other._property), _message(other._message) {}
@@ -72,7 +72,12 @@ public:
 
 /**
  * An exception to throw when creating a Context, if the value can't be
- * parsed into the correct type of object to pass to the Context constructor.
+ * parsed into the correct type of object to pass to the Context constructor
+ * or if the parsed value is invalid for that property for some other reason.
+ *
+ * If it's not clear from the string representation of the value why it's
+ * inappropriate for the propery, an extra message should be added clarifying
+ * that.
  */
 template<typename T>
 class InvalidPropertyValueException : public exception {
@@ -83,7 +88,12 @@ private:
 public:
     InvalidPropertyValueException(const char* property, const T& value) throw() : _property(property), _value(value) {
         std::ostringstream s;
-        s << "Invalid value '" << value << "' for " << property << "!" << std::endl;
+        s << "Invalid value '" << value << "' for " << property << "!";
+        _message = s.str();
+    }
+    InvalidPropertyValueException(const char* property, const T& value, const char* extra_message) throw() : _property(property), _value(value) {
+        std::ostringstream s;
+        s << "Invalid value '" << value << "' for " << property << "!" << extra_message;
         _message = s.str();
     }
     InvalidPropertyValueException(const InvalidPropertyValueException& other) throw() : _property(other._property), _value(other._value), _message(other._message) {}
