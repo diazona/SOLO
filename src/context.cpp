@@ -281,8 +281,6 @@ MVGluonDistribution* ContextCollection::create_mv_gluon_distribution() {
     check_property_default(q2maxMV,  double, parse_double, gsl_pow_2(2 * inf + sqs / exp(Ymin)) + gsl_pow_2(2 * inf))
     check_property_default(YminMV, double, parse_double, 2 * Ymin)
     check_property_default(YmaxMV, double, parse_double, Ymax - log(pTmin) + log(sqs))
-    assert(q2minMV < q2maxMV);
-    assert(YminMV < YmaxMV);
     check_property_default(gdist_subinterval_limit, size_t, parse_size, 10000)
     logger << "Creating MV gluon distribution with " << q2minMV << " < k2 < " << q2maxMV << ", " << YminMV << " < Y < " << YmaxMV << endl;
     return new MVGluonDistribution(lambdaMV, gammaMV, q2minMV, q2maxMV, YminMV, YmaxMV, Q02, x0, lambda, gdist_subinterval_limit);
@@ -298,7 +296,6 @@ FixedSaturationMVGluonDistribution* ContextCollection::create_fmv_gluon_distribu
     check_property_default(q2maxMV,  double, parse_double, gsl_pow_2(2 * inf + sqs / exp(Ymin)) + gsl_pow_2(2 * inf))
     check_property(YMV, double, parse_double)
     logger << "Creating fMV gluon distribution with " << q2minMV << " < k2 < " << q2maxMV << ", Y = " << YMV << endl;
-    assert(q2minMV < q2maxMV);
     check_property_default(gdist_subinterval_limit, size_t, parse_size, 10000)
     gdist = new FixedSaturationMVGluonDistribution(lambdaMV, gammaMV, q2minMV, q2maxMV, YMV, Q02, x0, lambda, gdist_subinterval_limit);
 }
@@ -313,8 +310,6 @@ PlateauPowerGluonDistribution* ContextCollection::create_pp_gluon_distribution()
     check_property_default(r2maxPP, double, parse_double, 2 * gsl_pow_2(2 * inf))
     check_property_default(YminPP,  double, parse_double, 2 * Ymin)
     check_property_default(YmaxPP,  double, parse_double, Ymax - log(pTmin) + log(sqs))
-    assert(r2minPP < r2maxPP);
-    assert(YminPP < YmaxPP);
     check_property_default(gdist_subinterval_limit, size_t, parse_size, 10000)
     logger << "Creating plateau-power gluon distribution with " << r2minPP << " < r2 < " << r2maxPP << ", " << YminPP << " < Y < " << YmaxPP << endl;
     gdist = new PlateauPowerGluonDistribution(gammaPP, r2minPP, r2maxPP, YminPP, YmaxPP, Q02, x0, lambda, gdist_subinterval_limit);

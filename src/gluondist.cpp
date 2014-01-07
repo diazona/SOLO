@@ -108,6 +108,10 @@ void AbstractTransformGluonDistribution::setup() {
     func.params = &params;
     gsl_integration_workspace* workspace = gsl_integration_workspace_alloc(subinterval_limit);
     
+    if (u2min > u2max || Ymin > Ymax) {
+        throw InvalidGridRegionException(u2min, u2max, Ymin, Ymax);
+    }
+
     double log_step = log(step);
     double log_u2min = log(u2min);
     double log_u2max = log(u2max);

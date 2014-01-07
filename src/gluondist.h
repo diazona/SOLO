@@ -24,7 +24,46 @@
 #include <string>
 #include "interp2d.h"
 
-class NoGridException : public std::exception {
+/**
+ * An exception to be thrown when a method that requires a grid
+ * is called on a gluon distribution which doesn't use a grid.
+ */
+class NoGridException : public std::exception {};
+
+/**
+ * An exception to be thrown when the min and max values passed
+ * to the constructor of an AbstractTransformGluonDistribution
+ * don't satisfy min < max.
+ */
+class InvalidGridRegionException : public std::exception {
+private:
+    double _u2min, _u2max, _Ymin, _Ymax;
+protected:
+    std::string _message;
+public:
+    InvalidGridRegionException(double u2min, double u2max, double Ymin, double Ymax) throw() :
+        _u2min(u2min), _u2max(u2max), _Ymin(Ymin), _Ymax(Ymax) {
+        std::ostringstream s;
+        s << "Gluon distribution constructed with invalid range: " << _u2min << " < u2 < "
+          << _u2max << ", " << _Ymin << " < Y < " << _Ymax;
+        _message = s.str();
+    }
+    virtual ~InvalidGridRegionException() throw() {}
+    const double u2min() const {
+        return _u2min;
+    }
+    const double u2max() const {
+        return _u2max;
+    }
+    const double Ymin() const {
+        return _Ymin;
+    }
+    const double Ymax() const {
+        return _Ymax;
+    }
+    const char* what() const throw() {
+        return _message.c_str();
+    }
 };
 
 class GluonDistributionS2RangeException : public std::exception {
