@@ -432,6 +432,10 @@ GluonDistribution* ContextCollection::create_gluon_distribution(const string& gd
 }
 
 void ContextCollection::create_contexts() {
+    if (contexts_created) {
+        return;
+    }
+
     bool _c0r_optimization = false;
     pair<multimap<string, string>::iterator, multimap<string, string>::iterator> itit;
 
