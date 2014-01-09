@@ -111,6 +111,15 @@ const string canonicalize(const string& i_key) {
     else if (key == "integration strategy" || key == "strategy") {
         return "integration_strategy";
     }
+    else if (key == "c" || key == "centrality parameter") {
+        return "centrality";
+    }
+    else if (key == "resum_c" || key == "resummation constant") {
+        return "resummation_constant";
+    }
+    else if (key == "a") {
+        return "mass_number";
+    }
     else {
         return key;
     }
@@ -440,8 +449,8 @@ void ContextCollection::create_contexts() {
     pair<multimap<string, string>::iterator, multimap<string, string>::iterator> itit;
 
     check_property_default( x0,           double, parse_double, 0.000304)
-    check_property(         A,            double, parse_double)
-    check_property(         c,            double, parse_double)
+    check_property(         mass_number,  double, parse_double)
+    check_property(         centrality,   double, parse_double)
     check_property_default( lambda,       double, parse_double, 0.288)
     check_property_default( Nc,           double, parse_double, 3)
     check_property_default( Nf,           double, parse_double, 3)
@@ -468,16 +477,16 @@ void ContextCollection::create_contexts() {
     check_property(         pseudorandom_generator_seed, unsigned long int, parse_ulong)
     check_property_default( css_r_regularization, bool, parse_boolean, false)
     check_property_default( css_r2_max, double, parse_double, 0) // 0 is a dummy value for when the regularization is not being used
+    check_property_default( resummation_constant, double, parse_double, 1)
     /*
      * For dimensions in which the lower and upper bounds are -infinity and +infinity,
-     * we have to pick a finite value to cut off the integral. Using 10 seems to be
-     * quite sufficient but this can always be raised. It shouldn't be made too large,
-     * though, because if it is, the Monte Carlo sampling will miss the peak in the
-     * integrand entirely and just output zero all the time.
+     * we have to pick a finite value to cut off the integral. It shouldn't be made
+     * too large, though, because if it is, the Monte Carlo sampling will miss the
+     * peak in the integrand entirely and just output zero all the time.
      */
     check_property_default( inf, double, parse_double, 40)
     
-    this->Q02 = c * pow(A, 1./3.);
+    this->Q02 = centrality * pow(mass_number, 1./3.);
     this->x0 = x0;
     this->lambda = lambda;
     this->pT = pT;
@@ -561,8 +570,8 @@ void ContextCollection::create_contexts() {
                 contexts.push_back(
                     Context(
                         x0,
-                        A,
-                        c,
+                        mass_number,
+                        centrality,
                         lambda,
                         Nc,
                         Nf,
@@ -593,6 +602,7 @@ void ContextCollection::create_contexts() {
                         _c0r_optimization,
                         css_r_regularization,
                         css_r2_max,
+                        resummation_constant,
                         inf));
             }
             catch (const InvalidKinematicsException& e) {
@@ -757,8 +767,8 @@ std::ostream& operator<<(std::ostream& out, const DSSpiNLO::hadron& hadron) {
 
 std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "x0\t= "         << ctx.x0           << endl;
-    out << "A\t= "          << ctx.A            << endl;
-    out << "c\t= "          << ctx.c            << endl;
+    out << "mass number\t= "<< ctx.mass_number  << endl;
+    out << "centrality\t= " << ctx.centrality   << endl;
     out << "lambda\t= "     << ctx.lambda       << endl;
     out << "Nc\t= "         << ctx.Nc           << endl;
     out << "Nf\t= "         << ctx.Nf           << endl;
@@ -786,6 +796,7 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "c0r optimization\t = " << ctx.c0r_optimization << endl;
     out << "CSS r regularization\t = " << ctx.css_r_regularization << endl;
     out << "CSS r_max\t = " << ctx.css_r2_max << endl;
+    out << "resummation constant\t = " << ctx.resummation_constant << endl;
     out << "quasirandom generator type: " <<  ctx.quasirandom_generator_type->name << endl;
     out << "pseudorandom generator type: " <<  ctx.pseudorandom_generator_type->name << endl;
     out << "pseudorandom generator seed: " << ctx.pseudorandom_generator_seed << endl;

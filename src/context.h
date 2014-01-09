@@ -143,9 +143,9 @@ public:
     /** The fit parameter from the saturation scale */
     double x0;
     /** The mass number */
-    double A;
+    double mass_number;
     /** The centrality coefficient */
-    double c;
+    double centrality;
     /** The exponent in the saturation scale formula */
     double lambda;
     /** The number of colors */
@@ -191,6 +191,9 @@ public:
     /** The cutoff value for the CSS r regularization */
     double css_r2_max;
     
+    /** The factor in front of the resummation term, see H1qqCorrection */
+    double resummation_constant;
+    
     /** Projectile type */
     projectile_type projectile;
     /** Product hadron */
@@ -228,8 +231,8 @@ public:
     
     Context(
         double x0,
-        double A,
-        double c,
+        double mass_number,
+        double centrality,
         double lambda,
         double Nc,
         double Nf,
@@ -260,10 +263,11 @@ public:
         bool c0r_optimization,
         bool css_r_regularization,
         double css_r2_max,
+        double resummation_constant,
         double inf) :
      x0(x0),
-     A(A),
-     c(c),
+     mass_number(mass_number),
+     centrality(centrality),
      lambda(lambda),
      Nc(Nc),
      Nf(Nf),
@@ -294,8 +298,9 @@ public:
      c0r_optimization(c0r_optimization),
      css_r_regularization(css_r_regularization),
      css_r2_max(css_r2_max),
+     resummation_constant(resummation_constant),
      inf(inf),
-     Q02x0lambda(c * pow(A, 1.0d/3.0d) * pow(x0, lambda)),
+     Q02x0lambda(centrality * pow(mass_number, 1.0d/3.0d) * pow(x0, lambda)),
      tau(sqrt(pT2)/sqs*exp(Y)) {
         if (tau > 1) {
             throw InvalidKinematicsException("τ > 1: empty phase space");
@@ -306,8 +311,8 @@ public:
     }
     Context(const Context& other) :
      x0(other.x0),
-     A(other.A),
-     c(other.c),
+     mass_number(other.mass_number),
+     centrality(other.centrality),
      lambda(other.lambda),
      Nc(other.Nc),
      Nf(other.Nf),
@@ -338,6 +343,7 @@ public:
      c0r_optimization(other.c0r_optimization),
      css_r_regularization(other.css_r_regularization),
      css_r2_max(other.css_r2_max),
+     resummation_constant(other.resummation_constant),
      inf(other.inf),
      Q02x0lambda(other.Q02x0lambda),
      tau(other.tau) {}
