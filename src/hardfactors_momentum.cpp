@@ -143,8 +143,8 @@ void H16ggDelta::Fd(const IntegrationContext* ictx, double* real, double* imag) 
 
 void H1ggCorrection::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
     double Ig = -152./15. + 12 * ictx->xp - 6 * gsl_pow_2(ictx->xp) + 16 * gsl_pow_3(ictx->xp) / 3. - 2 * gsl_pow_4(ictx->xp) + 4 * gsl_pow_5(ictx->xp) / 5. + 8 * gsl_atanh(1 - 2 * ictx->xp);
-    double resummation_factor = /* c */ ictx->alphas_2pi * ictx->ctx->Nc * Ig;
-    double value = ictx->ggfactor / ictx->z2 * ictx->q12 * ictx->Fq1 / (M_PI * gsl_pow_2(ictx->kT2))
+    double resummation_factor = ictx->ctx->resummation_constant * ictx->alphas_2pi * ictx->ctx->Nc * Ig;
+    double value = ictx->ggfactor / ictx->z2 * ictx->q12 * 2 * ictx->Fq1 / (M_PI * gsl_pow_2(ictx->kT2)) // factor of 2 is because Qs^2 doubles in adjoint rep
         * (exp(resummation_factor) - 1 - resummation_factor);
     checkfinite(value);
     *real = value;
