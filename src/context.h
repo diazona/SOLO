@@ -194,6 +194,9 @@ public:
     /** The factor in front of the resummation term, see H1qqCorrection */
     double resummation_constant;
     
+    /** Whether to use exact (or approximate) kinematic expressions */
+    bool exact_kinematics;
+
     /** Projectile type */
     projectile_type projectile;
     /** Product hadron */
@@ -264,6 +267,7 @@ public:
         bool css_r_regularization,
         double css_r2_max,
         double resummation_constant,
+        bool exact_kinematics,
         double inf) :
      x0(x0),
      mass_number(mass_number),
@@ -299,6 +303,7 @@ public:
      css_r_regularization(css_r_regularization),
      css_r2_max(css_r2_max),
      resummation_constant(resummation_constant),
+     exact_kinematics(exact_kinematics),
      inf(inf),
      Q02x0lambda(centrality * pow(mass_number, 1.0d/3.0d) * pow(x0, lambda)),
      tau(sqrt(pT2)/sqs*exp(Y)) {
@@ -344,6 +349,7 @@ public:
      css_r_regularization(other.css_r_regularization),
      css_r2_max(other.css_r2_max),
      resummation_constant(other.resummation_constant),
+     exact_kinematics(other.exact_kinematics),
      inf(other.inf),
      Q02x0lambda(other.Q02x0lambda),
      tau(other.tau) {}

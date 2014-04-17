@@ -120,6 +120,9 @@ const string canonicalize(const string& i_key) {
     else if (key == "a") {
         return "mass_number";
     }
+    else if (key == "exact kinematics" || key == "exact") {
+        return "exact_kinematics";
+    }
     else {
         return key;
     }
@@ -478,6 +481,7 @@ void ContextCollection::create_contexts() {
     check_property_default( css_r_regularization, bool, parse_boolean, false)
     check_property_default( css_r2_max, double, parse_double, 0) // 0 is a dummy value for when the regularization is not being used
     check_property_default( resummation_constant, double, parse_double, 1)
+    check_property_default( exact_kinematics, bool, parse_boolean, false)
     /*
      * For dimensions in which the lower and upper bounds are -infinity and +infinity,
      * we have to pick a finite value to cut off the integral. It shouldn't be made
@@ -603,6 +607,7 @@ void ContextCollection::create_contexts() {
                         css_r_regularization,
                         css_r2_max,
                         resummation_constant,
+                        exact_kinematics,
                         inf));
             }
             catch (const InvalidKinematicsException& e) {
@@ -797,6 +802,7 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "CSS r regularization\t = " << ctx.css_r_regularization << endl;
     out << "CSS r_max\t = " << ctx.css_r2_max << endl;
     out << "resummation constant\t = " << ctx.resummation_constant << endl;
+    out << "exact kinematics\t = " << ctx.exact_kinematics << endl;
     out << "quasirandom generator type: " <<  ctx.quasirandom_generator_type->name << endl;
     out << "pseudorandom generator type: " <<  ctx.pseudorandom_generator_type->name << endl;
     out << "pseudorandom generator seed: " << ctx.pseudorandom_generator_seed << endl;
