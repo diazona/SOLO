@@ -47,12 +47,28 @@ class HardFactorTerm;
  */
 class HardFactor {
 public:
+    typedef enum {LO, NLO, MIXED} HardFactorOrder;
     /** An identifying name for the hard factor. */
     virtual const char* get_name() const = 0;
     /** The number of HardFactorTerm objects this hard factor has. */
     virtual const size_t get_term_count() const = 0;
     /** A pointer to the list of HardFactorTerm objects. */
     virtual const HardFactorTerm* const* get_terms() const = 0;
+    /** The order of the term (LO, NLO, mixed) */
+    virtual HardFactorOrder get_order() const {
+        // relies on a particular convention for get_name()
+        // but can be overridden for hard factors where that convention doesn't apply
+        std::string name = get_name();
+        if (name.compare(0, 3, "H01") == 0) {
+            return MIXED;
+        }
+        else if (name.compare(0, 2, "H0") == 0) {
+            return LO;
+        }
+        else if (name.compare(0, 2, "H1") == 0) {
+            return NLO;
+        }
+    };
 };
 
 /**
