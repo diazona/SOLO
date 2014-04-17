@@ -69,8 +69,12 @@ Integrator::Integrator(const Context* ctx, const ThreadLocalContext* tlctx, Hard
     for (HardFactorList::const_iterator it = hflist.begin(); it != hflist.end(); it++) {
         const HardFactorTerm* const* l_terms = (*it)->get_terms();
         for (size_t i = 0; i < (*it)->get_term_count(); i++) {
-            const IntegrationType* type = l_terms[i]->get_type();
-            terms[type].push_back(l_terms[i]);
+            const HardFactorTerm* term = l_terms[i];
+            if (ictx.ctx->exact_kinematics && term->get_order() == HardFactor::MIXED) {
+                throw KinematicSchemeMismatchException(*term);
+            }
+            const IntegrationType* type = term->get_type();
+            terms[type].push_back(term);
 #ifndef NDEBUG
             total1++;
 #endif
@@ -135,6 +139,11 @@ void Integrator::evaluate_2D_integrand(double* real, double* imag) {
     assert(current_terms.size() > 0);
     for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
         const HardFactorTerm* h = (*it);
+        if (ictx.ctx->exact_kinematics) {
+            // double check that there are no mixed-order hard factors when using exact kinematics
+            assert(h->get_order() == HardFactor::LO || h->get_order() == HardFactor::NLO);
+        }
+
         h->Fs(&ictx, &t_real, &t_imag);
         checkfinite(t_real);
         checkfinite(t_imag);

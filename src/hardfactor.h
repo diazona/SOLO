@@ -159,4 +159,28 @@ private:
     std::list<const HardFactor*> hardfactors_to_delete;
 };
 
+/**
+ * Exception to throw when trying to integrate a mixed LO+NLO hard factor
+ * in exact kinematics. This is not possible because LO and NLO terms use
+ * different integration limits in exact kinematics.
+ */
+class KinematicSchemeMismatchException : public exception {
+private:
+    string _message;
+public:
+    KinematicSchemeMismatchException(const HardFactor& hf) throw() {
+        _message = "Mixed-order hard factor ";
+        _message += hf.get_name();
+        _message += " cannot be integrated in exact kinematics";
+    }
+    KinematicSchemeMismatchException(const KinematicSchemeMismatchException& other) throw() : _message(other._message) {}
+    ~KinematicSchemeMismatchException() throw() {}
+    void operator=(const KinematicSchemeMismatchException& other) {
+        _message = other._message;
+    }
+    const char* what() const throw() {
+        return _message.c_str();
+    }
+};
+
 #endif // _HARD_FACTOR_H_
