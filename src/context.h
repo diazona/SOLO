@@ -231,6 +231,8 @@ public:
     double Q02x0lambda;
     /** The precomputed value of tau = pT / sqs * exp(Y) */
     double tau;
+    /** The precomputed value of tauhat = pT / sqs * (exp(Y) + exp(-Y)) */
+    double tauhat;
     
     Context(
         double x0,
@@ -306,9 +308,13 @@ public:
      exact_kinematics(exact_kinematics),
      inf(inf),
      Q02x0lambda(centrality * pow(mass_number, 1.0d/3.0d) * pow(x0, lambda)),
-     tau(sqrt(pT2)/sqs*exp(Y)) {
+     tau(sqrt(pT2)/sqs*exp(Y)),
+     tauhat(sqrt(pT2)/sqs*(exp(Y)+exp(-Y))) {
         if (tau > 1) {
             throw InvalidKinematicsException("τ > 1: empty phase space");
+        }
+        if (tauhat > 1) {
+            throw InvalidKinematicsException("\\hat{τ} > 1: empty phase space");
         }
         if (css_r_regularization) {
             assert(css_r2_max > 0);
@@ -352,7 +358,8 @@ public:
      exact_kinematics(other.exact_kinematics),
      inf(other.inf),
      Q02x0lambda(other.Q02x0lambda),
-     tau(other.tau) {}
+     tau(other.tau),
+     tauhat(other.tauhat) {}
 };
 
 /**
