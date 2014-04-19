@@ -110,16 +110,20 @@ void Integrator::evaluate_1D_integrand(double* real, double* imag) {
     assert(ictx.xi == 1.0d);
     for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
         const HardFactorTerm* h = (*it);
-        h->Fs(&ictx, &t_real, &t_imag);
-        checkfinite(t_real);
-        checkfinite(t_imag);
-        l_real += t_real * log_factor;
-        l_imag += t_imag * log_factor;
-        h->Fd(&ictx, &t_real, &t_imag);
-        checkfinite(t_real);
-        checkfinite(t_imag);
-        l_real += t_real;
-        l_imag += t_imag;
+        if (!ictx.ctx->exact_kinematics) {
+            h->Fs(&ictx, &t_real, &t_imag);
+            checkfinite(t_real);
+            checkfinite(t_imag);
+            l_real += t_real * log_factor;
+            l_imag += t_imag * log_factor;
+        }
+        if (!ictx.ctx->exact_kinematics || h->get_order() == HardFactor::LO) {
+            h->Fd(&ictx, &t_real, &t_imag);
+            checkfinite(t_real);
+            checkfinite(t_imag);
+            l_real += t_real;
+            l_imag += t_imag;
+        }
     }
     if (callback) {
         callback(&ictx, l_real, l_imag);
@@ -131,7 +135,8 @@ void Integrator::evaluate_1D_integrand(double* real, double* imag) {
 void Integrator::evaluate_2D_integrand(double* real, double* imag) {
     double l_real = 0.0, l_imag = 0.0; // l for "local"
     double t_real, t_imag;             // t for temporary
-    double jacobian =  (1 - ictx.ctx->tau / ictx.z) / (1 - ictx.ctx->tau); // Jacobian from y to xi
+    double jacobian; // Jacobian from y to xi
+    jacobian = (1 - (ictx.ctx->exact_kinematics ? ictx.xg : 0) - ictx.ctx->tau / ictx.z) / (1 - ictx.ctx->tau);
     checkfinite(jacobian);
     double xi_factor = 1.0 / (1 - ictx.xi);
     checkfinite(xi_factor);
@@ -147,25 +152,41 @@ void Integrator::evaluate_2D_integrand(double* real, double* imag) {
         h->Fs(&ictx, &t_real, &t_imag);
         checkfinite(t_real);
         checkfinite(t_imag);
+        if (h->get_order() == HardFactor::LO) {
+            /* Leading order hard factors are supposed to only have Fd, not Fs or Fn.
+             * If this assumption is violated, it could break things.
+             *
+             * Exercise for the reader: what things? (mwahaha)
+             */
+            assert(t_real == 0);
+            assert(t_imag == 0);
+        }
         l_real += t_real * xi_factor;
         l_imag += t_imag * xi_factor;
+
         h->Fn(&ictx, &t_real, &t_imag);
         checkfinite(t_real);
         checkfinite(t_imag);
+        if (h->get_order() == HardFactor::LO) {
+            assert(t_real == 0);
+            assert(t_imag == 0);
+        }
         l_real += t_real;
         l_imag += t_imag;
     }
     if (callback) {
         callback(&ictx, jacobian * l_real, jacobian * l_imag);
     }
-    ictx.set_xi_to_1();
-    for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
-        const HardFactorTerm* h = (*it);
-        h->Fs(&ictx, &t_real, &t_imag);
-        checkfinite(t_real);
-        checkfinite(t_imag);
-        l_real -= t_real * xi_factor;
-        l_imag -= t_imag * xi_factor;
+    if (!ictx.ctx->exact_kinematics) {
+        ictx.set_xi_to_1(2);
+        for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
+            const HardFactorTerm* h = (*it);
+            h->Fs(&ictx, &t_real, &t_imag);
+            checkfinite(t_real);
+            checkfinite(t_imag);
+            l_real -= t_real * xi_factor;
+            l_imag -= t_imag * xi_factor;
+        }
     }
     if (callback) {
         callback(&ictx, jacobian * l_real, jacobian * l_imag);

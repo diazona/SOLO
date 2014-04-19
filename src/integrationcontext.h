@@ -35,8 +35,8 @@ public:
     // calculated
     double z2, xi2;
     double kT2, kT;
-    double xp, xg;
-    double Yg;
+    double xp, xg, xa;
+    double Yg, Ya;
     double rx, ry, r2;
     double sx, sy, s2;
     double tx, ty, t2;
@@ -72,7 +72,7 @@ public:
       xiprime2(0),
       z2(0), xi2(0),
       kT2(0), kT(0),
-      xp(0), xg(0),
+      xp(0), xg(0), xa(0),
       rx(0), ry(0), r2(0),
       sx(0), sy(0), s2(0),
       tx(0), ty(0), t2(0),
@@ -89,12 +89,15 @@ public:
       Fq1(0), Fq2(0), Fq3(0),
       Fkq1(0), Fkq2(0), Fkq3(0) {
     };
-    void update_kinematics(double z, double y);
+    void update_kinematics(double z, double y, size_t core_dimensions);
     void update_positions(double xx, double xy, double yx, double yy, double bx, double by);
     void update_momenta(double q1x, double q1y, double q2x, double q2y, double q3x, double q3y);
     void update_auxiliary(double xiprime);
     void update_parton_functions();
-    void set_xi_to_1() { update_kinematics(z, 1); update_parton_functions(); }
+    void set_xi_to_1(size_t core_dimensions) {
+        update_kinematics(z, 1, core_dimensions);
+        update_parton_functions();
+    }
 };
 
 #endif // _INTEGRATIONCONTEXT_H_

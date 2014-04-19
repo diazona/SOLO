@@ -26,27 +26,74 @@
 
 #define checkfinite(d) assert(gsl_finite(d))
 
-void IntegrationContext::update_kinematics(double z, double y) {
+void IntegrationContext::update_kinematics(double z, double y, size_t core_dimensions) {
+    /* when using exact kinematics (ctx->exact_kinematics is true),
+     *  core_dimensions == 1 means we are calculating an LO term
+     *  core_dimensions == 2 means we are calculating an NLO term
+     *
+     * when NOT using exact kinematics, this correlation does NOT hold
+     *  core_dimensions == 1 can be either type of term
+     *  core_dimensions == 2 still means we are calculating an NLO term
+     */
+    assert(core_dimensions == 1 || core_dimensions == 2);
+    // for exact kinematics, tauhat < z < 1 and tau < y < 1
     assert(z <= 1);
-    assert(z >= ctx->tau);
-    assert(y <= 1);
-    assert(y >= ctx->tau);
+    assert(z >= ctx->exact_kinematics ? ctx->tauhat : ctx->tau);
+
     this->z = z;
     this->z2 = this->z*this->z;
-    if (y == 1.0d) {
-        this->xi = 1.0d; // avoid floating-point roundoff error
-    }
-    else {
-        this->xi = (y * (z - ctx->tau) - ctx->tau * (z - 1)) / (z * (1 - ctx->tau));
-    }
-    this->xi2 = xi*xi;
-    this->xp = ctx->tau / (this->z * xi);
     this->kT2 = ctx->pT2 / this->z2;
     this->kT = sqrt(this->kT2);
-    this->xg = kT / ctx->sqs * exp(-ctx->Y);
+    this->xg = kT / ctx->sqs * exp(-ctx->Y); // doubles as \hat{x}_a
+
+    if (core_dimensions == 1) {
+        /* When calculating LO terms, or NLO terms in exact kinematics, this shouldn't matter
+         * When calculating NLO terms using approximate kinematics, this needs to be 1
+         */
+        this->xi = 1;
+    }
+    else {
+        // all accesses of y are within this block
+        assert(y <= 1);
+        assert(y >= ctx->tau);
+        if (ctx->exact_kinematics) {
+            this->xi = (y - ctx->tau) * (1 - xg - ctx->tau / z) / (1 - ctx->tau) + ctx->tau / z;
+            assert(xi < 1);
+            assert(xi <= 1 - xg);
+        }
+        else {
+            if (y == 1.0) {
+                // if y == 1 then the formula should set xi = 1 but sometimes it doesn't
+                // because of floating point roundoff error, so do that manually
+                this->xi = 1.0;
+            }
+            else {
+                this->xi = (y * (z - ctx->tau) - ctx->tau * (z - 1)) / (z * (1 - ctx->tau));
+                assert(xi <= 1);
+            }
+        }
+    }
+    this->xi2 = xi*xi;
+
+    this->xp = ctx->tau / (this->z * xi);
+    if (ctx->exact_kinematics) {
+        if (core_dimensions == 1) {
+            // means we are calculating an LO term
+            this->xa = xg;
+        }
+        else {
+            // means we are calculating an NLO term
+            this->xa = exp(-ctx->Y) / ctx->sqs * (kT + ((kT - q1x)*(kT - q1x) + q1y*q1y) / kT * xi / (1 - xi));
+        }
+    }
+    else {
+        // could be either type of term
+        this->xa = xg;
+    }
     this->Yg = -log(this->xg);
-    this->Qs2 = ctx->gdist->Qs2(this->Yg);
-    this->Fk = ctx->gdist->F(this->kT2, this->Yg);
+    this->Ya = -log(this->xa);
+    this->Qs2 = ctx->gdist->Qs2(this->Ya);
+    this->Fk = ctx->gdist->F(this->kT2, this->Ya);
     this->alphas = ctx->cpl->alphas(this->kT2);
     this->alphas_2pi = this->alphas * 0.5 * M_1_PI;
 }
@@ -77,9 +124,9 @@ void IntegrationContext::update_positions(double xx, double xy, double yx, doubl
     // Calculate the new gluon distribution values
     // this has to be done after kinematics are updated
     if (r2 > 0) {
-        this->S2r = ctx->gdist->S2(r2, this->Yg);
+        this->S2r = ctx->gdist->S2(r2, this->Ya);
         if (s2 > 0 || t2 > 0) {
-            this->S4rst = ctx->gdist->S4(r2, s2, t2, this->Yg);
+            this->S4rst = ctx->gdist->S4(r2, s2, t2, this->Ya);
         }
         else {
             this->S4rst = NAN;
@@ -108,24 +155,24 @@ void IntegrationContext::update_momenta(double q1x, double q1y, double q2x, doub
     this->q32 = q3x*q3x + q3y*q3y;
     
     if (q12 > 0) {
-        this->Fq1 = ctx->gdist->F(q12, this->Yg);
-        this->Fkq1 = ctx->gdist->F((kT - q1x)*(kT - q1x) + q1y*q1y, this->Yg);
+        this->Fq1 = ctx->gdist->F(q12, this->Ya);
+        this->Fkq1 = ctx->gdist->F((kT - q1x)*(kT - q1x) + q1y*q1y, this->Ya);
     }
     else {
         this->Fq1 = NAN;
         this->Fkq1 = NAN;
     }
     if (q22 > 0) {
-        this->Fq2 = ctx->gdist->F(q22, this->Yg);
-        this->Fkq2 = ctx->gdist->F((kT - q2x)*(kT - q2x) + q2y*q2y, this->Yg);
+        this->Fq2 = ctx->gdist->F(q22, this->Ya);
+        this->Fkq2 = ctx->gdist->F((kT - q2x)*(kT - q2x) + q2y*q2y, this->Ya);
     }
     else {
         this->Fq2 = NAN;
         this->Fkq2 = NAN;
     }
     if (q32 > 0) {
-        this->Fq3 = ctx->gdist->F(q32, this->Yg);
-        this->Fkq3 = ctx->gdist->F((kT - q3x)*(kT - q3x) + q3y*q3y, this->Yg);
+        this->Fq3 = ctx->gdist->F(q32, this->Ya);
+        this->Fkq3 = ctx->gdist->F((kT - q3x)*(kT - q3x) + q3y*q3y, this->Ya);
     }
     else {
         this->Fq3 = NAN;
@@ -214,4 +261,5 @@ void IntegrationContext::update_parton_functions() {
     
     this->qgfactor = qgfactor;
 }
+
 

@@ -39,7 +39,7 @@ void H02qq::Fd(const IntegrationContext* ictx, double* real, double* imag) const
 
 void H14qqSingular::Fs(const IntegrationContext* ictx, double* real, double* imag) const {
     double kA2 = gsl_pow_2(ictx->kT/ictx->xi + ictx->q1x) + gsl_pow_2(ictx->q1y); // (k / xi + q1)^2
-    double Fg1 = ictx->ctx->gdist->F(kA2, ictx->Yg);
+    double Fg1 = ictx->ctx->gdist->F(kA2, ictx->Ya);
     double dotfac = (ictx->q1x * ictx->q2x + ictx->q1y * ictx->q2y) / (ictx->q12 * ictx->q22);
     double value = ictx->ctx->Nc * M_1_PI * ictx->alphas_2pi * ictx->ctx->Sperp * ictx->qqfactor / ictx->z2 * (1 + ictx->xi2) / ictx->xi
         * dotfac * Fg1 * ictx->Fkq2;
@@ -59,6 +59,8 @@ void H14qqDelta::Fd(const IntegrationContext* ictx, double* real, double* imag) 
     *real = value;
     *imag = 0;
 }
+
+
 
 void H1qqCorrection::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
     double Iq = -61./12. + 3 * ictx->xp + 1.5 * gsl_pow_2(ictx->xp) + gsl_pow_3(ictx->xp) / 3. + 0.25 * gsl_pow_4(ictx->xp) + 4 * log(1 - ictx->xp);
@@ -115,8 +117,8 @@ void H16ggSingular::Fs(const IntegrationContext* ictx, double* real, double* ima
     double dotfac = (ictx->q1x * ictx->q2x + ictx->q1y * ictx->q2y) / (ictx->q12 * ictx->q22);
     double kA2 = gsl_pow_2(ictx->kT + ictx->q1x + ictx->q3x) + gsl_pow_2(ictx->q1y + ictx->q3y); // (k + q1 + q3)^2
     double kB2 = gsl_pow_2(ictx->kT / ictx->xi + ictx->q2x + ictx->q3x) + gsl_pow_2(ictx->q2y + ictx->q3y); // (k / ξ + q2 + q3)^2
-    double Fg1 = ictx->ctx->gdist->F(kA2, ictx->Yg);
-    double Fg2 = ictx->ctx->gdist->F(kB2, ictx->Yg);
+    double Fg1 = ictx->ctx->gdist->F(kA2, ictx->Ya);
+    double Fg2 = ictx->ctx->gdist->F(kB2, ictx->Ya);
     double value = -4 * M_1_PI * ictx->alphas_2pi * ictx->ctx->Nc * ictx->ctx->Sperp * ictx->ggfactor / ictx->z2
          * Pfac * dotfac * Fg1 * Fg2 * ictx->Fq3;
     checkfinite(value);
@@ -129,8 +131,8 @@ void H16ggDelta::Fd(const IntegrationContext* ictx, double* real, double* imag) 
     double kA12 = gsl_pow_2(ictx->q2x - ictx->kT) + gsl_pow_2(ictx->q2y); // (q2 - k)^2
     double kB2 = gsl_pow_2(ictx->q1x + ictx->kT) + gsl_pow_2(ictx->q1y); // (q1 + k)^2
     double kC2 = gsl_pow_2(ictx->q1x + ictx->q2x) + gsl_pow_2(ictx->q1y + ictx->q2y); // (q1 + q2)^2
-    double Fg2 = ictx->ctx->gdist->F(kB2, ictx->Yg);
-    double Fg3 = ictx->ctx->gdist->F(kC2, ictx->Yg);
+    double Fg2 = ictx->ctx->gdist->F(kB2, ictx->Ya);
+    double Fg3 = ictx->ctx->gdist->F(kC2, ictx->Ya);
     double log0 = log(kA02 / ictx->kT2);
     double log1 = log(kA12 / ictx->kT2);
     double value = -4 * ictx->alphas_2pi * ictx->ctx->Nc * ictx->ctx->Sperp * ictx->ggfactor / ictx->z2 * ictx->Fq1 * Fg2 * Fg3
@@ -157,8 +159,8 @@ void H14gq::Fn(const IntegrationContext* ictx, double* real, double* imag) const
     double dotfac = (ictx->q1x * ictx->q2x + ictx->q1y * ictx->q2y) / (ictx->q12 * ictx->q22);
     double kA2 = gsl_pow_2(ictx->kT / ictx->xi + ictx->q1x) + gsl_pow_2(ictx->q1y);
     double kB2 = gsl_pow_2(ictx->kT * (ictx->xi - 1) / ictx->xi - ictx->q1x + ictx->q2x) + gsl_pow_2(-ictx->q1y + ictx->q2y);
-    double Fg1 = ictx->ctx->gdist->F(kA2, ictx->Yg);
-    double Fg2 = ictx->ctx->gdist->F(kB2, ictx->Yg);
+    double Fg1 = ictx->ctx->gdist->F(kA2, ictx->Ya);
+    double Fg2 = ictx->ctx->gdist->F(kB2, ictx->Ya);
     double value = -ictx->alphas_2pi * ictx->ctx->Nc * M_1_PI * ictx->gqfactor / ictx->z2 * Pfac * Fg1 * Fg2 * dotfac;
     checkfinite(value);
     *real = value;
@@ -169,7 +171,7 @@ void H14qg::Fn(const IntegrationContext* ictx, double* real, double* imag) const
     double Pfac = (1 - 2 * ictx->xi + 2 * ictx->xi2) / ictx->xi; // Pqg(xi) / xi
     double dotfac = (ictx->q1x * ictx->q2x + ictx->q1y * ictx->q2y) / (ictx->q12 * ictx->q22);
     double kB2 = gsl_pow_2(ictx->kT * (ictx->xi - 1) / ictx->xi - ictx->q1x + ictx->q2x) + gsl_pow_2(-ictx->q1y + ictx->q2y);
-    double Fg2 = ictx->ctx->gdist->F(kB2, ictx->Yg);
+    double Fg2 = ictx->ctx->gdist->F(kB2, ictx->Ya);
     double value = -ictx->alphas_2pi * M_1_PI * ictx->qgfactor / ictx->z2 * Pfac * ictx->Fkq1 * Fg2 * dotfac;
     checkfinite(value);
     *real = value;

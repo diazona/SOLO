@@ -42,8 +42,13 @@ bool compare_integration_types(const IntegrationType* a, const IntegrationType* 
 
 void PlainIntegrationType::fill_min(IntegrationContext& ictx, const size_t core_dimensions, double* min) const {
     assert(ictx.ctx->tau < 1);
+    assert(ictx.ctx->tauhat < 1);
+    assert(core_dimensions == 1 || core_dimensions == 2);
     size_t i = 0;
-    while (i < core_dimensions) { min[i++] = ictx.ctx->tau; }
+    min[i++] = ictx.ctx->exact_kinematics ? ictx.ctx->tauhat : ictx.ctx->tau;
+    if (core_dimensions == 2) {
+        min[i++] = ictx.ctx->tau;
+    }
     while (i < core_dimensions + extra_dimensions) { min[i++] = -ictx.ctx->inf; }
 }
 void PlainIntegrationType::fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const {
@@ -53,7 +58,7 @@ void PlainIntegrationType::fill_max(IntegrationContext& ictx, const size_t core_
 }
 void PositionIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     assert(core_dimensions == 1 || core_dimensions == 2);
-    ictx.update_kinematics(values[0], core_dimensions == 1 ? 1 : values[1]);
+    ictx.update_kinematics(values[0], values[1], core_dimensions);
     ictx.update_positions(
         extra_dimensions > 0 ? values[core_dimensions + 0] : 0,
         extra_dimensions > 1 ? values[core_dimensions + 1] : 0,
@@ -66,7 +71,7 @@ void PositionIntegrationType::update(IntegrationContext& ictx, const size_t core
 }
 void MomentumIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     assert(core_dimensions == 1 || core_dimensions == 2);
-    ictx.update_kinematics(values[0], core_dimensions == 1 ? 1 : values[1]);
+    ictx.update_kinematics(values[0], values[1], core_dimensions);
     ictx.update_momenta(
         extra_dimensions > 0 ? values[core_dimensions + 0] : 0,
         extra_dimensions > 1 ? values[core_dimensions + 1] : 0,
@@ -79,7 +84,7 @@ void MomentumIntegrationType::update(IntegrationContext& ictx, const size_t core
 }
 
 void NoIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
-    ictx.update_kinematics(values[0], core_dimensions == 1 ? 1 : values[1]);
+    ictx.update_kinematics(values[0], values[1], core_dimensions);
     ictx.update_parton_functions();
 }
 
@@ -90,8 +95,13 @@ void NoIntegrationType::update(IntegrationContext& ictx, const size_t core_dimen
 
 void XiPIntegrationType::fill_min(IntegrationContext& ictx, const size_t core_dimensions, double* min) const {
     assert(ictx.ctx->tau < 1);
+    assert(ictx.ctx->tauhat < 1);
+    assert(core_dimensions == 1 || core_dimensions == 2);
     size_t i = 0;
-    while (i < core_dimensions) { min[i++] = ictx.ctx->tau; }
+    min[i++] = ictx.ctx->exact_kinematics ? ictx.ctx->tauhat : ictx.ctx->tau;
+    if (core_dimensions == 2) {
+        min[i++] = ictx.ctx->tau;
+    }
     min[i++] = 0;
     while (i < core_dimensions + extra_dimensions) { min[i++] = -ictx.ctx->inf; }
 }
@@ -104,7 +114,7 @@ void XiPIntegrationType::fill_max(IntegrationContext& ictx, const size_t core_di
 
 void XiPIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     assert(core_dimensions == 1 || core_dimensions == 2);
-    ictx.update_kinematics(values[0], core_dimensions == 1 ? 1 : values[1]);
+    ictx.update_kinematics(values[0], values[1], core_dimensions);
     ictx.update_auxiliary(values[core_dimensions]);
     ictx.update_momenta(
         extra_dimensions > 1 ? values[core_dimensions + 1] : 0,
@@ -123,8 +133,13 @@ void XiPIntegrationType::update(IntegrationContext& ictx, const size_t core_dime
  */
 void RadialIntegrationType::fill_min(IntegrationContext& ictx, const size_t core_dimensions, double* min) const {
     assert(ictx.ctx->tau < 1);
+    assert(ictx.ctx->tauhat < 1);
+    assert(core_dimensions == 1 || core_dimensions == 2);
     size_t i = 0;
-    while (i < core_dimensions) { min[i++] = ictx.ctx->tau; }
+    min[i++] = ictx.ctx->exact_kinematics ? ictx.ctx->tauhat : ictx.ctx->tau;
+    if (core_dimensions == 2) {
+        min[i++] = ictx.ctx->tau;
+    }
     while (i < core_dimensions + extra_dimensions) { min[i++] = 0; }
 }
 void RadialIntegrationType::fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const {
@@ -135,7 +150,7 @@ void RadialIntegrationType::fill_max(IntegrationContext& ictx, const size_t core
 
 void RadialIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     assert(core_dimensions == 1 || core_dimensions == 2);
-    ictx.update_kinematics(values[0], core_dimensions == 1 ? 1 : values[1]);
+    ictx.update_kinematics(values[0], values[1], core_dimensions);
     ictx.update_positions(
         extra_dimensions > 0 ? values[core_dimensions + 0] : 0,
         0,
