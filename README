@@ -181,6 +181,8 @@ where the <options> can include any number of the following, in any order:
         "fixed" or "running"
     cubature_iterations
         number of calls to use for cubature integration
+    exact_kinematics
+        whether to use exact kinematic expressions
     factorization_scale (default fixed)
         "fixed" or "4pT2" or "CpT2" or "c0r" to specify how to set the
         factorization scale
