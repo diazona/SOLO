@@ -246,6 +246,13 @@ public:
     ContextCollection& context_collection() {
         return cc;
     }
+    /**
+     * Parse the hard factor specifications collected in the constructor.
+     *
+     * This will force a call to ContextCollection::create_contexts if
+     * that has not already been done manually.
+     */
+    void parse_hf_specs();
 
     friend class ResultsCalculator;
 private:
@@ -279,7 +286,8 @@ private:
      * The list of names of hard factors from the groups given on the command line
      */
     vector<string> hfnames;
-    
+    vector<string> hfspecs;
+
     /**
      * Parse a string specification of a hard factor group and add the
      * resulting hard factors and names to the lists
@@ -344,7 +352,7 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
             gdist_type = a;
         }
         else if (a[0] == 'h' || a[0] == 'H' || a[1] == ':' || a == "lo" || a == "nlo") {
-            parse_hf_spec(a);
+            hfspecs.push_back(a);
         }
         else if (::isdigit(a[0])) {
             vector<string> pTnums = split(a, ",");
@@ -377,9 +385,16 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
         cc.set("gdist", gdist_type);
     }
     cc.trace_gdist = trace_gdist;
-    if (hfgroups.empty()) {
-        parse_hf_spec("lo");
-        parse_hf_spec("nlo");
+    if (hfspecs.empty()) {
+        hfspecs.push_back("lo");
+        hfspecs.push_back("nlo");
+    }
+}
+
+void ProgramConfiguration::parse_hf_specs() {
+    assert(hfgroups.empty());
+    for (vector<string>::const_iterator it = hfspecs.begin(); it!= hfspecs.end(); it++) {
+        parse_hf_spec(*it);
     }
     assert(!hfgroups.empty());
     assert(hfgroups.size() == hfgnames.size());
@@ -399,9 +414,15 @@ ProgramConfiguration::~ProgramConfiguration() {
 static const char* default_lo_spec = "m:h02qq,m:h02gg";
 /**
  * This defines the hard factor group that is used when "nlo" is given
- * on the command line
+ * on the command line and exact_kinematics is not set
  */
-static const char* default_nlo_spec = "r:h12qq,m:h14qq,r:h12gg,m:h12qqbar,m:h16gg,r:h112gq,r:h122gq,m:h14gq,r:h112qg,r:h122qg,m:h14qg";
+static const char* approximate_nlo_spec = "r:h12qq,m:h14qq,r:h12gg,m:h12qqbar,m:h16gg,r:h112gq,r:h122gq,m:h14gq,r:h112qg,r:h122qg,m:h14qg";
+/**
+ * This defines the hard factor group that is used when "nlo" is given
+ * on the command line and exact_kinematics is set
+ */
+static const char* exact_nlo_spec = "m:h1qqexact,m:h1ggexact,r:h112gq,r:h122gq,m:h14gq,r:h112qg,r:h122qg,m:h14qg";
+
 
 void ProgramConfiguration::parse_hf_spec(const string& spec) {
     vector<string> splitspec;
@@ -410,7 +431,7 @@ void ProgramConfiguration::parse_hf_spec(const string& spec) {
         splitspec = split(default_lo_spec, ", ");
     }
     else if (spec == "nlo") {
-        splitspec = split(default_nlo_spec, ", ");
+        splitspec = split(cc[0].exact_kinematics ? exact_nlo_spec : approximate_nlo_spec, ", ");
     }
     else {
         splitspec = split(spec, ", ");
@@ -478,6 +499,7 @@ void ProgramConfiguration::parse_hf_spec(const string& spec) {
 ResultsCalculator::ResultsCalculator(ContextCollection& cc, ThreadLocalContext& tlctx, ProgramConfiguration& pc) :
     cc(cc), tlctx(tlctx), hfgroups(pc.hfgroups), hfgnames(pc.hfgnames), hfnames(pc.hfnames), result_array_len(cc.size()), _hfglen(0), _hflen(0), trace(pc.trace), minmax(pc.minmax), separate(pc.separate) {
     _hfglen = hfgroups.size();
+    assert(_hfglen > 0);
     if (separate) {
         for (vector<HardFactorList*>::iterator hflit = hfgroups.begin(); hflit != hfgroups.end(); hflit++) {
             _hflen += (*hflit)->size();
@@ -757,11 +779,15 @@ int run(int argc, char** argv) {
         return 1;
     }
 
+    // parse hard factor specifications after creating contexts
+    pc.parse_hf_specs();
+
     // Only create ThreadLocalContext here because cc may not have
     // values for pdf_filename and ff_filename before create_contexts
     // is called
     ThreadLocalContext tlctx(cc);
 
+    // pc.parse_hf_specs() needs to happen before this
     ResultsCalculator rc(cc, tlctx, pc);
     p_rc = &rc;
 

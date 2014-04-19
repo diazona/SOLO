@@ -137,17 +137,25 @@ where the <options> can include any number of the following, in any order:
         
     The names are case-insensitive.
 
-    It's also possible to specify the group of all leading order terms,
+    It's also possible to specify the group of all leading order terms using
+    the shortcut "lo", which is equivalent to
     
         m:h02qq,m:h02gg
         
-    using the shortcut "lo", and the group of all next-to-leading order terms,
+    or the group of all next-to-leading order terms using the shortcut "nlo",
+    which is equivalent to
     
         r:h12qq,m:h14qq,r:h12gg,m:h12qqbar,m:h16gg,r:h112gq,r:h122gq,m:h14gq,
         r:h112qg,r:h122qg,m:h14qg
         
-    using the shortcut "nlo". These are defined in oneloopcalc.cpp. The default
-    if no hard factor groups are specified on the command line is
+    if approximate kinematics are in use (exact_kinematics = 0 in the Context),
+    or if exact kinematics are in use (exact_kinematics = 1),
+
+        m:h1qqexact,m:h1ggexact,r:h112gq,r:h122gq,m:h14gq,r:h112qg,r:h122qg,
+        m:h14qg
+
+    These are defined in oneloopcalc.cpp. The default if no hard factor groups
+    are specified on the command line is
     
         lo nlo
 
