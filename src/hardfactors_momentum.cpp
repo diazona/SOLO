@@ -92,6 +92,15 @@ void H1qqCorrectionB::Fd(const IntegrationContext* ictx, double* real, double* i
     *imag = 0;
 }
 
+void H1qqExact::Fn(const IntegrationContext* ictx, double* real, double* imag) const {
+    double value = ictx->alphas_2pi * M_1_PI * ictx->qqfactor / ictx->z2 * (1 + ictx->xi2) / (1 - ictx->xi)
+        * (ictx->ctx->CF * gsl_pow_2(1 - ictx->xi) + ictx->ctx->Nc * ictx->xi) / gsl_pow_2(ictx->kT2) * ictx->q12 * ictx->Fq1;
+    checkfinite(value);
+    *real = value;
+    *imag = 0;
+}
+
+
 void H02gg::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
     double kA2 = gsl_pow_2(ictx->q1x - ictx->kT) + gsl_pow_2(ictx->q1y); // (q - k)^2
     double value = ictx->ctx->Sperp * ictx->ggfactor / ictx->z2 * ictx->Fq1 * ictx->Fkq1;
@@ -153,6 +162,14 @@ void H1ggCorrection::Fd(const IntegrationContext* ictx, double* real, double* im
     *imag = 0;
 }
 
+void H1ggExact::Fn(const IntegrationContext* ictx, double* real, double* imag) const {
+    double value = ictx->alphas_2pi * ictx->ctx->Nc * M_1_PI * ictx->ggfactor / ictx->z2
+        * 2 * gsl_pow_2(1 - ictx->xi + ictx->xi2) * (1 + ictx->xi2 + gsl_pow_2(1 - ictx->xi)) / (ictx->xi - ictx->xi2)
+        / gsl_pow_2(ictx->kT2) * ictx->q12 * ictx->Fq1;
+    checkfinite(value);
+    *real = value;
+    *imag = 0;
+}
 
 void H14gq::Fn(const IntegrationContext* ictx, double* real, double* imag) const {
     double Pfac = (2 - 2 * ictx->xi + ictx->xi2) / ictx->xi2; // Pgq(xi) / xi

@@ -136,6 +136,17 @@ public:
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
 
+class H1qqExact : public HardFactorTerm {
+public:
+    const char* get_name() const {
+        return "H1qqExact";
+    }
+    const IntegrationType* get_type() const {
+        return &momentum1;
+    }
+    void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
+};
+
 class H02gg : public HardFactorTerm {
 public:
     const char* get_name() const {
@@ -229,6 +240,18 @@ public:
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
 
+class H1ggExact : public HardFactorTerm {
+public:
+    const char* get_name() const {
+        return "H1ggExact";
+    }
+    const IntegrationType* get_type() const {
+        return &momentum1;
+    }
+    void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
+};
+
+
 // class H112gq : public HardFactorTerm {
 // public:
 //     const char* get_name() {
@@ -309,11 +332,13 @@ private:
         add_hard_factor(new H1qqCorrectionA(), true);
         add_hard_factor(new H1qqCorrectionB(), true);
         add_hard_factor(new H1qqCorrection(), true);
+        add_hard_factor(new H1qqExact(), true);
         add_hard_factor(new H02gg(), true);
 //         add_hard_factor(new H12gg(), true);
         add_hard_factor(new H12qqbar(), true);
         add_hard_factor(new H16gg(), true);
         add_hard_factor(new H1ggCorrection(), true);
+        add_hard_factor(new H1ggExact(), true);
 //         add_hard_factor(new H112gq(), true);
 //         add_hard_factor(new H122gq(), true);
         add_hard_factor(new H14gq(), true);
