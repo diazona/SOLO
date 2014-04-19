@@ -59,13 +59,13 @@
 #define checkfinite(d) assert(gsl_finite(d))
 
 Integrator::Integrator(const Context* ctx, const ThreadLocalContext* tlctx, HardFactorList& hflist) :
-  ictx(ctx, tlctx), current_type(DipoleIntegrationType::get_instance()),
+  ictx(ctx, tlctx), current_type(NULL), terms(compare_integration_types),
   callback(NULL), cubature_callback(NULL), miser_callback(NULL), vegas_callback(NULL), quasi_callback(NULL) {
     assert(hflist.size() > 0);
 #ifndef NDEBUG
     size_t total1 = 0;
 #endif
-    // separate the hard factors provided into dipole and quadrupole terms
+    // separate the hard factors provided into dipole and quadrupole etc. terms
     for (HardFactorList::const_iterator it = hflist.begin(); it != hflist.end(); it++) {
         const HardFactorTerm* const* l_terms = (*it)->get_terms();
         for (size_t i = 0; i < (*it)->get_term_count(); i++) {

@@ -26,13 +26,20 @@
 
 namespace momentum {
 
+static const NoIntegrationType none;
+static const MomentumIntegrationType momentum1(2);
+static const MomentumIntegrationType momentum2(4);
+static const MomentumIntegrationType momentum3(6);
+static const XiPIntegrationType momentumxip1(3);
+static const XiPIntegrationType momentumxip2(5);
+
 class H02qq : public HardFactorTerm {
 public:
     const char* get_name() const {
         return "H02qq";
     }
     const IntegrationType* get_type() const {
-        return NoIntegrationType::get_instance();
+        return &none;
     }
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -55,7 +62,7 @@ public:
         return "H14qqSingular";
     }
     const IntegrationType* get_type() const {
-        return Momentum2IntegrationType::get_instance();
+        return &momentum2;
     }
     void Fs(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -66,7 +73,7 @@ public:
         return "H14qqDelta";
     }
     const IntegrationType* get_type() const {
-        return Momentum1XiPIntegrationType::get_instance();
+        return &momentumxip1;
     }
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -102,7 +109,7 @@ public:
         return "H1qqCoA";
     }
     const IntegrationType* get_type() const {
-        return Momentum1IntegrationType::get_instance();
+        return &momentum1;
     }
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -113,7 +120,7 @@ public:
         return "H1qqCoB";
     }
     const IntegrationType* get_type() const {
-        return Momentum1IntegrationType::get_instance();
+        return &momentum1;
     }
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -124,7 +131,7 @@ public:
         return "H1qqCo";
     }
     const IntegrationType* get_type() const {
-        return Momentum1IntegrationType::get_instance();
+        return &momentum1;
     }
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -135,7 +142,7 @@ public:
         return "H02gg";
     }
     const IntegrationType* get_type() const {
-        return Momentum1IntegrationType::get_instance();
+        return &momentum1;
     }
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -159,7 +166,7 @@ public:
         return "H12qqbar";
     }
     const IntegrationType* get_type() const {
-        return Momentum1XiPIntegrationType::get_instance();
+        return &momentumxip1;
     }
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -170,7 +177,7 @@ public:
         return "H16ggSingular";
     }
     const IntegrationType* get_type() const {
-        return Momentum3IntegrationType::get_instance();
+        return &momentum3;
     }
     void Fs(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -181,7 +188,7 @@ public:
         return "H16ggDelta";
     }
     const IntegrationType* get_type() const {
-        return Momentum2XiPIntegrationType::get_instance();
+        return &momentumxip2;
     }
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -217,7 +224,7 @@ public:
         return "H1ggCo";
     }
     const IntegrationType* get_type() const {
-        return Momentum1IntegrationType::get_instance();
+        return &momentum1;
     }
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -250,7 +257,7 @@ public:
         return "H14gq";
     }
     const IntegrationType* get_type() const {
-        return Momentum2IntegrationType::get_instance();
+        return &momentum2;
     }
     void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -283,7 +290,7 @@ public:
         return "H14qg";
     }
     const IntegrationType* get_type() const {
-        return Momentum2IntegrationType::get_instance();
+        return &momentum2;
     }
     void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
 };

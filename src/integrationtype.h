@@ -50,6 +50,12 @@ public:
 };
 
 /**
+ * Comparison function for IntegrationType pointers based on the
+ * type_info and extra_dimensions fields.
+ */
+bool compare_integration_types(const IntegrationType* a, const IntegrationType* b);
+
+/**
  * Base class for integration types which have one or two dimensions (z and/or y)
  * with limits of tau and 1, and any number of other dimensions with limits
  * plus or minus infinity
@@ -66,88 +72,29 @@ protected:
  */
 class NoIntegrationType : public PlainIntegrationType {
 public:
-    static const NoIntegrationType* get_instance() {
-        static NoIntegrationType instance;
-        return &instance;
-    }
-private:
     NoIntegrationType() : PlainIntegrationType(0) {}
     NoIntegrationType(NoIntegrationType const&);
+private:
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };
 
 /**
- * An integration type for integration over rx, ry, z and/or y
+ * Base class for Cartesian position integration types
  */
-class DipoleIntegrationType : public PlainIntegrationType {
+class PositionIntegrationType : public PlainIntegrationType {
 public:
-    static const DipoleIntegrationType* get_instance() {
-        static DipoleIntegrationType instance;
-        return &instance;
-    }
-private:
-    DipoleIntegrationType() : PlainIntegrationType(2) {}
-    DipoleIntegrationType(DipoleIntegrationType const&);
+    PositionIntegrationType(const size_t extra_dimensions) : PlainIntegrationType(extra_dimensions) {}
+protected:
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };
 
 /**
- * An integration type for integration over sx, sy, tx, ty, z and/or y
+ * Base class for momentum integration types
  */
-class QuadrupoleIntegrationType : public PlainIntegrationType {
+class MomentumIntegrationType : public PlainIntegrationType {
 public:
-    static const QuadrupoleIntegrationType* get_instance() {
-        static QuadrupoleIntegrationType instance;
-        return &instance;
-    }
-private:
-    QuadrupoleIntegrationType() : PlainIntegrationType(4) {}
-    QuadrupoleIntegrationType(QuadrupoleIntegrationType const&);
-    void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
-};
-
-/**
- * An integration type for integration over q1x, q1y, z and/or y
- */
-class Momentum1IntegrationType : public PlainIntegrationType {
-public:
-    static const Momentum1IntegrationType* get_instance() {
-        static Momentum1IntegrationType instance;
-        return &instance;
-    }
-private:
-    Momentum1IntegrationType() : PlainIntegrationType(2) {}
-    Momentum1IntegrationType(Momentum1IntegrationType const&);
-    void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
-};
-
-/**
- * An integration type for integration over q1x, q1y, q2x, q2y, z and/or y
- */
-class Momentum2IntegrationType : public PlainIntegrationType {
-public:
-    static const Momentum2IntegrationType* get_instance() {
-        static Momentum2IntegrationType instance;
-        return &instance;
-    }
-private:
-    Momentum2IntegrationType() : PlainIntegrationType(4) {}
-    Momentum2IntegrationType(Momentum2IntegrationType const&);
-    void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
-};
-
-/**
- * An integration type for integration over q1x, q1y, q2x, q2y, q3x, q3y, z and/or y
- */
-class Momentum3IntegrationType : public PlainIntegrationType {
-public:
-    static const Momentum3IntegrationType* get_instance() {
-        static Momentum3IntegrationType instance;
-        return &instance;
-    }
-private:
-    Momentum3IntegrationType() : PlainIntegrationType(6) {}
-    Momentum3IntegrationType(Momentum3IntegrationType const&);
+    MomentumIntegrationType(const size_t extra_dimensions) : PlainIntegrationType(extra_dimensions) {}
+protected:
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };
 
@@ -157,39 +104,11 @@ private:
  * and any number of other dimensions with limits plus or minus infinity
  */
 class XiPIntegrationType : public IntegrationType {
-protected:
+public:
     XiPIntegrationType(size_t extra_dimensions) : IntegrationType(extra_dimensions) {}
+protected:
     void fill_min(IntegrationContext& ictx, const size_t core_dimensions, double* min) const;
     void fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const;
-};
-
-/**
- * An integration type for integration over q1x, q1y, xiprime, z and/or y
- */
-class Momentum1XiPIntegrationType : public XiPIntegrationType {
-public:
-    static const Momentum1XiPIntegrationType* get_instance() {
-        static Momentum1XiPIntegrationType instance;
-        return &instance;
-    }
-private:
-    Momentum1XiPIntegrationType() : XiPIntegrationType(3) {}
-    Momentum1XiPIntegrationType(Momentum1XiPIntegrationType const&);
-    void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
-};
-
-/**
- * An integration type for integration over q1x, q1y, q2x, q2y, xiprime, z and/or y
- */
-class Momentum2XiPIntegrationType : public XiPIntegrationType {
-public:
-    static const Momentum2XiPIntegrationType* get_instance() {
-        static Momentum2XiPIntegrationType instance;
-        return &instance;
-    }
-private:
-    Momentum2XiPIntegrationType() : XiPIntegrationType(5) {}
-    Momentum2XiPIntegrationType(Momentum2XiPIntegrationType const&);
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };
 
@@ -199,40 +118,13 @@ private:
  * zero and infinity
  */
 class RadialIntegrationType : public IntegrationType {
-protected:
+public:
     RadialIntegrationType(const size_t extra_dimensions) : IntegrationType(extra_dimensions) {}
+protected:
     void fill_min(IntegrationContext& ictx, const size_t core_dimensions, double* min) const;
     void fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const;
-};
-
-/**
- * An integration type for integration over r, z and/or y
- */
-class RadialDipoleIntegrationType : public RadialIntegrationType {
-public:
-    static const RadialDipoleIntegrationType* get_instance() {
-        static RadialDipoleIntegrationType instance;
-        return &instance;
-    }
-private:
-    RadialDipoleIntegrationType() : RadialIntegrationType(1) {}
-    RadialDipoleIntegrationType(RadialDipoleIntegrationType const&);
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };
 
-/**
- * An integration type for integration over s, t, z and/or y
- */
-class RadialQuadrupoleIntegrationType : public RadialIntegrationType {
-public:
-    static const RadialQuadrupoleIntegrationType* get_instance() {
-        static RadialQuadrupoleIntegrationType instance;
-        return &instance;
-    }
-private:
-    RadialQuadrupoleIntegrationType() : RadialIntegrationType(2) {}
-    RadialQuadrupoleIntegrationType(RadialQuadrupoleIntegrationType const&);
-    void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
-};
 
 #endif

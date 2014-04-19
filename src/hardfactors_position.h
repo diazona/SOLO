@@ -27,13 +27,16 @@
 
 namespace position {
 
+static const PositionIntegrationType dipole(2);
+static const PositionIntegrationType quadrupole(4);
+
 class H02qq : public HardFactorTerm {
 public:
     const char* get_name() const {
         return "H02qq";
     }
     const IntegrationType* get_type() const {
-        return DipoleIntegrationType::get_instance();
+        return &dipole;
     }
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -44,7 +47,7 @@ public:
         return "H12qq";
     }
     const IntegrationType* get_type() const {
-        return DipoleIntegrationType::get_instance();
+        return &dipole;
     }
     void Fs(const IntegrationContext* ictx, double* real, double* imag) const;
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
@@ -56,7 +59,7 @@ public:
         return "H14qq";
     }
     const IntegrationType* get_type() const {
-        return QuadrupoleIntegrationType::get_instance();
+        return &quadrupole;
     }
     void Fs(const IntegrationContext* ictx, double* real, double* imag) const;
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
@@ -68,7 +71,7 @@ public:
         return "H14qqResidual";
     }
     const IntegrationType* get_type() const {
-        return DipoleIntegrationType::get_instance();
+        return &dipole;
     }
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -104,7 +107,7 @@ public:
         return "H02gg";
     }
     const IntegrationType* get_type() const {
-        return DipoleIntegrationType::get_instance();
+        return &dipole;
     }
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -115,7 +118,7 @@ public:
         return "H12gg";
     }
     const IntegrationType* get_type() const {
-        return DipoleIntegrationType::get_instance();
+        return &dipole;
     }
     void Fs(const IntegrationContext* ictx, double* real, double* imag) const;
     void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
@@ -128,7 +131,7 @@ public:
         return "H12qqbarPrimary";
     }
     const IntegrationType* get_type() const {
-        return QuadrupoleIntegrationType::get_instance();
+        return &quadrupole;
     }
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -139,7 +142,7 @@ public:
         return "H12qqbarResidual";
     }
     const IntegrationType* get_type() const {
-        return DipoleIntegrationType::get_instance();
+        return &dipole;
     }
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -175,7 +178,7 @@ public:
         return "H16ggPrimary";
     }
     const IntegrationType* get_type() const {
-        return QuadrupoleIntegrationType::get_instance();
+        return &quadrupole;
     }
     void Fs(const IntegrationContext* ictx, double* real, double* imag) const;
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
@@ -187,7 +190,7 @@ public:
         return "H16ggResidual";
     }
     const IntegrationType* get_type() const {
-        return DipoleIntegrationType::get_instance();
+        return &dipole;
     }
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -223,7 +226,7 @@ public:
         return "H112gq";
     }
     const IntegrationType* get_type() const {
-        return DipoleIntegrationType::get_instance();
+        return &dipole;
     }
     void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -234,7 +237,7 @@ public:
         return "H122gq";
     }
     const IntegrationType* get_type() const {
-        return DipoleIntegrationType::get_instance();
+        return &dipole;
     }
     void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -245,7 +248,7 @@ public:
         return "H14gq";
     }
     const IntegrationType* get_type() const {
-        return QuadrupoleIntegrationType::get_instance();
+        return &quadrupole;
     }
     void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -256,7 +259,7 @@ public:
         return "H112qg";
     }
     const IntegrationType* get_type() const {
-        return DipoleIntegrationType::get_instance();
+        return &dipole;
     }
     void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -267,7 +270,7 @@ public:
         return "H122qg";
     }
     const IntegrationType* get_type() const {
-        return DipoleIntegrationType::get_instance();
+        return &dipole;
     }
     void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -278,7 +281,7 @@ public:
         return "H14qg";
     }
     const IntegrationType* get_type() const {
-        return QuadrupoleIntegrationType::get_instance();
+        return &quadrupole;
     }
     void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
 };

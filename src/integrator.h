@@ -32,7 +32,7 @@
 
 typedef std::vector<const HardFactor*> HardFactorList;
 typedef std::vector<const HardFactorTerm*> HardFactorTermList;
-typedef std::map<const IntegrationType*, HardFactorTermList> HardFactorTypeMap;
+typedef std::map<const IntegrationType*, HardFactorTermList, bool(*)(const IntegrationType*, const IntegrationType*)> HardFactorTypeMap;
 
 /**
  * A class to interface with the GSL Monte Carlo integration routines.
