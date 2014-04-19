@@ -58,7 +58,7 @@
  */
 #define checkfinite(d) assert(gsl_finite(d))
 
-Integrator::Integrator(const Context* ctx, const ThreadLocalContext* tlctx, HardFactorList& hflist) :
+Integrator::Integrator(const Context* ctx, const ThreadLocalContext* tlctx, const HardFactorList& hflist) :
   ictx(ctx, tlctx), current_type(NULL), terms(compare_integration_types),
   callback(NULL), cubature_callback(NULL), miser_callback(NULL), vegas_callback(NULL), quasi_callback(NULL) {
     assert(hflist.size() > 0);

@@ -165,7 +165,7 @@ private:
     /**
      * The list of groups of hard factors
      */
-    vector<HardFactorList*> hfgroups;
+    vector<const HardFactorList*> hfgroups;
     /**
      * The list of names of the hard factor groups. Each name goes with the
      * hard factor group at the corresponding index in hfgroups.
@@ -228,7 +228,7 @@ private:
     /**
      * Construct an Integrator and use it
      */
-    void integrate_hard_factor(const Context& ctx, const ThreadLocalContext& tlctx, HardFactorList& hflist, size_t index);
+    void integrate_hard_factor(const Context& ctx, const ThreadLocalContext& tlctx, const HardFactorList& hflist, size_t index);
 };
 
 /**
@@ -277,7 +277,7 @@ private:
     /**
      * The list of hard factor groups given on the command line
      */
-    vector<HardFactorList*> hfgroups;
+    vector<const HardFactorList*> hfgroups;
     /**
      * The list of names of hard factor groups given on the command line
      */
@@ -287,12 +287,26 @@ private:
      */
     vector<string> hfnames;
     vector<string> hfspecs;
+};
 
+/**
+ * A class to parse a hard factor specification.
+ */
+class ParsedHardFactorGroup {
+private:
+    ParsedHardFactorGroup(const string& label, const HardFactorList* objects, const vector<string>& specifications) :
+     label(label), objects(objects), specifications(specifications) {}
+public:
     /**
-     * Parse a string specification of a hard factor group and add the
-     * resulting hard factors and names to the lists
+     * Attempts to parse a string as a hard factor group specification.
+     *
+     * Returns NULL if the parsing failed to produce a valid group.
      */
-    void parse_hf_spec(const string& spec);
+    static const ParsedHardFactorGroup* parse(const string& spec, bool exact_kinematics);
+
+    const string label;
+    const HardFactorList* objects;
+    const vector<string> specifications;
 };
 
 ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false), trace_gdist(false), minmax(false), separate(false) {
@@ -351,9 +365,6 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
         else if (a == "MV" || a == "fMV" ||  a == "GBW") {
             gdist_type = a;
         }
-        else if (a[0] == 'h' || a[0] == 'H' || a[1] == ':' || a == "lo" || a == "nlo") {
-            hfspecs.push_back(a);
-        }
         else if (::isdigit(a[0])) {
             vector<string> pTnums = split(a, ",");
             for (vector<string>::iterator it = pTnums.begin(); it != pTnums.end(); it++) {
@@ -361,16 +372,24 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
             }
         }
         else {
-            // try opening as a file
-            ifstream config;
-            config.open(a.c_str());
-            if (config.good()) {
-                logger << "Reading config file " << a << endl;
-                config >> cc;
-                config.close();
+            // try parsing as a hard factor, just to check if it's a valid one
+            const ParsedHardFactorGroup* phfg = ParsedHardFactorGroup::parse(a, false);
+            if (phfg) {
+                delete phfg;
+                hfspecs.push_back(a);
             }
             else {
-                logger << "Unrecognized argument " << a << endl;
+                // try opening as a file
+                ifstream config;
+                config.open(a.c_str());
+                if (config.good()) {
+                    logger << "Reading config file " << a << endl;
+                    config >> cc;
+                    config.close();
+                }
+                else {
+                    logger << "Unrecognized argument " << a << endl;
+                }
             }
         }
     }
@@ -394,7 +413,12 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
 void ProgramConfiguration::parse_hf_specs() {
     assert(hfgroups.empty());
     for (vector<string>::const_iterator it = hfspecs.begin(); it!= hfspecs.end(); it++) {
-        parse_hf_spec(*it);
+        const ParsedHardFactorGroup* hfg = ParsedHardFactorGroup::parse(*it, cc[0].exact_kinematics);
+        if (hfg) {
+            hfgroups.push_back(hfg->objects);
+            hfgnames.push_back(hfg->label);
+            hfnames.insert(hfnames.end(), hfg->specifications.begin(), hfg->specifications.end());
+        }
     }
     assert(!hfgroups.empty());
     assert(hfgroups.size() == hfgnames.size());
@@ -402,7 +426,7 @@ void ProgramConfiguration::parse_hf_specs() {
 }
 
 ProgramConfiguration::~ProgramConfiguration() {
-    for (vector<HardFactorList*>::iterator it = hfgroups.begin(); it != hfgroups.end(); it++) {
+    for (vector<const HardFactorList*>::iterator it = hfgroups.begin(); it != hfgroups.end(); it++) {
         delete *it;
     }
 }
@@ -411,33 +435,66 @@ ProgramConfiguration::~ProgramConfiguration() {
  * This defines the hard factor group that is used when "lo" is given
  * on the command line
  */
-static const char* default_lo_spec = "m:h02qq,m:h02gg";
+static const char* default_lo_spec = "m.h02qq,m.h02gg";
 /**
  * This defines the hard factor group that is used when "nlo" is given
  * on the command line and exact_kinematics is not set
  */
-static const char* approximate_nlo_spec = "r:h12qq,m:h14qq,r:h12gg,m:h12qqbar,m:h16gg,r:h112gq,r:h122gq,m:h14gq,r:h112qg,r:h122qg,m:h14qg";
+static const char* approximate_nlo_spec = "r.h12qq,m.h14qq,r.h12gg,m.h12qqbar,m.h16gg,r.h112gq,r.h122gq,m.h14gq,r.h112qg,r.h122qg,m.h14qg";
 /**
  * This defines the hard factor group that is used when "nlo" is given
  * on the command line and exact_kinematics is set
  */
-static const char* exact_nlo_spec = "m:h1qqexact,m:h1ggexact,r:h112gq,r:h122gq,m:h14gq,r:h112qg,r:h122qg,m:h14qg";
+static const char* exact_nlo_spec = "m.h1qqexact,m.h1ggexact,r.h112gq,r.h122gq,m.h14gq,r.h112qg,r.h122qg,m.h14qg";
 
-
-void ProgramConfiguration::parse_hf_spec(const string& spec) {
+const ParsedHardFactorGroup* ParsedHardFactorGroup::parse(const string& spec, bool exact_kinematics) {
     vector<string> splitspec;
+    string specname(spec);
     // Split the specification string on commas to get individual hard factor names
     if (spec == "lo") {
         splitspec = split(default_lo_spec, ", ");
     }
     else if (spec == "nlo") {
-        splitspec = split(cc[0].exact_kinematics ? exact_nlo_spec : approximate_nlo_spec, ", ");
+        splitspec = split(exact_kinematics ? exact_nlo_spec : approximate_nlo_spec, ", ");
     }
     else {
-        splitspec = split(spec, ", ");
+        string specbody(spec);
+        vector<string> namesplitspec = split(spec, ":", 2);
+        assert(namesplitspec.size() == 1 || namesplitspec.size() == 2);
+        if (namesplitspec.size() > 1) {
+            if (namesplitspec[0].size() == 0) {
+                // this means there was simply a leading colon; ignore it
+                specname = namesplitspec[1];
+                specbody = namesplitspec[1];
+            }
+            else {
+                /* At this point we have established that the hf spec takes the form
+                 * <string1>:<string2> where <string1> is of nonzero length and contains
+                 * no colons. This next bit of logic attempts to intelligently determine
+                 * whether <string1> is meant to be a hard factor type specification
+                 * (i.e. one of 'm', 'r', or 'p') or a label for the hard factor spec.
+                 */
+                if (!(namesplitspec[0] == "m" || namesplitspec[0] == "r" || namesplitspec[0] == "p")) {
+                    // <string1> is something other than 'm', 'r', or 'p', so is clearly a label
+                    specname = namesplitspec[0];
+                    specbody = namesplitspec[1];
+                }
+                else if (
+                    (namesplitspec[1][1] == ':' || namesplitspec[1][1] == '.')
+                    && (namesplitspec[1][0] == 'm' || namesplitspec[1][0] == 'r' || namesplitspec[1][0] == 'p')
+                ) {
+                    // <string2> starts with [mrp][:.] (in regex syntax) so
+                    // includes a type letter, thus <string1> must be a label
+                    specname = namesplitspec[0];
+                    specbody = namesplitspec[1];
+                }
+                // else specname and specbody should both just be spec, but
+                // they already are, so do nothing
+            }
+        }
+        splitspec = split(specbody, ", ");
     }
-    HardFactorList* hfobjs = new HardFactorList();
-    assert(hfobjs != NULL);
+    HardFactorList hfobjs;
     // Iterate over the individual hard factor names
     for (vector<string>::iterator it = splitspec.begin(); it != splitspec.end(); it++) {
         string orig_s = *it;
@@ -449,9 +506,11 @@ void ProgramConfiguration::parse_hf_spec(const string& spec) {
         // If the hard factor specification takes the form [letter]:[stuff],
         // consider the first letter to indicate the type, and remove it and
         // the colon
-        if (s[1] == ':') {
+        if (s[1] == '.' || s[1] == ':') {
             hf_type = s[0];
-            s = s.substr(2);
+            if (hf_type == 'm' || hf_type == 'r' || hf_type == 'p') {
+                s = s.substr(2);
+            }
         }
         // Pass the remaining name (e.g. "h02qq") to the hard factor registry
         // to get the actual hard factor object
@@ -480,20 +539,22 @@ void ProgramConfiguration::parse_hf_spec(const string& spec) {
         }
         if (hf == NULL) {
             logger << "No such hard factor " << orig_s << endl;
+            // the string failed to parse
+            return NULL;
         }
         else {
-            hfobjs->push_back(hf);
+            hfobjs.push_back(hf);
         }
     }
-    if (hfobjs->size() == 0) {
+    if (hfobjs.size() == 0) {
         logger << "No valid hard factors in spec " << spec << endl;
-        throw "Error parsing hard factors";
+        return NULL;
     }
-    // This constitutes one group. Add it to the list and add the
-    // specification to the lists of names.
-    hfgroups.push_back(hfobjs);
-    hfgnames.push_back(spec);
-    hfnames.insert(hfnames.end(), splitspec.begin(), splitspec.end());
+    else {
+        HardFactorList* p_hfobjs = new HardFactorList(hfobjs);
+        // parsing seems to have succeeded, so go ahead and create the object
+        return new ParsedHardFactorGroup(specname, p_hfobjs, splitspec);
+    }
 }
 
 ResultsCalculator::ResultsCalculator(ContextCollection& cc, ThreadLocalContext& tlctx, ProgramConfiguration& pc) :
@@ -501,7 +562,7 @@ ResultsCalculator::ResultsCalculator(ContextCollection& cc, ThreadLocalContext& 
     _hfglen = hfgroups.size();
     assert(_hfglen > 0);
     if (separate) {
-        for (vector<HardFactorList*>::iterator hflit = hfgroups.begin(); hflit != hfgroups.end(); hflit++) {
+        for (vector<const HardFactorList*>::iterator hflit = hfgroups.begin(); hflit != hfgroups.end(); hflit++) {
             _hflen += (*hflit)->size();
         }
         result_array_len *= _hflen;
@@ -553,11 +614,11 @@ void ResultsCalculator::calculate() {
             hf_index = 0;
             // recall the definition
             // typedef HardFactorList std::vector<const HardFactor*>
-            for (vector<HardFactorList*>::iterator hit = hfgroups.begin(); hit != hfgroups.end(); hit++) {
+            for (vector<const HardFactorList*>::iterator hit = hfgroups.begin(); hit != hfgroups.end(); hit++) {
                 if (separate) {
                     // go through the hard factors in each group one at a time
                     HardFactorList one_hf;
-                    for (HardFactorList::iterator hfit = (*hit)->begin(); hfit != (*hit)->end(); hfit++) {
+                    for (HardFactorList::const_iterator hfit = (*hit)->begin(); hfit != (*hit)->end(); hfit++) {
                         one_hf.assign(1, *hfit);
                         integrate_hard_factor(ctx, tlctx, one_hf, index_from(cc_index, hf_index));
                         hf_index++;
@@ -577,7 +638,7 @@ void ResultsCalculator::calculate() {
     }
 }
 
-void ResultsCalculator::integrate_hard_factor(const Context& ctx, const ThreadLocalContext& tlctx, HardFactorList& hflist, size_t index) {
+void ResultsCalculator::integrate_hard_factor(const Context& ctx, const ThreadLocalContext& tlctx, const HardFactorList& hflist, size_t index) {
     double l_real, l_imag, l_error;
     Integrator integrator(&ctx, &tlctx, hflist);
     if (trace) {

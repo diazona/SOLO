@@ -108,51 +108,62 @@ where the <options> can include any number of the following, in any order:
 
     These tell the program which terms to calculate. A hard factor _group_
     specification is made of any number of individual hard factor specifications
-    separated by commas. The program will calculate the results for all the
-    terms in the group and display a total for each group.
+    separated by commas, for example
+
+        m.h02qq,m.h02gg
+
+    The program will calculate the results for all the terms in the group and
+    display a total for each group. You can name a group by prefixing the
+    specification with a colon, like
+
+        lo:m.h02qq,m.h02gg
+
+    The name will be used to label a column in the results table printed
+    when the program finishes.
     
-    An _individual_ hard factor specification is a string like "p:h02qq" or
-    "m:h16gg". The "p:" at the beginning specifies the position space
-    implementation, "r:" specifies a position space implementation with the
-    angular integral already done, and the "m:" specifies the momentum space
+    An _individual_ hard factor specification is a string like "p.h02qq" or
+    "m.h16gg". The "p." at the beginning specifies the position space
+    implementation, "r." specifies a position space implementation with the
+    angular integral already done, and the "m." specifies the momentum space
     implementation. The prefix can be omitted, in which case position space
     is taken as the default. (Not recommended, as position space is highly
-    inaccurate for some terms.)
+    inaccurate for some terms.) For compatibility with older versions, the
+    program also accepts a colon instead of the period (like "p:h02qq").
     
     The rest of the string gives the name of a hard factor. The canonical set
-    of possible names that can be used with a "p:" prefix are all the return
+    of possible names that can be used with a "p." prefix are all the return
     values from the get_name() methods in hardfactors_position.h, and similarly
-    for "r:" with hardfactors_radial.h and "m:" with hardfactors_momentum.h.
+    for "r." with hardfactors_radial.h and "m." with hardfactors_momentum.h.
     Here's a near-complete list:
     
-        p:h02qq m:h02qq p:h12qq r:h12qq p:h14qq m:h14qq
-        p:h02gg m:h02gg p:h12gg r:h12gg p:h12qqbar m:h12qqbar p:h16gg m:h16gg
-        p:h112qg r:h112qg p:h122qg r:h122qg p:h14qg m:h14qg
-        p:h112gq r:h112gq p:h122gq r:h122gq p:h14gq m:h14gq
+        p.h02qq m.h02qq p.h12qq r.h12qq p.h14qq m.h14qq
+        p.h02gg m.h02gg p.h12gg r.h12gg p.h12qqbar m.h12qqbar p.h16gg m.h16gg
+        p.h112qg r.h112qg p.h122qg r.h122qg p.h14qg m.h14qg
+        p.h112gq r.h112gq p.h122gq r.h122gq p.h14gq m.h14gq
         
     and also these, which go beyond what is in the paper:
         
-        r:h12qq.1 r:h12qq.1A r:h12qq.1B r:h12qq.2 r:h12qq.3 r:h012qqexp
-        m:h1qqexact m:h1ggexact
+        r.h12qq.1 r.h12qq.1A r.h12qq.1B r.h12qq.2 r.h12qq.3 r.h012qqexp
+        m.h1qqexact m.h1ggexact
         
     The names are case-insensitive.
 
     It's also possible to specify the group of all leading order terms using
     the shortcut "lo", which is equivalent to
     
-        m:h02qq,m:h02gg
+        m.h02qq,m.h02gg
         
     or the group of all next-to-leading order terms using the shortcut "nlo",
     which is equivalent to
     
-        r:h12qq,m:h14qq,r:h12gg,m:h12qqbar,m:h16gg,r:h112gq,r:h122gq,m:h14gq,
-        r:h112qg,r:h122qg,m:h14qg
+        r.h12qq,m.h14qq,r.h12gg,m.h12qqbar,m.h16gg,r.h112gq,r.h122gq,m.h14gq,
+        r.h112qg,r.h122qg,m.h14qg
         
     if approximate kinematics are in use (exact_kinematics = 0 in the Context),
     or if exact kinematics are in use (exact_kinematics = 1),
 
-        m:h1qqexact,m:h1ggexact,r:h112gq,r:h122gq,m:h14gq,r:h112qg,r:h122qg,
-        m:h14qg
+        m.h1qqexact,m.h1ggexact,r.h112gq,r.h122gq,m.h14gq,r.h112qg,r.h122qg,
+        m.h14qg
 
     These are defined in oneloopcalc.cpp. The default if no hard factor groups
     are specified on the command line is
