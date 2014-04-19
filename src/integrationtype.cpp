@@ -204,7 +204,7 @@ void RadialQuadrupoleIntegrationType::update(IntegrationContext& ictx, const siz
     }
     else {
         ictx.update_kinematics(values[0], values[1]);
-        ictx.update_positions(values[2], 0, values[4], 0, 0, 0);
+        ictx.update_positions(values[2], 0, values[3], 0, 0, 0);
         ictx.update_parton_functions();
     }
 }
