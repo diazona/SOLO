@@ -133,6 +133,7 @@ where the <options> can include any number of the following, in any order:
     and also these, which go beyond what is in the paper:
         
         r:h12qq.1 r:h12qq.1A r:h12qq.1B r:h12qq.2 r:h12qq.3 r:h012qqexp
+        m:h1qqexact m:h1ggexact
         
     The names are case-insensitive.
 
