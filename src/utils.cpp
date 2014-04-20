@@ -32,15 +32,16 @@ string trim(const string& str, const string& chars, size_t begin, size_t end) {
 // Split a string using any of the given chars as delimiters. Empty fields are dropped.
 vector<string> split(const string& str, const string& chars, size_t limit, size_t i_begin, size_t i_end) {
     vector<string> tokens;
-    size_t delimiter, n = 0;
+    size_t delimiter, n = 1;
     if (str.size() < i_end) {
         i_end = str.size();
     }
-    while (n++ < limit && i_begin < i_end) {
+    while (n < limit && i_begin < i_end) {
         delimiter = str.find_first_of(chars, i_begin);
         if (delimiter != i_begin) {
             assert(delimiter > i_begin);
             tokens.push_back(str.substr(i_begin, delimiter - i_begin));
+            n++;
         }
         i_begin = str.find_first_not_of(chars, delimiter);
         assert(i_begin == string::npos || i_begin > delimiter);
@@ -100,7 +101,14 @@ int main(int argc, char** argv) {
         cout << "'" << *it << "' ";
     }
     cout << endl;
-    
+
+    tokens = split("abcdefghijklmnop", "egjl", 2);
+    cout << "split('abcdefghijklmnop', 'egjl', 2) = ";
+    for (vector<string>::iterator it = tokens.begin(); it != tokens.end(); it++) {
+        cout << "'" << *it << "' ";
+    }
+    cout << endl;
+
     vector<double> v;
     for (double d = 0; d < 10; d++) { v.push_back(d); }
     random_shuffle(v.begin(), v.end());
