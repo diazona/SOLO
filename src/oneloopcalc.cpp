@@ -309,6 +309,38 @@ public:
     const vector<string> specifications;
 };
 
+/**
+ * An exception to be thrown when a hard factor specification fails to be
+ * parsed for some reason. The reason is indicated by the message.
+ */
+class InvalidHardFactorSpecException : public exception {
+private:
+    string _message;
+public:
+    string hfspec;
+    /**
+     * Constructs an instance of the exception.
+     *
+     * @param hfspec the hard factor specification or part of a specification
+     *  that caused the error
+     * @param message a descriptive human-readable message indicating why hfspec
+     *  could not be parsed
+     */
+    InvalidHardFactorSpecException(const string& hfspec, const string& message) throw() : hfspec(hfspec) {
+        ostringstream s;
+        s << message << " in hard factor " << hfspec;
+        _message = s.str();
+    }
+    InvalidHardFactorSpecException(const InvalidHardFactorSpecException& other) throw() : _message(other._message) {}
+    ~InvalidHardFactorSpecException() throw() {}
+    void operator=(const InvalidHardFactorSpecException& other) {
+        _message = other._message;
+    }
+    const char* what() const throw() {
+        return _message.c_str();
+    }
+};
+
 ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false), trace_gdist(false), minmax(false), separate(false) {
     string gdist_type;
     bool current_arg_is_config_line = false;
@@ -373,12 +405,12 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
         }
         else {
             // try parsing as a hard factor, just to check if it's a valid one
-            const ParsedHardFactorGroup* phfg = ParsedHardFactorGroup::parse(a, false);
-            if (phfg) {
+            try {
+                const ParsedHardFactorGroup* phfg = ParsedHardFactorGroup::parse(a, false);
                 delete phfg;
                 hfspecs.push_back(a);
             }
-            else {
+            catch (InvalidHardFactorSpecException e) {
                 // try opening as a file
                 ifstream config;
                 config.open(a.c_str());
@@ -413,11 +445,16 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
 void ProgramConfiguration::parse_hf_specs() {
     assert(hfgroups.empty());
     for (vector<string>::const_iterator it = hfspecs.begin(); it!= hfspecs.end(); it++) {
-        const ParsedHardFactorGroup* hfg = ParsedHardFactorGroup::parse(*it, cc[0].exact_kinematics);
-        if (hfg) {
+        try {
+            const ParsedHardFactorGroup* hfg = ParsedHardFactorGroup::parse(*it, cc[0].exact_kinematics);
             hfgroups.push_back(hfg->objects);
             hfgnames.push_back(hfg->label);
             hfnames.insert(hfnames.end(), hfg->specifications.begin(), hfg->specifications.end());
+        }
+        catch (InvalidHardFactorSpecException e) {
+            // should have already checked that the HF parses, so this shouldn't happen
+            logger << e.what() << endl;
+            assert(false);
         }
     }
     assert(!hfgroups.empty());
@@ -538,17 +575,15 @@ const ParsedHardFactorGroup* ParsedHardFactorGroup::parse(const string& spec, bo
                 break;
         }
         if (hf == NULL) {
-            logger << "No such hard factor " << orig_s << endl;
             // the string failed to parse
-            return NULL;
+            throw InvalidHardFactorSpecException(orig_s, "No such hard factor");
         }
         else {
             hfobjs.push_back(hf);
         }
     }
     if (hfobjs.size() == 0) {
-        logger << "No valid hard factors in spec " << spec << endl;
-        return NULL;
+        throw InvalidHardFactorSpecException(spec, "No valid hard factors in specification");
     }
     else {
         HardFactorList* p_hfobjs = new HardFactorList(hfobjs);
