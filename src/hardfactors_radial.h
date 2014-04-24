@@ -27,8 +27,8 @@
 
 namespace radial {
 
-static const RadialIntegrationType dipole(1);
-static const RadialIntegrationType quadrupole(2);
+static const AngleIndependentPositionIntegrationType dipole(1);
+static const AngleIndependentPositionIntegrationType quadrupole(2);
 
 class H02qq : public HardFactorTerm {
 public:

@@ -119,12 +119,36 @@ protected:
  */
 class RadialIntegrationType : public IntegrationType {
 public:
-    RadialIntegrationType(const size_t extra_dimensions) : IntegrationType(extra_dimensions) {}
-protected:
+    RadialIntegrationType(const size_t extra_dimensions) : IntegrationType(extra_dimensions) {assert(extra_dimensions % 2 == 0);}
+    void fill_min(IntegrationContext& ictx, const size_t core_dimensions, double* min) const;
+    void fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const;
+};
+
+class RadialPositionIntegrationType : public RadialIntegrationType {
+public:
+    RadialPositionIntegrationType(const size_t extra_dimensions) : RadialIntegrationType(extra_dimensions) {}
+    void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
+};
+
+class RadialMomentumIntegrationType : public RadialIntegrationType {
+public:
+    RadialMomentumIntegrationType(const size_t extra_dimensions) : RadialIntegrationType(extra_dimensions) {}
+    void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
+};
+
+class AngleIndependentPositionIntegrationType : public IntegrationType {
+public:
+    AngleIndependentPositionIntegrationType(const size_t extra_dimensions) : IntegrationType(extra_dimensions) {}
     void fill_min(IntegrationContext& ictx, const size_t core_dimensions, double* min) const;
     void fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const;
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };
 
+class QLimitedMomentumIntegrationType : public RadialMomentumIntegrationType {
+public:
+    QLimitedMomentumIntegrationType(const size_t extra_dimensions) : RadialMomentumIntegrationType(extra_dimensions) {}
+    void fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const;
+    void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
+};
 
 #endif

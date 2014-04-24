@@ -88,6 +88,8 @@ void NoIntegrationType::update(IntegrationContext& ictx, const size_t core_dimen
     ictx.update_parton_functions();
 }
 
+
+
 /*
  * For these integration types, xiprime is taken to be the coordinate that
  * follows y (in the "2D" case) or z (in the "1D" case).
@@ -145,10 +147,61 @@ void RadialIntegrationType::fill_min(IntegrationContext& ictx, const size_t core
 void RadialIntegrationType::fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const {
     size_t i = 0;
     while (i < core_dimensions) { max[i++] = 1; }
-    while (i < core_dimensions + extra_dimensions) { max[i++] = ictx.ctx->inf; }
+    while (i < core_dimensions + extra_dimensions) {
+        max[i++] = ictx.ctx->inf;
+        max[i++] = 2 * M_PI;
+    }
 }
 
-void RadialIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
+void RadialPositionIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
+    assert(core_dimensions == 1 || core_dimensions == 2);
+    ictx.update_kinematics(values[0], values[1], core_dimensions);
+    ictx.update_positions(
+        extra_dimensions > 0 ? values[core_dimensions + 0] * cos(values[core_dimensions + 1]) : 0,
+        extra_dimensions > 0 ? values[core_dimensions + 0] * sin(values[core_dimensions + 1]) : 0,
+        extra_dimensions > 2 ? values[core_dimensions + 2] * cos(values[core_dimensions + 3]) : 0,
+        extra_dimensions > 2 ? values[core_dimensions + 2] * sin(values[core_dimensions + 3]) : 0,
+        extra_dimensions > 4 ? values[core_dimensions + 4] * cos(values[core_dimensions + 5]) : 0,
+        extra_dimensions > 4 ? values[core_dimensions + 4] * sin(values[core_dimensions + 5]) : 0
+    );
+    ictx.update_parton_functions();
+}
+
+void RadialMomentumIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
+    assert(core_dimensions == 1 || core_dimensions == 2);
+    ictx.update_kinematics(values[0], values[1], core_dimensions);
+    ictx.update_momenta(
+        extra_dimensions > 0 ? values[core_dimensions + 0] * cos(values[core_dimensions + 1]) : 0,
+        extra_dimensions > 0 ? values[core_dimensions + 0] * sin(values[core_dimensions + 1]) : 0,
+        extra_dimensions > 2 ? values[core_dimensions + 2] * cos(values[core_dimensions + 3]) : 0,
+        extra_dimensions > 2 ? values[core_dimensions + 2] * sin(values[core_dimensions + 3]) : 0,
+        extra_dimensions > 4 ? values[core_dimensions + 4] * cos(values[core_dimensions + 5]) : 0,
+        extra_dimensions > 4 ? values[core_dimensions + 4] * sin(values[core_dimensions + 5]) : 0
+    );
+    ictx.update_parton_functions();
+}
+
+void AngleIndependentPositionIntegrationType::fill_min(IntegrationContext& ictx, const size_t core_dimensions, double* min) const {
+    assert(ictx.ctx->tau < 1);
+    assert(ictx.ctx->tauhat < 1);
+    assert(core_dimensions == 1 || core_dimensions == 2);
+    size_t i = 0;
+    min[i++] = ictx.ctx->exact_kinematics ? ictx.ctx->tauhat : ictx.ctx->tau;
+    if (core_dimensions == 2) {
+        min[i++] = ictx.ctx->tau;
+    }
+    while (i < core_dimensions + extra_dimensions) { min[i++] = 0; }
+}
+
+void AngleIndependentPositionIntegrationType::fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const {
+    size_t i = 0;
+    while (i < core_dimensions) { max[i++] = 1; }
+    while (i < core_dimensions + extra_dimensions) {
+        max[i++] = ictx.ctx->inf;
+    }
+}
+
+void AngleIndependentPositionIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     assert(core_dimensions == 1 || core_dimensions == 2);
     ictx.update_kinematics(values[0], values[1], core_dimensions);
     ictx.update_positions(
@@ -158,6 +211,31 @@ void RadialIntegrationType::update(IntegrationContext& ictx, const size_t core_d
         0,
         extra_dimensions > 2 ? values[core_dimensions + 2] : 0,
         0
+    );
+    ictx.update_parton_functions();
+}
+
+void QLimitedMomentumIntegrationType::fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const {
+    size_t i = 0;
+    while (i < core_dimensions) { max[i++] = 1; }
+    while (i < core_dimensions + extra_dimensions) {
+        max[i++] = 1;
+        max[i++] = 2 * M_PI;
+    }
+}
+
+void QLimitedMomentumIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
+    // the thing in the array is a scaled integration variable between 0 and 1, so convert it to q
+    assert(core_dimensions == 1 || core_dimensions == 2);
+    ictx.update_kinematics(values[0], values[1], core_dimensions);
+    double qmax = sqrt(ictx.kT * (ictx.ctx->sqs * exp(ictx.ctx->Y) - ictx.kT) * (1 - ictx.xi) / ictx.xi);
+    ictx.update_momenta(
+        extra_dimensions > 0 ? qmax * values[core_dimensions + 0] * cos(values[core_dimensions + 1]) + ictx.kT : 0,
+        extra_dimensions > 0 ? qmax * values[core_dimensions + 0] * sin(values[core_dimensions + 1]) : 0,
+        extra_dimensions > 2 ? qmax * values[core_dimensions + 2] * cos(values[core_dimensions + 3]) + ictx.kT : 0,
+        extra_dimensions > 2 ? qmax * values[core_dimensions + 2] * sin(values[core_dimensions + 3]) : 0,
+        extra_dimensions > 4 ? qmax * values[core_dimensions + 4] * cos(values[core_dimensions + 5]) + ictx.kT : 0,
+        extra_dimensions > 4 ? qmax * values[core_dimensions + 4] * sin(values[core_dimensions + 5]) : 0
     );
     ictx.update_parton_functions();
 }

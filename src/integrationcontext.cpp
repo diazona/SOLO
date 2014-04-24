@@ -59,7 +59,6 @@ void IntegrationContext::update_kinematics(double z, double y, size_t core_dimen
         if (ctx->exact_kinematics) {
             this->xi = (y - ctx->tau) * (1 - xg - ctx->tau / z) / (1 - ctx->tau) + ctx->tau / z;
             assert(xi < 1);
-            assert(xi <= 1 - xg);
         }
         else {
             if (y == 1.0) {

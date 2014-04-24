@@ -32,6 +32,7 @@ static const MomentumIntegrationType momentum2(4);
 static const MomentumIntegrationType momentum3(6);
 static const XiPIntegrationType momentumxip1(3);
 static const XiPIntegrationType momentumxip2(5);
+static const QLimitedMomentumIntegrationType qlim(2);
 
 class H02qq : public HardFactorTerm {
 public:
@@ -142,7 +143,7 @@ public:
         return "H1qqExact";
     }
     const IntegrationType* get_type() const {
-        return &momentum1;
+        return &qlim;
     }
     void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
 };
@@ -246,7 +247,7 @@ public:
         return "H1ggExact";
     }
     const IntegrationType* get_type() const {
-        return &momentum1;
+        return &qlim;
     }
     void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
 };
