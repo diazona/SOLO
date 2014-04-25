@@ -258,6 +258,7 @@ void AngleIndependentPositionIntegrationType::fill_max(IntegrationContext& ictx,
 double AngleIndependentPositionIntegrationType::jacobian(IntegrationContext& ictx, const size_t core_dimensions) const {
     assert(extra_dimensions <= 3);
     double jacobian = IntegrationType::jacobian(ictx, core_dimensions); // y to xi
+    jacobian *= 2 * M_PI;
     // now (r,theta) to (x,y)
     if (extra_dimensions > 0) {
         assert(ictx.xy == 0);
