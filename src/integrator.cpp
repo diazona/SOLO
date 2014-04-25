@@ -103,6 +103,7 @@ void Integrator::update2D(const double* values) {
 void Integrator::evaluate_1D_integrand(double* real, double* imag) {
     double l_real = 0.0, l_imag = 0.0; // l for "local"
     double t_real, t_imag;             // t for temporary
+    double jacobian = current_type->jacobian(ictx, 1);
     double log_factor = log(1 - ictx.ctx->tau / ictx.z);
     checkfinite(log_factor);
     HardFactorTermList& current_terms = terms[current_type];
@@ -126,17 +127,16 @@ void Integrator::evaluate_1D_integrand(double* real, double* imag) {
         }
     }
     if (callback) {
-        callback(&ictx, l_real, l_imag);
+        callback(&ictx, jacobian * l_real, jacobian * l_imag);
     }
-    *real = l_real;
-    *imag = l_imag;
+    *real = jacobian * l_real;
+    *imag = jacobian * l_imag;
 }
 
 void Integrator::evaluate_2D_integrand(double* real, double* imag) {
     double l_real = 0.0, l_imag = 0.0; // l for "local"
     double t_real, t_imag;             // t for temporary
-    double jacobian; // Jacobian from y to xi
-    jacobian = (1 - (ictx.ctx->exact_kinematics ? ictx.xg : 0) - ictx.ctx->tau / ictx.z) / (1 - ictx.ctx->tau);
+    double jacobian = current_type->jacobian(ictx, 2);
     checkfinite(jacobian);
     double xi_factor = 1.0 / (1 - ictx.xi);
     checkfinite(xi_factor);

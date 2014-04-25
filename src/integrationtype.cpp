@@ -18,8 +18,11 @@
  */
 
 #include <cassert>
+#include <gsl/gsl_sys.h>
 #include <typeinfo>
 #include "integrationtype.h"
+
+#define checkfinite(d) assert(gsl_finite(d))
 
 bool compare_integration_types(const IntegrationType* a, const IntegrationType* b) {
     if (typeid(*a) == typeid(*b)) {
@@ -40,6 +43,18 @@ bool compare_integration_types(const IntegrationType* a, const IntegrationType* 
  * and so on.
  */
 
+// jacobian from y to xi
+double IntegrationType::jacobian(IntegrationContext& ictx, const size_t core_dimensions) const {
+    if (core_dimensions == 2) {
+        double jacobian = (1 - ictx.ctx->tau / ictx.z) / (1 - ictx.ctx->tau);
+        checkfinite(jacobian);
+        return jacobian;
+    }
+    else {
+        return 1;
+    }
+}
+
 void PlainIntegrationType::fill_min(IntegrationContext& ictx, const size_t core_dimensions, double* min) const {
     assert(ictx.ctx->tau < 1);
     assert(ictx.ctx->tauhat < 1);
@@ -56,6 +71,7 @@ void PlainIntegrationType::fill_max(IntegrationContext& ictx, const size_t core_
     while (i < core_dimensions) { max[i++] = 1; }
     while (i < core_dimensions + extra_dimensions) { max[i++] = ictx.ctx->inf; }
 }
+
 void PositionIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     assert(core_dimensions == 1 || core_dimensions == 2);
     ictx.update_kinematics(values[0], values[1], core_dimensions);
@@ -153,6 +169,25 @@ void RadialIntegrationType::fill_max(IntegrationContext& ictx, const size_t core
     }
 }
 
+double RadialPositionIntegrationType::jacobian(IntegrationContext& ictx, const size_t core_dimensions) const {
+    assert(extra_dimensions <= 6);
+    double jacobian = IntegrationType::jacobian(ictx, core_dimensions); // y to xi
+    // now (r,theta) to (x,y)
+    if (extra_dimensions > 0) {
+        assert(extra_dimensions > 1);
+        jacobian *= gsl_hypot(ictx.xx, ictx.xy);
+    }
+    if (extra_dimensions > 2) {
+        assert(extra_dimensions > 3);
+        jacobian *= gsl_hypot(ictx.yx, ictx.yy);
+    }
+    if (extra_dimensions > 4) {
+        assert(extra_dimensions > 5);
+        jacobian *= gsl_hypot(ictx.bx, ictx.by);
+    }
+    checkfinite(jacobian);
+    return jacobian;
+}
 void RadialPositionIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     assert(core_dimensions == 1 || core_dimensions == 2);
     ictx.update_kinematics(values[0], values[1], core_dimensions);
@@ -167,6 +202,25 @@ void RadialPositionIntegrationType::update(IntegrationContext& ictx, const size_
     ictx.update_parton_functions();
 }
 
+double RadialMomentumIntegrationType::jacobian(IntegrationContext& ictx, const size_t core_dimensions) const {
+    assert(extra_dimensions <= 6);
+    double jacobian = IntegrationType::jacobian(ictx, core_dimensions); // y to xi
+    // now (r,theta) to (x,y)
+    if (extra_dimensions > 0) {
+        assert(extra_dimensions > 1);
+        jacobian *= sqrt(ictx.q12);
+    }
+    if (extra_dimensions > 2) {
+        assert(extra_dimensions > 3);
+        jacobian *= sqrt(ictx.q22);
+    }
+    if (extra_dimensions > 4) {
+        assert(extra_dimensions > 5);
+        jacobian *= sqrt(ictx.q32);
+    }
+    checkfinite(jacobian);
+    return jacobian;
+}
 void RadialMomentumIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     assert(core_dimensions == 1 || core_dimensions == 2);
     ictx.update_kinematics(values[0], values[1], core_dimensions);
@@ -201,6 +255,25 @@ void AngleIndependentPositionIntegrationType::fill_max(IntegrationContext& ictx,
     }
 }
 
+double AngleIndependentPositionIntegrationType::jacobian(IntegrationContext& ictx, const size_t core_dimensions) const {
+    assert(extra_dimensions <= 3);
+    double jacobian = IntegrationType::jacobian(ictx, core_dimensions); // y to xi
+    // now (r,theta) to (x,y)
+    if (extra_dimensions > 0) {
+        assert(ictx.xy == 0);
+        jacobian *= ictx.xx;
+    }
+    if (extra_dimensions > 1) {
+        assert(ictx.yy == 0);
+        jacobian *= ictx.yx;
+    }
+    if (extra_dimensions > 2) {
+        assert(ictx.by == 0);
+        jacobian *= ictx.bx;
+    }
+    checkfinite(jacobian);
+    return jacobian;
+}
 void AngleIndependentPositionIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     assert(core_dimensions == 1 || core_dimensions == 2);
     ictx.update_kinematics(values[0], values[1], core_dimensions);
@@ -222,6 +295,17 @@ void QLimitedMomentumIntegrationType::fill_max(IntegrationContext& ictx, const s
         max[i++] = 1;
         max[i++] = 2 * M_PI;
     }
+}
+
+double QLimitedMomentumIntegrationType::jacobian(IntegrationContext& ictx, const size_t core_dimensions) const {
+    double jacobian = RadialMomentumIntegrationType::jacobian(ictx, core_dimensions);
+    double qmax = sqrt(ictx.kT * (ictx.ctx->sqs * exp(ictx.ctx->Y) - ictx.kT) * (1 - ictx.xi) / ictx.xi);
+    checkfinite(qmax);
+    for (size_t i = 0; i < extra_dimensions; i++) {
+        jacobian *= qmax;
+    }
+    checkfinite(jacobian);
+    return jacobian;
 }
 
 void QLimitedMomentumIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {

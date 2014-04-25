@@ -23,9 +23,16 @@
 #include "integrationcontext.h"
 
 /**
- * Represents a particular integration region: a combination of the
- * number of dimensions being integrated over and the bounds in each
- * of those dimensions.
+ * Represents the properties of an integration region.
+ *
+ * An instance of this class is responsible for setting the number
+ * of variables being integrated over and effectively specifying which
+ * variables those are. In particular, it needs to set bounds on each
+ * variable, and also translate the Monte Carlo integration variables
+ * (which must have constant bounds) to the kinematic variables (whose
+ * bounds can depend on each other) by calculating the jacobian determinant
+ * and setting the value of the kinematic variables using provided values
+ * of the integration variables.
  */
 class IntegrationType {
 public:
@@ -42,6 +49,13 @@ public:
      * `max` using information from the `IntegrationContext`.
      */
     virtual void fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const = 0;
+    /**
+     * Calculates the jacobian determinant to convert from the variables being
+     * integrated over to the variables involved in the calculation.
+     *
+     * This gets called after `update()` at each step of the calculation.
+     */
+    virtual double jacobian(IntegrationContext& ictx, const size_t core_dimensions) const;
     /**
      * Updates the variables in the `IntegrationContext` based on the `values`,
      * which were passed in from the Monte Carlo integration routine.
@@ -127,12 +141,14 @@ public:
 class RadialPositionIntegrationType : public RadialIntegrationType {
 public:
     RadialPositionIntegrationType(const size_t extra_dimensions) : RadialIntegrationType(extra_dimensions) {}
+    double jacobian(IntegrationContext& ictx, const size_t core_dimensions) const;
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };
 
 class RadialMomentumIntegrationType : public RadialIntegrationType {
 public:
     RadialMomentumIntegrationType(const size_t extra_dimensions) : RadialIntegrationType(extra_dimensions) {}
+    double jacobian(IntegrationContext& ictx, const size_t core_dimensions) const;
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };
 
@@ -141,6 +157,7 @@ public:
     AngleIndependentPositionIntegrationType(const size_t extra_dimensions) : IntegrationType(extra_dimensions) {}
     void fill_min(IntegrationContext& ictx, const size_t core_dimensions, double* min) const;
     void fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const;
+    double jacobian(IntegrationContext& ictx, const size_t core_dimensions) const;
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };
 
@@ -148,6 +165,7 @@ class QLimitedMomentumIntegrationType : public RadialMomentumIntegrationType {
 public:
     QLimitedMomentumIntegrationType(const size_t extra_dimensions) : RadialMomentumIntegrationType(extra_dimensions) {}
     void fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const;
+    double jacobian(IntegrationContext& ictx, const size_t core_dimensions) const;
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };
 
