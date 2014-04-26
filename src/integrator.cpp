@@ -111,20 +111,16 @@ void Integrator::evaluate_1D_integrand(double* real, double* imag) {
     assert(ictx.xi == 1.0d);
     for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
         const HardFactorTerm* h = (*it);
-        if (!ictx.ctx->exact_kinematics) {
-            h->Fs(&ictx, &t_real, &t_imag);
-            checkfinite(t_real);
-            checkfinite(t_imag);
-            l_real += t_real * log_factor;
-            l_imag += t_imag * log_factor;
-        }
-        if (!ictx.ctx->exact_kinematics || h->get_order() == HardFactor::LO) {
-            h->Fd(&ictx, &t_real, &t_imag);
-            checkfinite(t_real);
-            checkfinite(t_imag);
-            l_real += t_real;
-            l_imag += t_imag;
-        }
+        h->Fs(&ictx, &t_real, &t_imag);
+        checkfinite(t_real);
+        checkfinite(t_imag);
+        l_real += t_real * log_factor;
+        l_imag += t_imag * log_factor;
+        h->Fd(&ictx, &t_real, &t_imag);
+        checkfinite(t_real);
+        checkfinite(t_imag);
+        l_real += t_real;
+        l_imag += t_imag;
     }
     if (callback) {
         callback(&ictx, jacobian * l_real, jacobian * l_imag);
@@ -177,16 +173,14 @@ void Integrator::evaluate_2D_integrand(double* real, double* imag) {
     if (callback) {
         callback(&ictx, jacobian * l_real, jacobian * l_imag);
     }
-    if (!ictx.ctx->exact_kinematics) {
-        ictx.set_xi_to_1(2);
-        for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
-            const HardFactorTerm* h = (*it);
-            h->Fs(&ictx, &t_real, &t_imag);
-            checkfinite(t_real);
-            checkfinite(t_imag);
-            l_real -= t_real * xi_factor;
-            l_imag -= t_imag * xi_factor;
-        }
+    ictx.set_xi_to_1(2);
+    for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
+        const HardFactorTerm* h = (*it);
+        h->Fs(&ictx, &t_real, &t_imag);
+        checkfinite(t_real);
+        checkfinite(t_imag);
+        l_real -= t_real * xi_factor;
+        l_imag -= t_imag * xi_factor;
     }
     if (callback) {
         callback(&ictx, jacobian * l_real, jacobian * l_imag);
