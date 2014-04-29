@@ -26,7 +26,7 @@
 
 #define checkfinite(d) assert(gsl_finite(d))
 
-void IntegrationContext::update_kinematics(double z, double y, size_t core_dimensions) {
+void IntegrationContext::update_kinematics(double z, double xi, size_t core_dimensions) {
     /* when using exact kinematics (ctx->exact_kinematics is true),
      *  core_dimensions == 1 means we are calculating an LO term
      *  core_dimensions == 2 means we are calculating an NLO term
@@ -45,33 +45,7 @@ void IntegrationContext::update_kinematics(double z, double y, size_t core_dimen
     this->kT2 = ctx->pT2 / this->z2;
     this->kT = sqrt(this->kT2);
     this->xg = kT / ctx->sqs * exp(-ctx->Y); // doubles as \hat{x}_a
-
-    if (core_dimensions == 1) {
-        /* When calculating LO terms, or NLO terms in exact kinematics, this shouldn't matter
-         * When calculating NLO terms using approximate kinematics, this needs to be 1
-         */
-        this->xi = 1;
-    }
-    else {
-        // all accesses of y are within this block
-        assert(y <= 1);
-        assert(y >= ctx->tau);
-        if (ctx->exact_kinematics) {
-            this->xi = (y - ctx->tau) * (1 - xg - ctx->tau / z) / (1 - ctx->tau) + ctx->tau / z;
-            assert(xi < 1);
-        }
-        else {
-            if (y == 1.0) {
-                // if y == 1 then the formula should set xi = 1 but sometimes it doesn't
-                // because of floating point roundoff error, so do that manually
-                this->xi = 1.0;
-            }
-            else {
-                this->xi = (y * (z - ctx->tau) - ctx->tau * (z - 1)) / (z * (1 - ctx->tau));
-                assert(xi <= 1);
-            }
-        }
-    }
+    this->xi = xi;
     this->xi2 = xi*xi;
 
     this->xp = ctx->tau / (this->z * xi);

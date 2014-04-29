@@ -33,6 +33,37 @@ bool compare_integration_types(const IntegrationType* a, const IntegrationType* 
     }
 }
 
+static double xi_zy(const Context* const ctx, size_t core_dimensions, double z, double y) {
+    if (core_dimensions == 1) {
+        /* When calculating LO terms, or NLO terms in exact kinematics, this shouldn't matter
+         * When calculating NLO terms using approximate kinematics, this needs to be 1
+         */
+        return 1;
+    }
+    else {
+        assert(y <= 1);
+        assert(y >= ctx->tau);
+        double xi;
+        double xahat = sqrt(ctx->pT2) / (z * ctx->sqs) * exp(-ctx->Y);
+        if (ctx->exact_kinematics) {
+            xi = (y - ctx->tau) * (1 - xahat - ctx->tau / z) / (1 - ctx->tau) + ctx->tau / z;
+            assert(xi < 1);
+        }
+        else {
+            if (y == 1.0) {
+                // if y == 1 then the formula should set xi = 1 but sometimes it doesn't
+                // because of floating point roundoff error, so do that manually
+                xi = 1.0;
+            }
+            else {
+                xi = (y * (z - ctx->tau) - ctx->tau * (z - 1)) / (z * (1 - ctx->tau));
+                assert(xi <= 1);
+            }
+        }
+        return xi;
+    }
+}
+
 /*
  * In general, the values passed as the third argument to update() are interpreted as
  *  values[0]: z
@@ -74,7 +105,7 @@ void PlainIntegrationType::fill_max(const Context* const ctx, const size_t core_
 
 void PositionIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     assert(core_dimensions == 1 || core_dimensions == 2);
-    ictx.update_kinematics(values[0], values[1], core_dimensions);
+    ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
     ictx.update_positions(
         extra_dimensions > 0 ? values[core_dimensions + 0] : 0,
         extra_dimensions > 1 ? values[core_dimensions + 1] : 0,
@@ -87,7 +118,7 @@ void PositionIntegrationType::update(IntegrationContext& ictx, const size_t core
 }
 void MomentumIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     assert(core_dimensions == 1 || core_dimensions == 2);
-    ictx.update_kinematics(values[0], values[1], core_dimensions);
+    ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
     ictx.update_momenta(
         extra_dimensions > 0 ? values[core_dimensions + 0] : 0,
         extra_dimensions > 1 ? values[core_dimensions + 1] : 0,
@@ -100,7 +131,7 @@ void MomentumIntegrationType::update(IntegrationContext& ictx, const size_t core
 }
 
 void NoIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
-    ictx.update_kinematics(values[0], values[1], core_dimensions);
+    ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
     ictx.update_parton_functions();
 }
 
@@ -132,7 +163,7 @@ void XiPIntegrationType::fill_max(const Context* const ctx, const size_t core_di
 
 void XiPIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     assert(core_dimensions == 1 || core_dimensions == 2);
-    ictx.update_kinematics(values[0], values[1], core_dimensions);
+    ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
     ictx.update_auxiliary(values[core_dimensions]);
     ictx.update_momenta(
         extra_dimensions > 1 ? values[core_dimensions + 1] : 0,
@@ -190,7 +221,7 @@ double RadialPositionIntegrationType::jacobian(IntegrationContext& ictx, const s
 }
 void RadialPositionIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     assert(core_dimensions == 1 || core_dimensions == 2);
-    ictx.update_kinematics(values[0], values[1], core_dimensions);
+    ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
     ictx.update_positions(
         extra_dimensions > 0 ? values[core_dimensions + 0] * cos(values[core_dimensions + 1]) : 0,
         extra_dimensions > 0 ? values[core_dimensions + 0] * sin(values[core_dimensions + 1]) : 0,
@@ -223,7 +254,7 @@ double RadialMomentumIntegrationType::jacobian(IntegrationContext& ictx, const s
 }
 void RadialMomentumIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     assert(core_dimensions == 1 || core_dimensions == 2);
-    ictx.update_kinematics(values[0], values[1], core_dimensions);
+    ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
     ictx.update_momenta(
         extra_dimensions > 0 ? values[core_dimensions + 0] * cos(values[core_dimensions + 1]) : 0,
         extra_dimensions > 0 ? values[core_dimensions + 0] * sin(values[core_dimensions + 1]) : 0,
@@ -277,7 +308,7 @@ double AngleIndependentPositionIntegrationType::jacobian(IntegrationContext& ict
 }
 void AngleIndependentPositionIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     assert(core_dimensions == 1 || core_dimensions == 2);
-    ictx.update_kinematics(values[0], values[1], core_dimensions);
+    ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
     ictx.update_positions(
         extra_dimensions > 0 ? values[core_dimensions + 0] : 0,
         0,
@@ -312,7 +343,7 @@ double QLimitedMomentumIntegrationType::jacobian(IntegrationContext& ictx, const
 void QLimitedMomentumIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     // the thing in the array is a scaled integration variable between 0 and 1, so convert it to q
     assert(core_dimensions == 1 || core_dimensions == 2);
-    ictx.update_kinematics(values[0], values[1], core_dimensions);
+    ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
     double qmax = sqrt(ictx.kT * (ictx.ctx->sqs * exp(ictx.ctx->Y) - ictx.kT) * (1 - ictx.xi) / ictx.xi);
     ictx.update_momenta(
         extra_dimensions > 0 ? qmax * values[core_dimensions + 0] * cos(values[core_dimensions + 1]) + ictx.kT : 0,
