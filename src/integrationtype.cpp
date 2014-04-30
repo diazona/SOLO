@@ -33,6 +33,26 @@ bool compare_integration_types(const IntegrationType* a, const IntegrationType* 
     }
 }
 
+static inline double zmax(const Context* const ctx) {
+    return 1;
+}
+static inline double zmin(const Context* const ctx) {
+    return ctx->exact_kinematics ? ctx->tauhat : ctx->tau;
+}
+static inline double ximax(const Context* const ctx, const double z) {
+    const double xahat = sqrt(ctx->pT2) / (z * ctx->sqs) * exp(-ctx->Y);
+    return ctx->exact_kinematics ? 1 - xahat : 1;
+}
+static inline double ximin(const Context* const ctx, const double z) {
+    return ctx->tau / z;
+}
+static inline double ymax(const Context* const ctx) {
+    return 1;
+}
+static inline double ymin(const Context* const ctx) {
+    return ctx->tau;
+}
+
 static double xi_zy(const Context* const ctx, size_t core_dimensions, double z, double y) {
     if (core_dimensions == 1) {
         /* When calculating LO terms, or NLO terms in exact kinematics, this shouldn't matter
@@ -44,22 +64,15 @@ static double xi_zy(const Context* const ctx, size_t core_dimensions, double z, 
         assert(y <= 1);
         assert(y >= ctx->tau);
         double xi;
-        double xahat = sqrt(ctx->pT2) / (z * ctx->sqs) * exp(-ctx->Y);
-        if (ctx->exact_kinematics) {
-            xi = (y - ctx->tau) * (1 - xahat - ctx->tau / z) / (1 - ctx->tau) + ctx->tau / z;
-            assert(xi < 1);
+        if (y == ymax(ctx)) {
+            // if y == 1 then the formula should set xi = 1 but sometimes it doesn't
+            // because of floating point roundoff error, so do that manually
+            xi = ximax(ctx, z);
         }
         else {
-            if (y == 1.0) {
-                // if y == 1 then the formula should set xi = 1 but sometimes it doesn't
-                // because of floating point roundoff error, so do that manually
-                xi = 1.0;
-            }
-            else {
-                xi = (y * (z - ctx->tau) - ctx->tau * (z - 1)) / (z * (1 - ctx->tau));
-                assert(xi <= 1);
-            }
+            xi = (y - ymin(ctx)) * (ximax(ctx, z) - ximin(ctx, z)) / (ymax(ctx) - ymin(ctx)) + ximin(ctx, z);
         }
+        assert(ctx->exact_kinematics ? (xi < 1) : (xi <= 1));
         return xi;
     }
 }
@@ -77,7 +90,7 @@ static double xi_zy(const Context* const ctx, size_t core_dimensions, double z, 
 // jacobian from y to xi
 double IntegrationType::jacobian(IntegrationContext& ictx, const size_t core_dimensions) const {
     if (core_dimensions == 2) {
-        double jacobian = (1 - ictx.ctx->tau / ictx.z) / (1 - ictx.ctx->tau);
+        double jacobian = (ximax(ictx.ctx, ictx.z) - ximin(ictx.ctx, ictx.z)) / (ymax(ictx.ctx) - ymin(ictx.ctx));
         checkfinite(jacobian);
         return jacobian;
     }
@@ -91,15 +104,19 @@ void PlainIntegrationType::fill_min(const Context* const ctx, const size_t core_
     assert(ctx->tauhat < 1);
     assert(core_dimensions == 1 || core_dimensions == 2);
     size_t i = 0;
-    min[i++] = ctx->exact_kinematics ? ctx->tauhat : ctx->tau;
+    min[i++] = zmin(ctx);
     if (core_dimensions == 2) {
-        min[i++] = ctx->tau;
+        min[i++] = ymin(ctx);
     }
     while (i < core_dimensions + extra_dimensions) { min[i++] = -ctx->inf; }
 }
 void PlainIntegrationType::fill_max(const Context* const ctx, const size_t core_dimensions, double* max) const {
+    assert(core_dimensions == 1 || core_dimensions == 2);
     size_t i = 0;
-    while (i < core_dimensions) { max[i++] = 1; }
+    max[i++] = zmax(ctx);
+    if (core_dimensions == 2) {
+        max[i++] = ymax(ctx);
+    }
     while (i < core_dimensions + extra_dimensions) { max[i++] = ctx->inf; }
 }
 
@@ -147,17 +164,21 @@ void XiPIntegrationType::fill_min(const Context* const ctx, const size_t core_di
     assert(ctx->tauhat < 1);
     assert(core_dimensions == 1 || core_dimensions == 2);
     size_t i = 0;
-    min[i++] = ctx->exact_kinematics ? ctx->tauhat : ctx->tau;
+    min[i++] = zmin(ctx);
     if (core_dimensions == 2) {
-        min[i++] = ctx->tau;
+        min[i++] = ymin(ctx);
     }
-    min[i++] = 0;
+    min[i++] = 0; // xiprime
     while (i < core_dimensions + extra_dimensions) { min[i++] = -ctx->inf; }
 }
 void XiPIntegrationType::fill_max(const Context* const ctx, const size_t core_dimensions, double* max) const {
+    assert(core_dimensions == 1 || core_dimensions == 2);
     size_t i = 0;
-    while (i < core_dimensions) { max[i++] = 1; }
-    max[i++] = 1;
+    max[i++] = zmax(ctx);
+    if (core_dimensions == 2) {
+        max[i++] = ymax(ctx);
+    }
+    max[i++] = 1; // xiprime
     while (i < core_dimensions + extra_dimensions) { max[i++] = ctx->inf; }
 }
 
@@ -185,15 +206,19 @@ void RadialIntegrationType::fill_min(const Context* const ctx, const size_t core
     assert(ctx->tauhat < 1);
     assert(core_dimensions == 1 || core_dimensions == 2);
     size_t i = 0;
-    min[i++] = ctx->exact_kinematics ? ctx->tauhat : ctx->tau;
+    min[i++] = zmin(ctx);
     if (core_dimensions == 2) {
-        min[i++] = ctx->tau;
+        min[i++] = ymin(ctx);
     }
     while (i < core_dimensions + extra_dimensions) { min[i++] = 0; }
 }
 void RadialIntegrationType::fill_max(const Context* const ctx, const size_t core_dimensions, double* max) const {
+    assert(core_dimensions == 1 || core_dimensions == 2);
     size_t i = 0;
-    while (i < core_dimensions) { max[i++] = 1; }
+    max[i++] = zmax(ctx);
+    if (core_dimensions == 2) {
+        max[i++] = ymax(ctx);
+    }
     while (i < core_dimensions + extra_dimensions) {
         max[i++] = ctx->inf;
         max[i++] = 2 * M_PI;
@@ -271,16 +296,20 @@ void AngleIndependentPositionIntegrationType::fill_min(const Context*const ctx, 
     assert(ctx->tauhat < 1);
     assert(core_dimensions == 1 || core_dimensions == 2);
     size_t i = 0;
-    min[i++] = ctx->exact_kinematics ? ctx->tauhat : ctx->tau;
+    min[i++] = zmin(ctx);
     if (core_dimensions == 2) {
-        min[i++] = ctx->tau;
+        min[i++] = ymin(ctx);
     }
     while (i < core_dimensions + extra_dimensions) { min[i++] = 0; }
 }
 
 void AngleIndependentPositionIntegrationType::fill_max(const Context* const ctx, const size_t core_dimensions, double* max) const {
+    assert(core_dimensions == 1 || core_dimensions == 2);
     size_t i = 0;
-    while (i < core_dimensions) { max[i++] = 1; }
+    max[i++] = zmax(ctx);
+    if (core_dimensions == 2) {
+        max[i++] = ymax(ctx);
+    }
     while (i < core_dimensions + extra_dimensions) {
         max[i++] = ctx->inf;
     }
@@ -321,8 +350,12 @@ void AngleIndependentPositionIntegrationType::update(IntegrationContext& ictx, c
 }
 
 void QLimitedMomentumIntegrationType::fill_max(const Context*const ctx, const size_t core_dimensions, double* max) const {
+    assert(core_dimensions == 1 || core_dimensions == 2);
     size_t i = 0;
-    while (i < core_dimensions) { max[i++] = 1; }
+    max[i++] = zmax(ctx);
+    if (core_dimensions == 2) {
+        max[i++] = ymax(ctx);
+    }
     while (i < core_dimensions + extra_dimensions) {
         max[i++] = 1;
         max[i++] = 2 * M_PI;

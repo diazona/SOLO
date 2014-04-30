@@ -36,9 +36,8 @@ void IntegrationContext::update_kinematics(double z, double xi, size_t core_dime
      *  core_dimensions == 2 still means we are calculating an NLO term
      */
     assert(core_dimensions == 1 || core_dimensions == 2);
-    // for exact kinematics, tauhat < z < 1 and tau < y < 1
     assert(z <= 1);
-    assert(z >= ctx->exact_kinematics ? ctx->tauhat : ctx->tau);
+    assert(z >= ctx->tau);
 
     this->z = z;
     this->z2 = this->z*this->z;
