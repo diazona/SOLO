@@ -867,6 +867,12 @@ int run(int argc, char** argv) {
         }
     }
 
+#ifdef EXACT_LIMIT_SCHEME
+    cout << "# EXACT_LIMIT_SCHEME = " << EXACT_LIMIT_SCHEME << endl;
+#else
+    cout << "# EXACT_LIMIT_SCHEME undefined" << endl;
+#endif
+
     cout << cc << "------------" << endl;
     
     cc.create_contexts();

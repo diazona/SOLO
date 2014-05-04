@@ -36,12 +36,23 @@ bool compare_integration_types(const IntegrationType* a, const IntegrationType* 
 static inline double zmax(const Context* const ctx) {
     return 1;
 }
+/* EXACT_LIMIT_SCHEME == 0 or undefined means to use Bowen's set of integral
+ * limits for exact kinematics; any other value means to use mine
+ */
 static inline double zmin(const Context* const ctx) {
+#if !defined(EXACT_LIMIT_SCHEME) || EXACT_LIMIT_SCHEME == 0
     return ctx->exact_kinematics ? ctx->tauhat : ctx->tau;
+#else
+    return ctx->tau;
+#endif
 }
 static inline double ximax(const Context* const ctx, const double z) {
+#if !defined(EXACT_LIMIT_SCHEME) || EXACT_LIMIT_SCHEME == 0
     const double xahat = sqrt(ctx->pT2) / (z * ctx->sqs) * exp(-ctx->Y);
     return ctx->exact_kinematics ? 1 - xahat : 1;
+#else
+    return 1;
+#endif
 }
 static inline double ximin(const Context* const ctx, const double z) {
     return ctx->tau / z;
