@@ -41,14 +41,14 @@ public:
     IntegrationType(const size_t extra_dimensions) : extra_dimensions(extra_dimensions) {}
     /**
      * Writes the lower bounds of the integration region into the array
-     * `min` using information from the `IntegrationContext`.
+     * `min` using information from the `Context`.
      */
-    virtual void fill_min(IntegrationContext& ictx, const size_t core_dimensions, double* min) const = 0;
+    virtual void fill_min(const Context* const ctx, const size_t core_dimensions, double* min) const = 0;
     /**
      * Writes the upper bounds of the integration region into the array
-     * `max` using information from the `IntegrationContext`.
+     * `max` using information from the `Context`.
      */
-    virtual void fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const = 0;
+    virtual void fill_max(const Context* const ctx, const size_t core_dimensions, double* max) const = 0;
     /**
      * Calculates the jacobian determinant to convert from the variables being
      * integrated over to the variables involved in the calculation.
@@ -77,8 +77,8 @@ bool compare_integration_types(const IntegrationType* a, const IntegrationType* 
 class PlainIntegrationType : public IntegrationType {
 protected:
     PlainIntegrationType(const size_t extra_dimensions) : IntegrationType(extra_dimensions) {}
-    void fill_min(IntegrationContext& ictx, const size_t core_dimensions, double* min) const;
-    void fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const;
+    void fill_min(const Context* const ctx, const size_t core_dimensions, double* min) const;
+    void fill_max(const Context* const ctx, const size_t core_dimensions, double* max) const;
 };
 
 /**
@@ -121,8 +121,8 @@ class XiPIntegrationType : public IntegrationType {
 public:
     XiPIntegrationType(size_t extra_dimensions) : IntegrationType(extra_dimensions) {}
 protected:
-    void fill_min(IntegrationContext& ictx, const size_t core_dimensions, double* min) const;
-    void fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const;
+    void fill_min(const Context* const ctx, const size_t core_dimensions, double* min) const;
+    void fill_max(const Context* const ctx, const size_t core_dimensions, double* max) const;
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };
 
@@ -134,8 +134,8 @@ protected:
 class RadialIntegrationType : public IntegrationType {
 public:
     RadialIntegrationType(const size_t extra_dimensions) : IntegrationType(extra_dimensions) {assert(extra_dimensions % 2 == 0);}
-    void fill_min(IntegrationContext& ictx, const size_t core_dimensions, double* min) const;
-    void fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const;
+    void fill_min(const Context* const ctx, const size_t core_dimensions, double* min) const;
+    void fill_max(const Context* const ctx, const size_t core_dimensions, double* max) const;
 };
 
 class RadialPositionIntegrationType : public RadialIntegrationType {
@@ -155,8 +155,8 @@ public:
 class AngleIndependentPositionIntegrationType : public IntegrationType {
 public:
     AngleIndependentPositionIntegrationType(const size_t extra_dimensions) : IntegrationType(extra_dimensions) {}
-    void fill_min(IntegrationContext& ictx, const size_t core_dimensions, double* min) const;
-    void fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const;
+    void fill_min(const Context* const ctx, const size_t core_dimensions, double *min) const;
+    void fill_max(const Context* const ctx, const size_t core_dimensions, double *max) const;
     double jacobian(IntegrationContext& ictx, const size_t core_dimensions) const;
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };
@@ -164,7 +164,7 @@ public:
 class QLimitedMomentumIntegrationType : public RadialMomentumIntegrationType {
 public:
     QLimitedMomentumIntegrationType(const size_t extra_dimensions) : RadialMomentumIntegrationType(extra_dimensions) {}
-    void fill_max(IntegrationContext& ictx, const size_t core_dimensions, double* max) const;
+    void fill_max(const Context* const ctx, const size_t core_dimensions, double* max) const;
     double jacobian(IntegrationContext& ictx, const size_t core_dimensions) const;
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };

@@ -399,8 +399,8 @@ void Integrator::integrate_impl(size_t core_dimensions, double* result, double* 
     size_t dimensions = core_dimensions + current_type->extra_dimensions;
     double min[10];
     double max[10];
-    current_type->fill_min(ictx, core_dimensions, min);
-    current_type->fill_max(ictx, core_dimensions, max);
+    current_type->fill_min(ictx.ctx, core_dimensions, min);
+    current_type->fill_max(ictx.ctx, core_dimensions, max);
     switch (dimensions) {
         case 1:
         case 2:
