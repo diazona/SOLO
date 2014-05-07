@@ -377,7 +377,7 @@ double QLimitedMomentumIntegrationType::jacobian(IntegrationContext& ictx, const
     double jacobian = RadialMomentumIntegrationType::jacobian(ictx, core_dimensions);
     double qmax = sqrt(ictx.kT * (ictx.ctx->sqs * exp(ictx.ctx->Y) - ictx.kT) * (1 - ictx.xi) / ictx.xi);
     checkfinite(qmax);
-    for (size_t i = 0; i < extra_dimensions; i++) {
+    for (size_t i = 0; i < extra_dimensions; i += 2) {
         jacobian *= qmax;
     }
     checkfinite(jacobian);
