@@ -28,4 +28,5 @@ process(S2r) process(S4rst)
 process(Fk)
 process(Fq1) process(Fq2) process(Fq3)
 process(Fkq1) process(Fkq2) process(Fkq3)
+process(qmax)
 #endif

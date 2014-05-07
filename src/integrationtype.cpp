@@ -375,10 +375,8 @@ void QLimitedMomentumIntegrationType::fill_max(const Context*const ctx, const si
 
 double QLimitedMomentumIntegrationType::jacobian(IntegrationContext& ictx, const size_t core_dimensions) const {
     double jacobian = RadialMomentumIntegrationType::jacobian(ictx, core_dimensions);
-    double qmax = sqrt(ictx.kT * (ictx.ctx->sqs * exp(ictx.ctx->Y) - ictx.kT) * (1 - ictx.xi) / ictx.xi);
-    checkfinite(qmax);
     for (size_t i = 0; i < extra_dimensions; i += 2) {
-        jacobian *= qmax;
+        jacobian *= ictx.qmax;
     }
     checkfinite(jacobian);
     return jacobian;
@@ -388,7 +386,8 @@ void QLimitedMomentumIntegrationType::update(IntegrationContext& ictx, const siz
     // the thing in the array is a scaled integration variable between 0 and 1, so convert it to q
     assert(core_dimensions == 1 || core_dimensions == 2);
     ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
-    double qmax = sqrt(ictx.kT * (ictx.ctx->sqs * exp(ictx.ctx->Y) - ictx.kT) * (1 - ictx.xi) / ictx.xi);
+    // qmax is computed in update_kinematics
+    double qmax = ictx.qmax;
     ictx.update_momenta(
         extra_dimensions > 0 ? qmax * values[core_dimensions + 0] * cos(values[core_dimensions + 1]) + ictx.kT : 0,
         extra_dimensions > 0 ? qmax * values[core_dimensions + 0] * sin(values[core_dimensions + 1]) : 0,

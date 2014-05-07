@@ -56,6 +56,9 @@ void IntegrationContext::update_kinematics(double z, double xi, size_t core_dime
         else {
             // means we are calculating an NLO term
             this->xa = exp(-ctx->Y) / ctx->sqs * (kT + ((kT - q1x)*(kT - q1x) + q1y*q1y) / kT * xi / (1 - xi));
+            // qmax is only meaningful for NLO terms with exact kinematics
+            this->qmax = sqrt(kT * (ctx->sqs * exp(ctx->Y) - kT) * (1 - xi) / xi);
+            checkfinite(qmax);
         }
     }
     else {

@@ -57,6 +57,7 @@ public:
     double Fk;
     double Fq1, Fq2, Fq3;
     double Fkq1, Fkq2, Fkq3;
+    double qmax;
     
     IntegrationContext(const Context* ctx, const ThreadLocalContext* tlctx) :
       ctx(ctx),
@@ -87,7 +88,8 @@ public:
       S2r(0), S4rst(0),
       Fk(0),
       Fq1(0), Fq2(0), Fq3(0),
-      Fkq1(0), Fkq2(0), Fkq3(0) {
+      Fkq1(0), Fkq2(0), Fkq3(0),
+      qmax(0) {
     };
     void update_kinematics(double z, double y, size_t core_dimensions);
     void update_positions(double xx, double xy, double yx, double yy, double bx, double by);
