@@ -198,9 +198,9 @@ where the <options> can include any number of the following, in any order:
         the color factor
     coupling_type (default fixed)
         "fixed" or "running"
-    cubature_iterations
+    cubature_iterations (default 1000000)
         number of calls to use for cubature integration
-    exact_kinematics
+    exact_kinematics (default false)
         whether to use exact kinematic expressions
     factorization_scale (default fixed)
         "fixed" or "4pT2" or "CpT2" or "c0r" to specify how to set the
@@ -210,11 +210,11 @@ where the <options> can include any number of the following, in any order:
         pT2 to get mu2
     ff_filename (default PINLO.DAT)
         filename to read DSS FF data from
-    gammaMV
+    gammaMV (default 1)
         the anomalous dimension in the MV gluon distribution
-    gdist_momentum_filename
+    gdist_momentum_filename (no default)
         file to read the momentum data for a gluon distribution from
-    gdist_position_filename
+    gdist_position_filename (no default)
         file to read the position data for a gluon distribution from
     gdist_subinterval_limit (default 10000)
         number of subdivisions to use when integrating a position gluon
@@ -290,7 +290,8 @@ where the <options> can include any number of the following, in any order:
     x0 (default 0.000304)
         the fit parameter from the definition of the saturation scale
     Y (no default)
-        comma-separated list of rapidities to calculate at
+        comma-separated list of rapidities (in the center of mass frame) to run
+        the calculation at
 
     The configuration files have to at least set A, c, sqs, and Y, and also pT
     if no transverse momenta are specified as command line arguments.
