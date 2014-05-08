@@ -252,6 +252,9 @@ key2=value2</code></pre>
             <dt><code>cubature_iterations</code> (default 1000000)</dt>
             <dd>number of calls to use for cubature integration</dd>
 
+            <dt><code>exact_kinematics</code> (default false)</dt>
+            <dd>whether to use exact kinematic expressions</dd>
+
             <dt><code>factorization_scale</code> (default fixed)</dt>
             <dd>"fixed" to set the factorization scale to a fixed value, or "4pT2" or "CpT2" to set it to a multiple of hadron transverse momentum, or "c0r" to set it to be inversely proportional to transverse position</dd>
 
@@ -278,6 +281,9 @@ key2=value2</code></pre>
 
             <dt><code>hadron</code> (no default)</dt>
             <dd>the type of hadron to be detected, <code>pi-</code>, <code>pi0</code>, or <code>pi+</code> (this influences which fragmentation function is used)</dd>
+
+            <dt><code>inf</code> (default 40)</dt>
+            <dd>the cutoff used for integration over an infinite region (for most integration types, integration over the plane is replaced by integration over a square of half-side equal to the value of <code>inf</code></dd>
 
             <dt><code>integration_strategy</code> (default <code>VEGAS</code>)</dt>
             <dd>the integration type to use for Monte Carlo integrals: <code>MISER</code>, <code>VEGAS</code> (best), or <code>QUASI</code></dd>
@@ -355,7 +361,7 @@ key2=value2</code></pre>
             <dd>the fit parameter from the definition of the saturation scale</dd>
 
             <dt><code>Y</code> (no default)</dt>
-            <dd>comma-separated list of rapidities to calculate at</dd>
+            <dd>comma-separated list of rapidities (in the center of mass frame) to run the calculation at</dd>
         </dl>
         <p>The configuration files have to at least set <code>A</code>, <code>c</code>, <code>sqs</code>, and <code>Y</code>, and also <code>pT</code> if no transverse momenta are specified as command line arguments.</p>
 
