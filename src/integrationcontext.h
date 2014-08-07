@@ -91,7 +91,7 @@ public:
       Fkq1(0), Fkq2(0), Fkq3(0),
       qmax(0) {
     };
-    void update_kinematics(double z, double y, size_t core_dimensions);
+    void update_kinematics(double z, double xi, size_t core_dimensions);
     void update_positions(double xx, double xy, double yx, double yy, double bx, double by);
     void update_momenta(double q1x, double q1y, double q2x, double q2y, double q3x, double q3y);
     void update_auxiliary(double xiprime);
