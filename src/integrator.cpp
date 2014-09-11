@@ -58,8 +58,8 @@
  */
 #define checkfinite(d) assert(gsl_finite(d))
 
-Integrator::Integrator(const Context* ctx, const ThreadLocalContext* tlctx, const HardFactorList& hflist) :
-  ictx(ctx, tlctx), current_type(NULL), terms(compare_integration_types),
+Integrator::Integrator(const Context* ctx, const ThreadLocalContext* tlctx, const HardFactorList& hflist, const double xg_min, const double xg_max) :
+  ictx(ctx, tlctx), current_type(NULL), terms(compare_integration_types), xg_min(xg_min), xg_max(xg_max),
   callback(NULL), cubature_callback(NULL), miser_callback(NULL), vegas_callback(NULL), quasi_callback(NULL) {
     assert(hflist.size() > 0);
 #ifndef NDEBUG
@@ -100,7 +100,16 @@ void Integrator::update2D(const double* values) {
     current_type->update(ictx, 2, values);
 }
 
+static inline bool xg_in_range(const double xg, const double xg_min, const double xg_max) {
+    assert(xg_min <= xg_max);
+    return xg > xg_min && xg <= xg_max;
+}
+
 void Integrator::evaluate_1D_integrand(double* real, double* imag) {
+    if (!xg_in_range(ictx.xa, xg_min, xg_max)) {
+        *real = *imag = 0.0;
+        return;
+    }
     double l_real = 0.0, l_imag = 0.0; // l for "local"
     double t_real, t_imag;             // t for temporary
     double jacobian = current_type->jacobian(ictx, 1);
@@ -130,6 +139,10 @@ void Integrator::evaluate_1D_integrand(double* real, double* imag) {
 }
 
 void Integrator::evaluate_2D_integrand(double* real, double* imag) {
+    if (!xg_in_range(ictx.xa, xg_min, xg_max)) {
+        *real = *imag = 0.0;
+        return;
+    }
     double l_real = 0.0, l_imag = 0.0; // l for "local"
     double t_real, t_imag;             // t for temporary
     double jacobian = current_type->jacobian(ictx, 2);

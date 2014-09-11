@@ -229,6 +229,8 @@ private:
      * Construct an Integrator and use it
      */
     void integrate_hard_factor(const Context& ctx, const ThreadLocalContext& tlctx, const HardFactorList& hflist, size_t index);
+
+    double xg_min, xg_max;
 };
 
 /**
@@ -287,6 +289,8 @@ private:
      */
     vector<string> hfnames;
     vector<string> hfspecs;
+
+    double xg_min, xg_max;
 };
 
 /**
@@ -341,7 +345,7 @@ public:
     }
 };
 
-ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false), trace_gdist(false), minmax(false), separate(false) {
+ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false), trace_gdist(false), minmax(false), separate(false), xg_min(0), xg_max(1) {
     string gdist_type;
     bool current_arg_is_config_line = false;
     for (int i = 1; i < argc; i++) {
@@ -349,6 +353,25 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
         if (current_arg_is_config_line) {
             cc.read_config_line(a);
             current_arg_is_config_line = false;
+        }
+        else if (a.compare(0, 10, "--ygrange=") == 0) {
+            vector<string> v = split(a, "=", 2);
+            if (v.size() == 2) {
+                vector<string> r = split(v[1], ":", 2);
+                if (r.size() == 2) {
+                    xg_min = exp(-atof(r[1].c_str()));
+                    xg_max = exp(-atof(r[0].c_str()));
+                    if (xg_min > xg_max) {
+                        cerr << "WARNING: reversing inverted range for ln(1/xg)" << endl;
+                        double t = xg_min;
+                        xg_min = xg_max;
+                        xg_max = t;
+                    }
+                }
+                else {
+                    cerr << "invalid range for ln(1/xg): " << v[1] << endl;
+                }
+            }
         }
         else if (a.compare(0, 8, "--trace=") == 0) {
             vector<string> v = split(a, "=", 2);
@@ -593,7 +616,7 @@ const ParsedHardFactorGroup* ParsedHardFactorGroup::parse(const string& spec, bo
 }
 
 ResultsCalculator::ResultsCalculator(ContextCollection& cc, ThreadLocalContext& tlctx, ProgramConfiguration& pc) :
-    cc(cc), tlctx(tlctx), hfgroups(pc.hfgroups), hfgnames(pc.hfgnames), hfnames(pc.hfnames), result_array_len(cc.size()), _hfglen(0), _hflen(0), trace(pc.trace), minmax(pc.minmax), separate(pc.separate) {
+    cc(cc), tlctx(tlctx), hfgroups(pc.hfgroups), hfgnames(pc.hfgnames), hfnames(pc.hfnames), result_array_len(cc.size()), _hfglen(0), _hflen(0), trace(pc.trace), minmax(pc.minmax), separate(pc.separate), xg_min(pc.xg_min), xg_max(pc.xg_max) {
     _hfglen = hfgroups.size();
     assert(_hfglen > 0);
     if (separate) {
@@ -675,7 +698,7 @@ void ResultsCalculator::calculate() {
 
 void ResultsCalculator::integrate_hard_factor(const Context& ctx, const ThreadLocalContext& tlctx, const HardFactorList& hflist, size_t index) {
     double l_real, l_imag, l_error;
-    Integrator integrator(&ctx, &tlctx, hflist);
+    Integrator integrator(&ctx, &tlctx, hflist, xg_min, xg_max);
     if (trace) {
         integrator.set_callback(write_data_point);
     }

@@ -83,8 +83,10 @@ private:
     void (*vegas_callback)(double*, double*, gsl_monte_vegas_state*);
     /** A callback function to call each time a quasi Monte Carlo integration finishes */
     void (*quasi_callback)(double*, double*, quasi_monte_state*);
+
+    double xg_min, xg_max;
 public:
-    Integrator(const Context* ctx, const ThreadLocalContext* tlctx, const HardFactorList& hflist);
+    Integrator(const Context* ctx, const ThreadLocalContext* tlctx, const HardFactorList& hflist, const double xg_min, const double xg_max);
     ~Integrator();
     /**
      * Updates the kinematic variables during a "1D" integration.
