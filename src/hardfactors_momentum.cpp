@@ -178,7 +178,7 @@ void H14gq::Fn(const IntegrationContext* ictx, double* real, double* imag) const
     double kB2 = gsl_pow_2(ictx->kT * (ictx->xi - 1) / ictx->xi - ictx->q1x + ictx->q2x) + gsl_pow_2(-ictx->q1y + ictx->q2y);
     double Fg1 = ictx->ctx->gdist->F(kA2, ictx->Ya);
     double Fg2 = ictx->ctx->gdist->F(kB2, ictx->Ya);
-    double value = -ictx->alphas_2pi * ictx->ctx->Nc / (4 * M_PI * M_PI * M_PI) * ictx->gqfactor / ictx->z2 * Pfac * Fg1 * Fg2 * dotfac;
+    double value = -ictx->alphas_2pi * ictx->ctx->Nc * M_1_PI * ictx->gqfactor / ictx->z2 * Pfac * Fg1 * Fg2 * dotfac;
     checkfinite(value);
     *real = value;
     *imag = 0;
@@ -189,7 +189,7 @@ void H14qg::Fn(const IntegrationContext* ictx, double* real, double* imag) const
     double dotfac = (ictx->q1x * ictx->q2x + ictx->q1y * ictx->q2y) / (ictx->q12 * ictx->q22);
     double kB2 = gsl_pow_2(ictx->kT * (ictx->xi - 1) / ictx->xi - ictx->q1x + ictx->q2x) + gsl_pow_2(-ictx->q1y + ictx->q2y);
     double Fg2 = ictx->ctx->gdist->F(kB2, ictx->Ya);
-    double value = -ictx->alphas_2pi / (4 * M_PI * M_PI * M_PI) * ictx->qgfactor / ictx->z2 * Pfac * ictx->Fkq1 * Fg2 * dotfac;
+    double value = -ictx->alphas_2pi * M_1_PI * ictx->qgfactor / ictx->z2 * Pfac * ictx->Fkq1 * Fg2 * dotfac;
     checkfinite(value);
     *real = value;
     *imag = 0;
