@@ -812,7 +812,7 @@ void termination_handler(int signal) {
         time(&rawtime);
         logger << "Terminating at " << ctime(&rawtime) << endl;
     }
-    _exit(2);
+    exit(2);
 }
 
 // from http://stackoverflow.com/questions/3969047/is-there-a-standard-way-of-representing-an-sha1-hash-as-a-c-string-and-how-do-i
