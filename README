@@ -153,20 +153,26 @@ where the <options> can include any number of the following, in any order:
     
         m.h02qq,m.h02gg
         
-    or the group of all next-to-leading order terms using the shortcut "nlo",
-    which is equivalent to
+    or the group of all next-to-leading order terms using the shortcut
+    "nlo.std", which is equivalent to
     
         r.h12qq,m.h14qq,r.h12gg,m.h12qqbar,m.h16gg,r.h112gq,r.h122gq,m.h14gq,
         r.h112qg,r.h122qg,m.h14qg
-        
-    if approximate kinematics are in use (exact_kinematics = 0 in the Context),
-    or if exact kinematics are in use (exact_kinematics = 1),
+    
+    or the group of all next-to-leading order terms using the high-pT expansion
+    for the diagonal channels using the shortcut "nlo.hipt", which is
+    equivalent to
 
         m.h1qqexact,m.h1ggexact,r.h112gq,r.h122gq,m.h14gq,r.h112qg,r.h122qg,
         m.h14qg
 
-    These are defined in oneloopcalc.cpp. The default if no hard factor groups
-    are specified on the command line is
+    The shortcut "nlo" will choose between these latter two options
+    automatically: "nlo.std" if approximate kinematics are in use
+    (exact_kinematics = 0 in the Context), or "nlo.hipt" if exact kinematics
+    are in use (exact_kinematics = 1).
+
+    These shortcuts are defined in oneloopcalc.cpp. The default if no hard
+    factor groups are specified on the command line is
     
         lo nlo
 

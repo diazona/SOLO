@@ -498,14 +498,16 @@ ProgramConfiguration::~ProgramConfiguration() {
 static const char* default_lo_spec = "m.h02qq,m.h02gg";
 /**
  * This defines the hard factor group that is used when "nlo" is given
- * on the command line and exact_kinematics is not set
+ * on the command line and exact_kinematics is not set, or when "nlo.std"
+ * is given on the command line
  */
-static const char* approximate_nlo_spec = "r.h12qq,m.h14qq,r.h12gg,m.h12qqbar,m.h16gg,r.h112gq,r.h122gq,m.h14gq,r.h112qg,r.h122qg,m.h14qg";
+static const char* standard_nlo_spec = "r.h12qq,m.h14qq,r.h12gg,m.h12qqbar,m.h16gg,r.h112gq,r.h122gq,m.h14gq,r.h112qg,r.h122qg,m.h14qg";
 /**
  * This defines the hard factor group that is used when "nlo" is given
- * on the command line and exact_kinematics is set
+ * on the command line and exact_kinematics is set, or when "nlo.hipt"
+ * is given on the command line
  */
-static const char* exact_nlo_spec = "m.h1qqexact,m.h1ggexact,r.h112gq,r.h122gq,m.h14gq,r.h112qg,r.h122qg,m.h14qg";
+static const char* highpt_nlo_spec = "m.h1qqexact,m.h1ggexact,r.h112gq,r.h122gq,m.h14gq,r.h112qg,r.h122qg,m.h14qg";
 
 const ParsedHardFactorGroup* ParsedHardFactorGroup::parse(const string& spec, bool exact_kinematics) {
     vector<string> splitspec;
@@ -515,7 +517,13 @@ const ParsedHardFactorGroup* ParsedHardFactorGroup::parse(const string& spec, bo
         splitspec = split(default_lo_spec, ", ");
     }
     else if (spec == "nlo") {
-        splitspec = split(exact_kinematics ? exact_nlo_spec : approximate_nlo_spec, ", ");
+        splitspec = split(exact_kinematics ? highpt_nlo_spec : standard_nlo_spec, ", ");
+    }
+    else if (spec == "nlo.hipt") {
+        splitspec = split(highpt_nlo_spec, ", ");
+    }
+    else if (spec == "nlo.std") {
+        splitspec = split(standard_nlo_spec, ", ");
     }
     else {
         string specbody(spec);
