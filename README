@@ -18,8 +18,8 @@ Quick start
                               With git and CMake
 
 The quickest and intended way to compile the code is as follows: first, ensure
-that git, GSL and CMake are properly installed (as well as a C++ compiler; GCC
-is recommended). Then run the following commands:
+that git, GSL, MuParser, and CMake are properly installed (as well as a C++
+compiler; GCC is recommended). Then run the following commands:
 
     git clone https://github.com/diazona/SOLO.git
     cd SOLO
@@ -37,8 +37,9 @@ source code manually. Go to
 
 Click on the link to download the latest release as either a ZIP or GZIP TAR
 file. When you extract it, you will see (among other things) empty directories
-named `interp2d` and `quasimontecarlo`. These will need to be filled with the
-source files for the interp2d and quasimontecarlo libraries respectively.
+named `gsl-muparser`, `interp2d`, `quasimontecarlo`. These will need to be
+filled with the source files for the gsl-muparser, interp2d, and quasimontecarlo
+libraries respectively.
 
 To obtain interp2d, go to
 
@@ -53,7 +54,12 @@ Similarly, to obtain quasimontecarlo, go to
 
 and download the latest release, then move the files that are in the directory
 `quasimontecarlo-0.1` or similar to the `quasimontecarlo` folder from the SOLO
-download.
+download. And the same for `gsl-muparser`: go to
+
+    https://github.com/diazona/gsl-muparser/releases
+
+and download the latest release, then move the files from `gsl-muparser-0.1` or
+similar to `gsl-muparser` in SOLO.
 
                      Additional downloads and compilation
 
