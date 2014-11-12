@@ -27,7 +27,19 @@ endif()
 
 include_directories(${gslmuparser_SOURCE_DIR} ${interp2d_SOURCE_DIR} ${quasimontecarlo_SOURCE_DIR})
 
-add_executable(oneloopcalc oneloopcalc.cpp integrator.cpp hardfactors_position.cpp hardfactors_radial.cpp hardfactors_momentum.cpp dss_pinlo.cpp mstwpdf.cc cubature.c gluondist.cpp coupling.cpp factorizationscale.cpp integrationcontext.cpp integrationtype.cpp context.cpp utils.cpp)
+add_executable(oneloopcalc  oneloopcalc.cpp
+                            integrator.cpp
+                            hardfactor_parsed.cpp hardfactor_group_parser.cpp
+                            hardfactors_position.cpp hardfactors_radial.cpp hardfactors_momentum.cpp
+                            dss_pinlo.cpp mstwpdf.cc
+                            cubature.c
+                            gluondist.cpp
+                            coupling.cpp
+                            factorizationscale.cpp
+                            integrationcontext.cpp
+                            integrationtype.cpp
+                            context.cpp
+                            utils.cpp)
 target_link_libraries(oneloopcalc gslmuparser interp2d quasimontecarlo ${LIBS})
 add_dependencies(oneloopcalc git_revision.h)
 

@@ -28,6 +28,11 @@
 
 #define checkfinite(d) assert(gsl_finite(d))
 
+namespace position {
+    const PositionIntegrationType dipole(2);
+    const PositionIntegrationType quadrupole(4);
+}
+
 using namespace position;
 
 void H02qq::Fd(const IntegrationContext* ictx, double* real, double* imag) const {

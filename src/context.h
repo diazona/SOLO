@@ -163,6 +163,13 @@ public:
     double sqs;
     /** The rapidity */
     double Y;
+    
+    /**
+     * Path to the file, if any, containing the expressions
+     * for hard factor terms to be integrated
+     */
+    std::string hf_definitions;
+    
     /** Name of the file PDF data was read from */
     std::string pdf_filename;
     /** Name of the file FF data was read from */
@@ -247,6 +254,7 @@ public:
         double pT2,
         double sqs,
         double Y,
+        std::string hf_definitions,
         std::string pdf_filename,
         std::string ff_filename,
         projectile_type projectile,
@@ -283,6 +291,7 @@ public:
      pT2(pT2),
      sqs(sqs),
      Y(Y),
+     hf_definitions(hf_definitions),
      pdf_filename(pdf_filename),
      ff_filename(ff_filename),
      projectile(projectile),
@@ -333,6 +342,7 @@ public:
      pT2(other.pT2),
      sqs(other.sqs),
      Y(other.Y),
+     hf_definitions(other.hf_definitions),
      pdf_filename(other.pdf_filename),
      ff_filename(other.ff_filename),
      projectile(other.projectile),

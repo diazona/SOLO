@@ -27,8 +27,8 @@
 
 namespace position {
 
-static const PositionIntegrationType dipole(2);
-static const PositionIntegrationType quadrupole(4);
+extern const PositionIntegrationType dipole;
+extern const PositionIntegrationType quadrupole;
 
 class H02qq : public HardFactorTerm {
 public:
@@ -288,7 +288,7 @@ public:
 
 class registry : public HardFactorRegistry {
 public:
-    static const registry* get_instance() {
+    static registry* get_instance() {
         static registry instance;
         return &instance;
     }

@@ -465,6 +465,7 @@ void ContextCollection::create_contexts() {
     check_property(         Y,            vector<double>, parse_vector)
     check_property(         projectile,   projectile_type, parse_projectile_type)
     check_property(         hadron,       DSSpiNLO::hadron, parse_hadron)
+    check_property_default( hf_definitions, string, parse_string, "")
     check_property_default( pdf_filename, string, parse_string, "mstw2008nlo.00.dat")
     check_property_default( ff_filename,  string, parse_string, "PINLO.DAT")
     check_property_default( integration_strategy, integration_strategy, parse_strategy, MC_VEGAS)
@@ -585,6 +586,7 @@ void ContextCollection::create_contexts() {
                         gsl_pow_2(*pTit),
                         sqs,
                         *Yit,
+                        hf_definitions,
                         pdf_filename,
                         ff_filename,
                         projectile,
@@ -783,6 +785,7 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "pT2\t= "        << ctx.pT2          << endl;
     out << "sqs\t= "        << ctx.sqs          << endl;
     out << "Y\t= "          << ctx.Y            << endl;
+    out << "hf_definitions\t= " << ctx.hf_definitions << endl;
     out << "pdf_filename\t= " << ctx.pdf_filename << endl;
     out << "ff_filename\t= " << ctx.ff_filename  << endl;
     out << "projectile\t= " << ctx.projectile << endl;

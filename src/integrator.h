@@ -29,10 +29,7 @@
 #include "integrationtype.h"
 #include "hardfactor.h"
 #include "quasimontecarlo.h"
-
-typedef std::vector<const HardFactor*> HardFactorList;
-typedef std::vector<const HardFactorTerm*> HardFactorTermList;
-typedef std::map<const IntegrationType*, HardFactorTermList, bool(*)(const IntegrationType*, const IntegrationType*)> HardFactorTypeMap;
+#include "typedefs.h"
 
 /**
  * A class to interface with the GSL Monte Carlo integration routines.

@@ -26,13 +26,13 @@
 
 namespace momentum {
 
-static const NoIntegrationType none;
-static const MomentumIntegrationType momentum1(2);
-static const MomentumIntegrationType momentum2(4);
-static const MomentumIntegrationType momentum3(6);
-static const XiPIntegrationType momentumxip1(3);
-static const XiPIntegrationType momentumxip2(5);
-static const QLimitedMomentumIntegrationType qlim(2);
+extern const NoIntegrationType none;
+extern const MomentumIntegrationType momentum1;
+extern const MomentumIntegrationType momentum2;
+extern const MomentumIntegrationType momentum3;
+extern const XiPIntegrationType momentumxip1;
+extern const XiPIntegrationType momentumxip2;
+extern const QLimitedMomentumIntegrationType qlim;
 
 class H02qq : public HardFactorTerm {
 public:
@@ -321,7 +321,7 @@ public:
 
 class registry : public HardFactorRegistry {
 public:
-    static const registry* get_instance() {
+    static registry* get_instance() {
         static registry instance;
         return &instance;
     }

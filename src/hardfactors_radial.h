@@ -27,8 +27,8 @@
 
 namespace radial {
 
-static const AngleIndependentPositionIntegrationType dipole(1);
-static const AngleIndependentPositionIntegrationType quadrupole(2);
+extern const AngleIndependentPositionIntegrationType dipole;
+extern const AngleIndependentPositionIntegrationType quadrupole;
 
 class H02qq : public HardFactorTerm {
 public:
@@ -369,7 +369,7 @@ public:
 
 class registry : public HardFactorRegistry {
 public:
-    static const registry* get_instance() {
+    static registry* get_instance() {
         static registry instance;
         return &instance;
     }

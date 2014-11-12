@@ -100,7 +100,7 @@ private:
 };
 
 /**
- * A singleton class that holds a map of strings to HardFactor objects,
+ * A class that holds a map of strings to HardFactor objects,
  * and can return the HardFactor object corresponding to a given string key.
  */
 class HardFactorRegistry {
