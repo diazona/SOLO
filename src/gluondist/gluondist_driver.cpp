@@ -1,6 +1,6 @@
 #include <cstdlib>
 #include <iostream>
-#include "context.h"
+#include "../configuration/context.h"
 #include "gluondist.h"
 
 ostream& logger = cerr;

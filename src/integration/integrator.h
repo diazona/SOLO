@@ -24,12 +24,12 @@
 #include <vector>
 #include <gsl/gsl_monte_miser.h>
 #include <gsl/gsl_monte_vegas.h>
-#include "context.h"
+#include "../configuration/context.h"
 #include "integrationcontext.h"
 #include "integrationtype.h"
-#include "hardfactor.h"
+#include "../hardfactors/hardfactor.h"
 #include "quasimontecarlo.h"
-#include "typedefs.h"
+#include "../typedefs.h"
 
 /**
  * A class to interface with the GSL Monte Carlo integration routines.

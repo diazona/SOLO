@@ -24,25 +24,29 @@
 #include <list>
 #include <map>
 #include <string>
-#include "integrationcontext.h"
-#include "integrationtype.h"
+#include "../integration/integrationcontext.h"
+#include "../integration/integrationtype.h"
 
 class HardFactorTerm;
 
 /**
  * Something that can be integrated using the program.
  * 
- * The actual implementation of the formulas is left for subclasses
- * of HardFactorTerm. A HardFactor can be either a single HardFactorTerm,
- * or a group of them. When a HardFactor is integrated, the program
- * queries it for its HardFactorTerms and sorts those terms out by
- * their IntegrationType. It then iterates through the IntegrationTypes
+ * A `HardFactor` is a named collection of one or more ::HardFactorTerm
+ * instances. It represents a mathematical expression. The actual
+ * implementation of the formulas is left for subclasses
+ * of `HardFactorTerm`.
+ * 
+ * A `HardFactor` can be either a single `HardFactorTerm`,
+ * or a group of them. When a `HardFactor` is integrated, the program
+ * queries it for its `HardFactorTerm`s and sorts those terms out by
+ * their `IntegrationType`. It then iterates through the `IntegrationType`s
  * and for each type, integrates the terms. The integrand for a given
  * type is just the sum of values of all the terms of that type.
  * 
  * In practice, what is usually integrated is a hard factor group,
- * which is a list of multiple HardFactor objects. The procedure is
- * the same, it just puts all the HardFactorTerms together into one
+ * which is a list of multiple `HardFactor` objects. The procedure is
+ * the same, it just puts all the `HardFactorTerm`s together into one
  * big map.
  */
 class HardFactor {
@@ -74,12 +78,12 @@ public:
 /**
  * The base of the classes that actually implement the formulas.
  * 
- * A HardFactorTerm can be queried for three functions: Fs, Fn, Fd.
+ * A HardFactorTerm can be queried for three functions: `Fs`, `Fn`, `Fd`.
  * Each returns a real and an imaginary component. These three functions
  * are used in particular combinations to compute the "1D" and "2D" integrands.
  * (The mathematical details are explained elsewhere.)
  * 
- * A HardFactorTerm is also a HardFactor which contains just one term: itself.
+ * A `HardFactorTerm` is also a `HardFactor` which contains just one term: itself.
  */
 class HardFactorTerm : public HardFactor {
 public:
@@ -164,7 +168,7 @@ private:
  * in exact kinematics. This is not possible because LO and NLO terms use
  * different integration limits in exact kinematics.
  */
-class KinematicSchemeMismatchException : public exception {
+class KinematicSchemeMismatchException : public std::exception {
 private:
     string _message;
 public:

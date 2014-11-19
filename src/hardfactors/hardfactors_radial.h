@@ -23,7 +23,7 @@
 // Hard factors in position space with radial integration
 
 #include "hardfactor.h"
-#include "integrationtype.h"
+#include "../integration/integrationtype.h"
 
 namespace radial {
 

@@ -19,10 +19,10 @@
 
 #include <cassert>
 #include <gsl/gsl_sys.h>
-#include "mstwpdf.h"
-#include "dss_pinlo.h"
+#include "../mstwpdf.h"
+#include "../dss_pinlo/dss_pinlo.h"
 #include "integrationcontext.h"
-#include "gluondist.h"
+#include "../gluondist/gluondist.h"
 
 #define checkfinite(d) assert(gsl_finite(d))
 

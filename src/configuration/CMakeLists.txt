@@ -1,0 +1,17 @@
+cmake_minimum_required (VERSION 2.6)
+
+find_package(GSL REQUIRED)
+include_directories(${GSL_INCLUDE_DIRS})
+set(LIBS ${LIBS} ${GSL_LIBRARIES})
+
+set(LIBS ${LIBS} m)
+
+include_directories(${interp2d_SOURCE_DIR} ${quasimontecarlo_SOURCE_DIR})
+
+add_executable(contextreader
+  context.cpp
+  ${SOLO_SOURCE_DIR}/utils/utils.cpp
+  ${SOLO_SOURCE_DIR}/coupling.cpp
+  ${SOLO_SOURCE_DIR}/factorizationscale.cpp)
+target_link_libraries(contextreader interp2d gdist ${LIBS})
+set_target_properties(contextreader PROPERTIES COMPILE_DEFINITIONS CONTEXT_TEST)

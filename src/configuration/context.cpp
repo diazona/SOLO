@@ -28,10 +28,10 @@
 #include <gsl/gsl_qrng.h>
 #include <gsl/gsl_rng.h>
 #include "context.h"
-#include "gluondist.h"
-#include "integrator.h"
-#include "log.h"
-#include "utils.h"
+#include "../gluondist/gluondist.h"
+#include "../integration/integrator.h"
+#include "../log.h"
+#include "../utils/utils.h"
 
 using namespace std;
 

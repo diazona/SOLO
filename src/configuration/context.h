@@ -28,11 +28,11 @@
 #include <vector>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_qrng.h>
-#include "mstwpdf.h"
-#include "dss_pinlo.h"
-#include "coupling.h"
-#include "factorizationscale.h"
-#include "gluondist.h"
+#include "../mstwpdf.h"
+#include "../dss_pinlo/dss_pinlo.h"
+#include "../coupling.h"
+#include "../factorizationscale.h"
+#include "../gluondist/gluondist.h"
 
 /**
  * Enumerates the types of Monte Carlo integration available

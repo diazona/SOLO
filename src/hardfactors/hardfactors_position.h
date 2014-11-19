@@ -23,7 +23,7 @@
 // Hard factors in position space
 
 #include "hardfactor.h"
-#include "integrationtype.h"
+#include "../integration/integrationtype.h"
 
 namespace position {
 

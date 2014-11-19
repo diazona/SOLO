@@ -19,6 +19,7 @@
 
 #include <muParser.h>
 #include "hardfactor.h"
+#include "../typedefs.h"
 
 class ParsedHardFactorTerm : public HardFactorTerm {
 public:
@@ -98,14 +99,14 @@ private:
 class HardFactorParser {
 public:
     HardFactorParser();
-    const std::vector<HardFactorTerm*> parse(const char* filename);
+    HardFactorTermList parse(const char* filename);
     void reset();
 
 private:
     const bool hard_factor_definition_complete() const;
     const HardFactorTerm* create_hard_factor_term();
 
-    vector<HardFactorTerm*> terms;
+    HardFactorTermList terms;
     string Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag;
     string name;
     HardFactor::HardFactorOrder order;

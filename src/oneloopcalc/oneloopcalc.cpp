@@ -33,20 +33,20 @@
 #include <gsl/gsl_rng.h>
 #include <openssl/sha.h>
 #include "git_revision.h"
-#include "exceptions.h"
-#include "mstwpdf.h"
-#include "dss_pinlo.h"
-#include "coupling.h"
-#include "gluondist.h"
-#include "context.h"
-#include "integrationcontext.h"
-#include "hardfactors_position.h"
-#include "hardfactors_momentum.h"
-#include "integrator.h"
-#include "utils.h"
-#include "log.h"
-#include "hardfactors_radial.h"
-#include "hardfactor_group_parser.h"
+#include "../exceptions.h"
+#include "../mstwpdf.h"
+#include "../dss_pinlo/dss_pinlo.h"
+#include "../coupling.h"
+#include "../gluondist/gluondist.h"
+#include "../configuration/context.h"
+#include "../integration/integrationcontext.h"
+#include "../hardfactors/hardfactors_position.h"
+#include "../hardfactors/hardfactors_momentum.h"
+#include "../integration/integrator.h"
+#include "../utils/utils.h"
+#include "../log.h"
+#include "../hardfactors/hardfactors_radial.h"
+#include "../hardfactors/hardfactor_group_parser.h"
 
 using namespace std;
 
@@ -58,7 +58,7 @@ using namespace std;
 namespace trace_variable {
 enum {
 #define process(v) v,
-#include "ictx_var_list.inc"
+#include "../integration/ictx_var_list.inc"
 #undef process
     COUNT
 };
@@ -76,7 +76,7 @@ void write_data_point(const IntegrationContext* ictx, const double real, const d
         return;
     }
 #define process(v) if (trace_vars[(size_t)trace_variable::v]) { trace_stream << ictx->v << "\t"; }
-#include "ictx_var_list.inc"
+#include "../integration/ictx_var_list.inc"
 #undef process
     trace_stream << real << "\t" << imag << "\t";
     trace_stream << endl;
@@ -103,7 +103,7 @@ void store_minmax(const IntegrationContext* ictx, const double real, const doubl
     if (ictx == NULL) {
         return;
     }
-#include "ictx_var_list.inc"
+#include "../integration/ictx_var_list.inc"
 }
 #undef process
 
@@ -333,7 +333,7 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
                     for (vector<string>::iterator it = w.begin(); it != w.end(); it++) {
                         bool handled = false;
 #define process(v) if (*it == #v) { trace_vars.set((size_t)trace_variable::v); handled = true; }
-#include "ictx_var_list.inc"
+#include "../integration/ictx_var_list.inc"
 #undef process
                         if (!handled) {
                             cerr << "unknown trace variable " << *it << endl;
@@ -597,7 +597,7 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
 
     if (rc.minmax) {
 #define process(v) out << #v << "\t" << min_ictx.v << "\t" << max_ictx.v << "\t" << endl;
-#include "ictx_var_list.inc"
+#include "../integration/ictx_var_list.inc"
 #undef process
     }
 }

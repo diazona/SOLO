@@ -17,6 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <fstream>
+#include <istream>
 #include <muParser.h>
 #include "gsl_mu.h"
 #include "hardfactor.h"
@@ -24,7 +26,8 @@
 #include "hardfactors_radial.h"
 #include "hardfactors_momentum.h"
 #include "hardfactor_parsed.h"
-#include "utils.h"
+#include "../typedefs.h"
+#include "../utils/utils.h"
 
 using mu::Parser;
 using mu::value_type;
@@ -51,22 +54,16 @@ void define_variables(Parser& parser, const IntegrationContext* ictx) {
      * Parser. That's why I don't do that.
      */     
 #define process(var) parser.DefineVar(#var, const_cast<value_type*>(&(ictx->var)));
-#include "ictx_var_list.inc"
+#include "../integration/ictx_var_list.inc"
 #undef process
 }
 
 void evaluate_hard_factor(Parser& parser, double* real, double* imag) {
     int number_of_values;
     value_type* values;
-    try {
-        values = parser.Eval(number_of_values);
-    }
-    catch (const mu::ParserError& e) {
-        // TODO report an error
-        return;
-    }
+    values = parser.Eval(number_of_values);
     if (number_of_values != 2) {
-        // TODO report an error
+        throw mu::ParserError("invalid number of values");
         return;
     }
     *real = values[0];
@@ -113,19 +110,30 @@ static HardFactor::HardFactorOrder sentinel = static_cast<HardFactor::HardFactor
 HardFactorParser::HardFactorParser() : order(sentinel), type(NULL), registry(NULL) {
 }
 
-const vector<HardFactorTerm*> HardFactorParser::parse(const char* filename) {
+HardFactorTermList HardFactorParser::parse(const char* filename) {
     ifstream hfinput(filename);
     string line;
     
     terms.clear();
+    size_t i = 0;
 
-    for (getline(hfinput, line); hfinput; getline(hfinput, line)) {
+    for (getline(hfinput, line); hfinput; i++, getline(hfinput, line)) {
+        if (line.length() == 0) {
+            continue;
+        }
         /* A hard factor definition consists of a name, an order
          * (LO or NLO), an integration type, and six functions
          * giving the real and imaginary components of Fs, Fn, Fd.
          * Each part of the definition is given as name = value.
          */
-        vector<string> parts = split(line, "= ", 2);
+        vector<string> parts = split(line, "=", 2);
+        assert(parts.size() > 0);
+        if (parts.size() != 2) {
+            ostringstream oss;
+            oss << "Incomplete or malformed property on line " << i << ":";
+            throw InvalidHardFactorDefinitionException(parts[0], parts.size() > 1 ? parts[1] : "", oss.str());
+        }
+        parts[0] = trim(parts[0]);
         if (parts[0] == "name") {
             if (!name.empty()) {
                 create_hard_factor_term();
@@ -146,7 +154,7 @@ const vector<HardFactorTerm*> HardFactorParser::parse(const char* filename) {
              * this function only creates HardFactorTerms which
              * can only be LO or NLO */
             else if (trim(parts[1]) == "mixed") {
-                throw InvalidHardFactorDefinitionException(parts[0], parts[1], "Mixed-order hard factors not supported");
+                throw InvalidHardFactorDefinitionException(parts[0], parts[1], "Mixed-order hard factors not supported:");
             }
             else {
                 throw InvalidHardFactorDefinitionException(parts[0], parts[1]);
@@ -156,6 +164,7 @@ const vector<HardFactorTerm*> HardFactorParser::parse(const char* filename) {
             if (type != NULL) {
                 create_hard_factor_term();
             }
+            parts[1] = trim(parts[1]);
             if (parts[1] == "none") {
                 type = &momentum::none;
                 registry = momentum::registry::get_instance();
@@ -201,7 +210,7 @@ const vector<HardFactorTerm*> HardFactorParser::parse(const char* filename) {
                 registry = radial::registry::get_instance();
             }
             else {
-                throw InvalidHardFactorDefinitionException(parts[0], parts[1], "Unknown integration type");
+                throw InvalidHardFactorDefinitionException(parts[0], parts[1], "Unknown integration type:");
             }
         }
         else if (parts[0] == "Fs real") {
@@ -244,6 +253,9 @@ const vector<HardFactorTerm*> HardFactorParser::parse(const char* filename) {
          * taken to represent a specification of a hard factor which
          * contains multiple terms.
          */
+        else {
+            throw InvalidHardFactorDefinitionException(parts[0], parts[1], "Unknown property:");
+        }
     }
     
     create_hard_factor_term();
@@ -262,9 +274,9 @@ const HardFactorTerm* HardFactorParser::create_hard_factor_term() {
         throw IncompleteHardFactorDefinitionException();
     }
     HardFactorTerm* hf = new ParsedHardFactorTerm(name, order, type, Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag);
-    reset();
     registry->add_hard_factor(hf, true);
     terms.push_back(hf);
+    reset();
     return hf;
 }
 
