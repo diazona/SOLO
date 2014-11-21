@@ -41,6 +41,11 @@ ParsedHardFactorTerm::ParsedHardFactorTerm(
     Fs_parser.SetExpr(Fs_real + "," + Fs_imag);
     Fn_parser.SetExpr(Fn_real + "," + Fn_imag);
     Fd_parser.SetExpr(Fd_real + "," + Fd_imag);
+    // use GetUsedVar() to trigger an attempt to parse the expression
+    // we want any parsing errors to be revealed now, not when evaluating expressions
+    Fs_parser.GetUsedVar();
+    Fn_parser.GetUsedVar();
+    Fd_parser.GetUsedVar();
 }
 
 void define_variables(Parser& parser, const IntegrationContext* ictx) {
