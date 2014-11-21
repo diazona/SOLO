@@ -18,43 +18,46 @@
  */
 
 #include <iostream>
+#include <muParser.h>
 #include "hardfactor.h"
 #include "hardfactor_parsed.h"
 #include "hardfactor_group_parser.h"
 
 using std::vector;
+using std::cerr;
+using std::endl;
 
 bool print_err(const std::exception& e, const std::string& filename, const size_t line_number) {
-    std::cerr << "Error parsing at line " <<  line_number << " of " << filename << endl;
+    cerr << "Error parsing at line " <<  line_number << " of " << filename << endl;
     const InvalidHardFactorDefinitionException* ihfde = dynamic_cast<const InvalidHardFactorDefinitionException*>(&e);
     if (ihfde != NULL) {
-        std::cerr << ihfde->line << endl;
+        cerr << ihfde->line << endl;
     }
-    std::cerr << e.what() << endl;
+    cerr << e.what() << endl;
     return false;
-}
-
-HardFactorTermList parse_hf_definitions(const char* filename) {
-    HardFactorParser parser;
-    try {
-        parser.parse_file(filename);
-    }
-    catch (const std::exception& e) {
-        std::cerr << e.what() << endl;
-    }
-    return parser.get_hard_factors();
 }
 
 int main(const int argc, char** argv) {
     if (argc < 2) {
+        cerr << "Usage: " << argv[0] << " filename [filename...]" << endl;
         return 2;
     }
-    HardFactorTermList hl = parse_hf_definitions(argv[1]);
-    if (hl.empty()) {
-        std::cerr << "No definitions found";
-        return 0;
+    HardFactorParser parser;
+    for (size_t i = 1; i < argc; i++) {
+        try {
+            parser.parse_file(argv[i], print_err);
+        }
+        catch (const std::exception& e) {
+            cerr << e.what() << endl;
+        }
+        catch (const mu::ParserError& e) {
+            cerr << e.GetMsg() << endl;
+        }
     }
-    else {
-        return 0;
+    HardFactorTermList hl = parser.get_hard_factors();
+    cout << "Found " << hl.size() << " hard factors:" << endl;
+    for (HardFactorTermList::const_iterator it = hl.begin(); it != hl.end(); it++) {
+        cout << "  " << (*it)->get_name() << endl;
     }
+    return 0;
 }
