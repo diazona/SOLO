@@ -110,156 +110,175 @@ static HardFactor::HardFactorOrder sentinel = static_cast<HardFactor::HardFactor
 HardFactorParser::HardFactorParser() : order(sentinel), type(NULL), registry(NULL) {
 }
 
-HardFactorTermList HardFactorParser::parse(const char* filename) {
-    ifstream hfinput(filename);
-    string line;
-    
-    terms.clear();
-    size_t i = 0;
+HardFactorTermList HardFactorParser::get_hard_factors() {
+    return terms;
+}
 
-    for (getline(hfinput, line); hfinput; i++, getline(hfinput, line)) {
-        if (line.length() == 0) {
-            continue;
+
+void HardFactorParser::parse_line(const string& line) {
+    if (line.length() == 0) {
+        return;
+    }
+    /* A hard factor definition consists of a name, an order
+        * (LO or NLO), an integration type, and six functions
+        * giving the real and imaginary components of Fs, Fn, Fd.
+        * Each part of the definition is given as name = value.
+        */
+    vector<string> parts = split(line, "=", 2);
+    assert(parts.size() > 0);
+    if (parts.size() != 2) {
+        throw InvalidHardFactorDefinitionException(line, parts[0], parts.size() > 1 ? parts[1] : "", "Incomplete or malformed property");
+    }
+    parts[0] = trim(parts[0]);
+    if (parts[0] == "name") {
+        if (!name.empty()) {
+            create_hard_factor_term();
         }
-        /* A hard factor definition consists of a name, an order
-         * (LO or NLO), an integration type, and six functions
-         * giving the real and imaginary components of Fs, Fn, Fd.
-         * Each part of the definition is given as name = value.
-         */
-        vector<string> parts = split(line, "=", 2);
-        assert(parts.size() > 0);
-        if (parts.size() != 2) {
-            ostringstream oss;
-            oss << "Incomplete or malformed property on line " << i << ":";
-            throw InvalidHardFactorDefinitionException(parts[0], parts.size() > 1 ? parts[1] : "", oss.str());
+        name = trim(parts[1]);
+    }
+    else if (parts[0] == "order") {
+        if (order != -1) {
+            create_hard_factor_term();
         }
-        parts[0] = trim(parts[0]);
-        if (parts[0] == "name") {
-            if (!name.empty()) {
-                create_hard_factor_term();
-            }
-            name = trim(parts[1]);
+        if (trim(parts[1]) == "lo") {
+            order = HardFactor::LO;
         }
-        else if (parts[0] == "order") {
-            if (order != -1) {
-                create_hard_factor_term();
-            }
-            if (trim(parts[1]) == "lo") {
-                order = HardFactor::LO;
-            }
-            else if (trim(parts[1]) == "nlo") {
-                order = HardFactor::NLO;
-            }
-            /* no support for mixed-order hard factors because
-             * this function only creates HardFactorTerms which
-             * can only be LO or NLO */
-            else if (trim(parts[1]) == "mixed") {
-                throw InvalidHardFactorDefinitionException(parts[0], parts[1], "Mixed-order hard factors not supported:");
-            }
-            else {
-                throw InvalidHardFactorDefinitionException(parts[0], parts[1]);
-            }
+        else if (trim(parts[1]) == "nlo") {
+            order = HardFactor::NLO;
         }
-        else if (parts[0] == "type") {
-            if (type != NULL) {
-                create_hard_factor_term();
-            }
-            parts[1] = trim(parts[1]);
-            if (parts[1] == "none") {
-                type = &momentum::none;
-                registry = momentum::registry::get_instance();
-            }
-            else if (parts[1] == "momentum1") {
-                type = &momentum::momentum1;
-                registry = momentum::registry::get_instance();
-            }
-            else if (parts[1] == "momentum2") {
-                type = &momentum::momentum2;
-                registry = momentum::registry::get_instance();
-            }
-            else if (parts[1] == "momentum3") {
-                type = &momentum::momentum3;
-                registry = momentum::registry::get_instance();
-            }
-            else if (parts[1] == "momentumxip1") {
-                type = &momentum::momentumxip1;
-                registry = momentum::registry::get_instance();
-            }
-            else if (parts[1] == "momentumxip2") {
-                type = &momentum::momentumxip2;
-                registry = momentum::registry::get_instance();
-            }
-            else if (parts[1] == "qlim") {
-                type = &momentum::qlim;
-                registry = momentum::registry::get_instance();
-            }
-            else if (parts[1] == "cartesian dipole") {
-                type = &position::dipole;
-                registry = position::registry::get_instance();
-            }
-            else if (parts[1] == "cartesian quadrupole") {
-                type = &position::quadrupole;
-                registry = position::registry::get_instance();
-            }
-            else if (parts[1] == "radial dipole") {
-                type = &radial::dipole;
-                registry = radial::registry::get_instance();
-            }
-            else if (parts[1] == "radial quadrupole") {
-                type = &radial::quadrupole;
-                registry = radial::registry::get_instance();
-            }
-            else {
-                throw InvalidHardFactorDefinitionException(parts[0], parts[1], "Unknown integration type:");
-            }
+        /* no support for mixed-order hard factors because
+            * this function only creates HardFactorTerms which
+            * can only be LO or NLO */
+        else if (trim(parts[1]) == "mixed") {
+            throw InvalidHardFactorDefinitionException(line, parts[0], parts[1], "Mixed-order hard factors not supported:");
         }
-        else if (parts[0] == "Fs real") {
-            if (!Fs_real.empty()) {
-                create_hard_factor_term();
-            }
-            Fs_real = parts[1];
-        }
-        else if (parts[0] == "Fs imag") {
-            if (!Fs_imag.empty()) {
-                create_hard_factor_term();
-            }
-            Fs_imag = parts[1];
-        }
-        else if (parts[0] == "Fn real") {
-            if (!Fn_real.empty()) {
-                create_hard_factor_term();
-            }
-            Fn_real = parts[1];
-        }
-        else if (parts[0] == "Fn imag") {
-            if (!Fn_imag.empty()) {
-                create_hard_factor_term();
-            }
-            Fn_imag = parts[1];
-        }
-        else if (parts[0] == "Fd real") {
-            if (!Fd_real.empty()) {
-                create_hard_factor_term();
-            }
-            Fd_real = parts[1];
-        }
-        else if (parts[0] == "Fd imag") {
-            if (!Fd_imag.empty()) {
-                create_hard_factor_term();
-            }
-            Fd_imag = parts[1];
-        }
-        /* Anything other than those keys, if it doesn't contain spaces, is
-         * taken to represent a specification of a hard factor which
-         * contains multiple terms.
-         */
         else {
-            throw InvalidHardFactorDefinitionException(parts[0], parts[1], "Unknown property:");
+            throw InvalidHardFactorDefinitionException(line, parts[0], parts[1]);
         }
     }
+    else if (parts[0] == "type") {
+        if (type != NULL) {
+            create_hard_factor_term();
+        }
+        parts[1] = trim(parts[1]);
+        if (parts[1] == "none") {
+            type = &momentum::none;
+            registry = momentum::registry::get_instance();
+        }
+        else if (parts[1] == "momentum1") {
+            type = &momentum::momentum1;
+            registry = momentum::registry::get_instance();
+        }
+        else if (parts[1] == "momentum2") {
+            type = &momentum::momentum2;
+            registry = momentum::registry::get_instance();
+        }
+        else if (parts[1] == "momentum3") {
+            type = &momentum::momentum3;
+            registry = momentum::registry::get_instance();
+        }
+        else if (parts[1] == "momentumxip1") {
+            type = &momentum::momentumxip1;
+            registry = momentum::registry::get_instance();
+        }
+        else if (parts[1] == "momentumxip2") {
+            type = &momentum::momentumxip2;
+            registry = momentum::registry::get_instance();
+        }
+        else if (parts[1] == "qlim") {
+            type = &momentum::qlim;
+            registry = momentum::registry::get_instance();
+        }
+        else if (parts[1] == "cartesian dipole") {
+            type = &position::dipole;
+            registry = position::registry::get_instance();
+        }
+        else if (parts[1] == "cartesian quadrupole") {
+            type = &position::quadrupole;
+            registry = position::registry::get_instance();
+        }
+        else if (parts[1] == "radial dipole") {
+            type = &radial::dipole;
+            registry = radial::registry::get_instance();
+        }
+        else if (parts[1] == "radial quadrupole") {
+            type = &radial::quadrupole;
+            registry = radial::registry::get_instance();
+        }
+        else {
+            throw InvalidHardFactorDefinitionException(line, parts[0], parts[1], "Unknown integration type:");
+        }
+    }
+    else if (parts[0] == "Fs real") {
+        if (!Fs_real.empty()) {
+            create_hard_factor_term();
+        }
+        Fs_real = parts[1];
+    }
+    else if (parts[0] == "Fs imag") {
+        if (!Fs_imag.empty()) {
+            create_hard_factor_term();
+        }
+        Fs_imag = parts[1];
+    }
+    else if (parts[0] == "Fn real") {
+        if (!Fn_real.empty()) {
+            create_hard_factor_term();
+        }
+        Fn_real = parts[1];
+    }
+    else if (parts[0] == "Fn imag") {
+        if (!Fn_imag.empty()) {
+            create_hard_factor_term();
+        }
+        Fn_imag = parts[1];
+    }
+    else if (parts[0] == "Fd real") {
+        if (!Fd_real.empty()) {
+            create_hard_factor_term();
+        }
+        Fd_real = parts[1];
+    }
+    else if (parts[0] == "Fd imag") {
+        if (!Fd_imag.empty()) {
+            create_hard_factor_term();
+        }
+        Fd_imag = parts[1];
+    }
+    /* Anything other than those keys, if it doesn't contain spaces, is
+        * taken to represent a specification of a hard factor which
+        * contains multiple terms.
+        */
+    else {
+        throw InvalidHardFactorDefinitionException(line, parts[0], parts[1], "Unknown property:");
+    }
     
-    create_hard_factor_term();
-    return terms;
+    if (hard_factor_definition_complete()) {
+        create_hard_factor_term();
+    }
+}
+
+
+void HardFactorParser::parse_file(const string& filename, bool (*error_handler)(const exception&, const string&, const size_t line_number)) {
+    ifstream hfinput(filename.c_str());
+    string line;
+    size_t i;
+
+    for (i = 0, getline(hfinput, line); hfinput; i++, getline(hfinput, line)) {
+        try {
+            parse_line(line);
+        }
+        catch (const InvalidHardFactorDefinitionException& e) {
+            if (error_handler != NULL && error_handler(e, line, i)) {
+                throw e;
+            }
+        }
+        catch (const IncompleteHardFactorDefinitionException& e) {
+            if (error_handler != NULL && error_handler(e, line, i)) {
+                throw e;
+            }
+        }
+    }
 }
 
 const bool HardFactorParser::hard_factor_definition_complete() const {
@@ -276,11 +295,11 @@ const HardFactorTerm* HardFactorParser::create_hard_factor_term() {
     HardFactorTerm* hf = new ParsedHardFactorTerm(name, order, type, Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag);
     registry->add_hard_factor(hf, true);
     terms.push_back(hf);
-    reset();
+    reset_current_term();
     return hf;
 }
 
-void HardFactorParser::reset() {
+void HardFactorParser::reset_current_term() {
     // We normally shouldn't be resetting when there is an incomplete definition
     assert(hard_factor_definition_complete());
     name.erase();

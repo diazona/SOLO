@@ -99,8 +99,10 @@ private:
 class HardFactorParser {
 public:
     HardFactorParser();
-    HardFactorTermList parse(const char* filename);
-    void reset();
+    void parse_file(const string& filename, bool (*error_handler)(const std::exception& e, const std::string& filename, const size_t line_number) = NULL);
+    void parse_line(const string& line);
+    HardFactorTermList get_hard_factors();
+    void reset_current_term();
 
 private:
     const bool hard_factor_definition_complete() const;
@@ -158,11 +160,7 @@ public:
             _message = "Incomplete hard factor definition: " + message;
         }
     }
-    IncompleteHardFactorDefinitionException(const IncompleteHardFactorDefinitionException& other) throw() : _message(other._message) {}
-    ~IncompleteHardFactorDefinitionException() throw() {}
-    void operator=(const IncompleteHardFactorDefinitionException& other) {
-        _message = other._message;
-    }
+    ~IncompleteHardFactorDefinitionException() throw() {};
     const char* what() const throw() {
         return _message.c_str();
     }
@@ -175,6 +173,7 @@ class InvalidHardFactorDefinitionException : public std::exception {
 private:
     std::string _message;
 public:
+    const std::string line;
     const std::string key;
     const std::string value;
     /**
@@ -182,7 +181,7 @@ public:
      *
      * @param message a descriptive human-readable message
      */
-    InvalidHardFactorDefinitionException(const std::string& key, const std::string& value, const std::string& message = "") throw() {
+    InvalidHardFactorDefinitionException(const std::string& line, const std::string& key, const std::string& value, const std::string& message = "") throw() {
         std::ostringstream oss;
         if (message.empty()) {
             oss << "Invalid hard factor definition: ";
@@ -193,11 +192,7 @@ public:
         oss << key << " = " << value;
         _message = oss.str();
     }
-    InvalidHardFactorDefinitionException(const InvalidHardFactorDefinitionException& other) throw() : _message(other._message) {}
-    ~InvalidHardFactorDefinitionException() throw() {}
-    void operator=(const InvalidHardFactorDefinitionException& other) {
-        _message = other._message;
-    }
+    virtual ~InvalidHardFactorDefinitionException() throw() {};
     const char* what() const throw() {
         return _message.c_str();
     }
