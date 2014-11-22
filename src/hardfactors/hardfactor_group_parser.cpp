@@ -22,6 +22,7 @@
 #include "hardfactors_position.h"
 #include "hardfactors_radial.h"
 #include "hardfactor_group_parser.h"
+#include "hardfactor_parser.h"
 #include "../utils/utils.h"
 
 using std::string;
@@ -44,21 +45,6 @@ static const char* standard_nlo_spec = "r.h12qq,m.h14qq,r.h12gg,m.h12qqbar,m.h16
  * is given on the command line
  */
 static const char* highpt_nlo_spec = "m.h1qqexact,m.h1ggexact,r.h112gq,r.h122gq,m.h14gq,r.h112qg,r.h122qg,m.h14qg";
-
-static inline bool is_registry(const char implementation_code) {
-    switch (implementation_code) {
-        case 'm':
-        case 'r':
-        case 'p':
-            return true;
-        default:
-            return false;
-    }
-}
-
-static inline bool is_registry(const string& implementation_code) {
-    return implementation_code.length() == 1 ? is_registry(implementation_code[0]) : false;
-}
 
 const ParsedHardFactorGroup* ParsedHardFactorGroup::parse(const string& spec, bool exact_kinematics) {
     vector<string> splitspec;
@@ -116,49 +102,10 @@ const ParsedHardFactorGroup* ParsedHardFactorGroup::parse(const string& spec, bo
     HardFactorList hfobjs;
     // Iterate over the individual hard factor names
     for (vector<string>::iterator it = splitspec.begin(); it != splitspec.end(); it++) {
-        string orig_s = *it;
-        string s = orig_s;
-
-        const HardFactor* hf;
-        char hf_type = '\000'; // dummy value, as a default
-        
-        // If the hard factor specification takes the form [letter]:[stuff],
-        // consider the first letter to indicate the type, and remove it and
-        // the colon
-        if (s[1] == '.' || s[1] == ':') {
-            hf_type = s[0];
-            if (is_registry(hf_type)) {
-                s = s.substr(2);
-            }
-        }
-        // Pass the remaining name (e.g. "h02qq") to the hard factor registry
-        // to get the actual hard factor object
-        switch (hf_type) {
-            case 'm':
-                hf = momentum::registry::get_instance()->get_hard_factor(s);
-                break;
-            case 'r':
-                hf = radial::registry::get_instance()->get_hard_factor(s);
-                break;
-            case 'p':
-                hf = position::registry::get_instance()->get_hard_factor(s);
-                break;
-            default:
-                // by default try momentum first, then radial, then position
-                hf = momentum::registry::get_instance()->get_hard_factor(s);
-                if (hf != NULL) {
-                    break;
-                }
-                hf = radial::registry::get_instance()->get_hard_factor(s);
-                if (hf != NULL) {
-                    break;
-                }
-                hf = position::registry::get_instance()->get_hard_factor(s);
-                break;
-        }
+        const HardFactor* hf = parse_hardfactor(*it);
         if (hf == NULL) {
             // the string failed to parse
-            throw InvalidHardFactorSpecException(orig_s, "No such hard factor");
+            throw InvalidHardFactorSpecException(spec, "No such hard factor");
         }
         else {
             hfobjs.push_back(hf);

@@ -47,6 +47,7 @@
 #include "../log.h"
 #include "../hardfactors/hardfactors_radial.h"
 #include "../hardfactors/hardfactor_group_parser.h"
+#include "../hardfactors/hardfactor_parsed.h"
 
 using namespace std;
 
@@ -408,6 +409,9 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
 
 void ProgramConfiguration::parse_hf_specs() {
     if (!cc[0].hf_definitions.empty()) {
+        HardFactorParser parser;
+        parser.parse_file(cc[0].hf_definitions);
+        // it adds the parsed hard factors to the registry
     }
     
     assert(hfgroups.empty());

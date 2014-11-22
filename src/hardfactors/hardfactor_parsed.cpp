@@ -17,8 +17,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <cassert>
 #include <fstream>
 #include <istream>
+#include <sstream>
 #include <muParser.h>
 #include "gsl_mu.h"
 #include "hardfactor.h"
@@ -26,12 +28,25 @@
 #include "hardfactors_radial.h"
 #include "hardfactors_momentum.h"
 #include "hardfactor_parsed.h"
+#include "hardfactor_parser.h"
 #include "../typedefs.h"
 #include "../utils/utils.h"
 
 using mu::Parser;
 using mu::value_type;
 using mu::valmap_type;
+using mu::varmap_type;
+
+ParsedCompositeHardFactor::ParsedCompositeHardFactor(const string& name, const HardFactor::HardFactorOrder order, const size_t term_count, const HardFactorTerm** terms) :
+  m_name(name.c_str()), m_order(order), m_term_count(term_count), m_terms(terms) {
+}
+
+ParsedCompositeHardFactor::ParsedCompositeHardFactor(const string& name, const HardFactor::HardFactorOrder order, const HardFactorTermList terms) :
+  m_name(name.c_str()), m_order(order), m_term_count(terms.size()), m_terms(new const HardFactorTerm*[m_term_count]) {
+    const HardFactorTerm** m_terms_end = copy(terms.begin(), terms.end(), m_terms);
+    assert(m_terms_end - m_terms == m_term_count);
+}
+
 
 ParsedHardFactorTerm::ParsedHardFactorTerm(
     const string& name, const HardFactor::HardFactorOrder order, const IntegrationType* type, const string& Fs_real, const string& Fs_imag, const string& Fn_real, const string& Fn_imag, const string& Fd_real, const string& Fd_imag) :
@@ -43,9 +58,26 @@ ParsedHardFactorTerm::ParsedHardFactorTerm(
     Fd_parser.SetExpr(Fd_real + "," + Fd_imag);
     // use GetUsedVar() to trigger an attempt to parse the expression
     // we want any parsing errors to be revealed now, not when evaluating expressions
-    Fs_parser.GetUsedVar();
-    Fn_parser.GetUsedVar();
-    Fd_parser.GetUsedVar();
+    varmap_type all_variables;
+    varmap_type variables_from_parser;
+    variables_from_parser = Fs_parser.GetUsedVar();
+    all_variables.insert(variables_from_parser.begin(), variables_from_parser.end());
+    variables_from_parser = Fn_parser.GetUsedVar();
+    all_variables.insert(variables_from_parser.begin(), variables_from_parser.end());
+    variables_from_parser = Fd_parser.GetUsedVar();
+    all_variables.insert(variables_from_parser.begin(), variables_from_parser.end());
+    // make sure only existing variables are used
+#define process(var) all_variables.erase(#var);
+#include "../integration/ictx_var_list.inc"
+#undef process
+    if (!all_variables.empty()) {
+        ostringstream oss;
+        oss << "Invalid variables used:";
+        for (varmap_type::const_iterator it = all_variables.begin(); it != all_variables.end(); it++) {
+            oss << " " << it->first;
+        }
+        throw mu::ParserError(oss.str());
+    }
 }
 
 void define_variables(Parser& parser, const IntegrationContext* ictx) {
@@ -115,7 +147,7 @@ static HardFactor::HardFactorOrder sentinel = static_cast<HardFactor::HardFactor
 HardFactorParser::HardFactorParser() : order(sentinel), type(NULL), registry(NULL) {
 }
 
-HardFactorTermList HardFactorParser::get_hard_factors() {
+HardFactorList HardFactorParser::get_hard_factors() {
     return terms;
 }
 
@@ -251,9 +283,39 @@ void HardFactorParser::parse_line(const string& line) {
         Fd_imag = parts[1];
     }
     /* Anything other than those keys, if it doesn't contain spaces, is
-        * taken to represent a specification of a hard factor which
-        * contains multiple terms.
-        */
+     * taken to represent a specification of a hard factor which
+     * contains multiple terms.
+     */
+    else if (parts[0].find_first_of(" \t\r\n") == string::npos) {
+        vector<string> term_labels = split(parts[1], ",");
+        if (term_labels.empty()) {
+            throw InvalidHardFactorSpecException(parts[0], "no hard factor terms provided in definition");
+        }
+        HardFactorTermList hftlist;
+        HardFactor::HardFactorOrder order = sentinel;
+        for (vector<string>::const_iterator it = term_labels.begin(); it != term_labels.end(); it++) {
+            // possible future enhancement: handle the case where *it names
+            // a composite hard factor by extracting the terms and adding them
+            // individually
+            const HardFactorTerm* hft = dynamic_cast<const HardFactorTerm*>(parse_hardfactor(*it));
+            if (hft == NULL) {
+                continue;
+            }
+            hftlist.push_back(hft);
+            if (order == sentinel) {
+                order = hft->get_order();
+            }
+            else if (order != HardFactor::MIXED && order != hft->get_order()) {
+                order = HardFactor::MIXED;
+            }
+        }
+        string name;
+        HardFactorRegistry* registry = parse_one_hardfactor_spec(parts[0], name, false);
+        if (registry == NULL) {
+            throw InvalidHardFactorSpecException(parts[0], "couldn't identify registry from hard factor name");
+        }
+        registry->add_hard_factor(new ParsedCompositeHardFactor(name, order, hftlist), true);
+    }
     else {
         throw InvalidHardFactorDefinitionException(line, parts[0], parts[1], "Unknown property:");
     }
@@ -274,12 +336,12 @@ void HardFactorParser::parse_file(const string& filename, bool (*error_handler)(
             parse_line(line);
         }
         catch (const InvalidHardFactorDefinitionException& e) {
-            if (error_handler != NULL && error_handler(e, line, i)) {
+            if (error_handler == NULL || error_handler(e, line, i)) {
                 throw e;
             }
         }
         catch (const IncompleteHardFactorDefinitionException& e) {
-            if (error_handler != NULL && error_handler(e, line, i)) {
+            if (error_handler == NULL || error_handler(e, line, i)) {
                 throw e;
             }
         }
@@ -293,11 +355,11 @@ const bool HardFactorParser::hard_factor_definition_complete() const {
       || Fd_real.empty()  || Fd_imag.empty());
 }
 
-const HardFactorTerm* HardFactorParser::create_hard_factor_term() {
+const ParsedHardFactorTerm* HardFactorParser::create_hard_factor_term() {
     if (!hard_factor_definition_complete()) {
         throw IncompleteHardFactorDefinitionException();
     }
-    HardFactorTerm* hf = new ParsedHardFactorTerm(name, order, type, Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag);
+    ParsedHardFactorTerm* hf = new ParsedHardFactorTerm(name, order, type, Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag);
     registry->add_hard_factor(hf, true);
     terms.push_back(hf);
     reset_current_term();

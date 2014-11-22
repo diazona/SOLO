@@ -64,34 +64,3 @@ public:
     const std::vector<std::string> specifications;
 };
 
-/**
- * An exception to be thrown when a hard factor specification fails to be
- * parsed for some reason. The reason is indicated by the message.
- */
-class InvalidHardFactorSpecException : public std::exception {
-private:
-    std::string _message;
-public:
-    std::string hfspec;
-    /**
-     * Constructs an instance of the exception.
-     *
-     * @param hfspec the hard factor specification or part of a specification
-     *  that caused the error
-     * @param message a descriptive human-readable message indicating why hfspec
-     *  could not be parsed
-     */
-    InvalidHardFactorSpecException(const std::string& hfspec, const std::string& message) throw() : hfspec(hfspec) {
-        std::ostringstream s;
-        s << message << " in hard factor " << hfspec;
-        _message = s.str();
-    }
-    InvalidHardFactorSpecException(const InvalidHardFactorSpecException& other) throw() : _message(other._message) {}
-    ~InvalidHardFactorSpecException() throw() {}
-    void operator=(const InvalidHardFactorSpecException& other) {
-        _message = other._message;
-    }
-    const char* what() const throw() {
-        return _message.c_str();
-    }
-};

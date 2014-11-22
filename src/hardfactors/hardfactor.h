@@ -59,7 +59,7 @@ public:
     /** A pointer to the list of HardFactorTerm objects. */
     virtual const HardFactorTerm* const* get_terms() const = 0;
     /** The order of the term (LO, NLO, mixed) */
-    virtual HardFactorOrder get_order() const {
+    virtual const HardFactorOrder get_order() const {
         // relies on a particular convention for get_name()
         // but can be overridden for hard factors where that convention doesn't apply
         std::string name = get_name();
@@ -138,7 +138,7 @@ public:
     /**
      * Returns the hard factor corresponding to the given key, or NULL if none
      */
-    const HardFactor* get_hard_factor(std::string& key) const {
+    const HardFactor* get_hard_factor(const std::string& key) const {
         using namespace std;
         string keystring(key);
         transform(keystring.begin(), keystring.end(), keystring.begin(), ::tolower);

@@ -21,6 +21,23 @@
 #include "hardfactor.h"
 #include "../typedefs.h"
 
+class ParsedCompositeHardFactor : public HardFactor {
+public:
+    ParsedCompositeHardFactor(const string& name, const HardFactor::HardFactorOrder order, const size_t term_count, const HardFactorTerm** terms);
+    ParsedCompositeHardFactor(const string& name, const HardFactorOrder order, const HardFactorTermList terms);
+    ~ParsedCompositeHardFactor();
+    
+    const char* get_name() const { return m_name; }
+    const HardFactorOrder get_order() const { return m_order; }
+    const size_t get_term_count() const { return m_term_count; }
+    const HardFactorTerm* const* get_terms() const { return m_terms; }
+private:
+    const char* m_name;
+    const HardFactorOrder m_order;
+    const size_t m_term_count;
+    const HardFactorTerm** m_terms;
+};
+
 class ParsedHardFactorTerm : public HardFactorTerm {
 public:
     ParsedHardFactorTerm(
@@ -101,29 +118,19 @@ public:
     HardFactorParser();
     void parse_file(const string& filename, bool (*error_handler)(const std::exception& e, const std::string& filename, const size_t line_number) = NULL);
     void parse_line(const string& line);
-    HardFactorTermList get_hard_factors();
+    HardFactorList get_hard_factors();
     void reset_current_term();
 
 private:
     const bool hard_factor_definition_complete() const;
-    const HardFactorTerm* create_hard_factor_term();
+    const ParsedHardFactorTerm* create_hard_factor_term();
 
-    HardFactorTermList terms;
+    HardFactorList terms;
     string Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag;
     string name;
     HardFactor::HardFactorOrder order;
     const IntegrationType* type;
     HardFactorRegistry* registry;
-};
-
-class ParsedHardFactorRegistry : public HardFactorRegistry {
-public:
-    static const ParsedHardFactorRegistry* get_instance() {
-        static ParsedHardFactorRegistry instance;
-        return &instance;
-    }
-private:
-    ParsedHardFactorRegistry() {}
 };
 
 /**

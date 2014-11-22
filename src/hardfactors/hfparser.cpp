@@ -54,9 +54,9 @@ int main(const int argc, char** argv) {
             cerr << e.GetMsg() << endl;
         }
     }
-    HardFactorTermList hl = parser.get_hard_factors();
+    HardFactorList hl = parser.get_hard_factors();
     cout << "Found " << hl.size() << " hard factors:" << endl;
-    for (HardFactorTermList::const_iterator it = hl.begin(); it != hl.end(); it++) {
+    for (HardFactorList::const_iterator it = hl.begin(); it != hl.end(); it++) {
         cout << "  " << (*it)->get_name() << endl;
     }
     return 0;
