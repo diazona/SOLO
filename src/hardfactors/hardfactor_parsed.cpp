@@ -62,6 +62,11 @@ ParsedHardFactorTerm::ParsedHardFactorTerm(
     Fs_parser.SetExpr(e0(Fs_real) + "," + e0(Fs_imag));
     Fn_parser.SetExpr(e0(Fn_real) + "," + e0(Fn_imag));
     Fd_parser.SetExpr(e0(Fd_real) + "," + e0(Fd_imag));
+    
+    mu_load_gsl(Fs_parser);
+    mu_load_gsl(Fn_parser);
+    mu_load_gsl(Fd_parser);
+    
     // use GetUsedVar() to trigger an attempt to parse the expression
     // we want any parsing errors to be revealed now, not when evaluating expressions
     varmap_type all_variables;
@@ -75,6 +80,7 @@ ParsedHardFactorTerm::ParsedHardFactorTerm(
     // make sure only existing variables are used
 #define process(var) all_variables.erase(#var);
 #include "../integration/ictx_var_list.inc"
+#include "../configuration/ctx_var_list.inc"
 #undef process
     if (!all_variables.empty()) {
         ostringstream oss;
@@ -99,6 +105,12 @@ void define_variables(Parser& parser, const IntegrationContext* ictx) {
 #define process(var) parser.DefineVar(#var, const_cast<value_type*>(&(ictx->var)));
 #include "../integration/ictx_var_list.inc"
 #undef process
+#define process(var) parser.DefineVar(#var, const_cast<value_type*>(&(ictx->ctx->var)));
+#include "../configuration/ctx_var_list.inc"
+#undef process
+    // and now some aliases
+    parser.DefineVar("A", const_cast<value_type*>(&(ictx->ctx->mass_number)));
+    parser.DefineVar("c", const_cast<value_type*>(&(ictx->ctx->centrality)));
 }
 
 void evaluate_hard_factor(Parser& parser, double* real, double* imag) {
