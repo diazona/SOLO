@@ -47,15 +47,21 @@ ParsedCompositeHardFactor::ParsedCompositeHardFactor(const string& name, const H
     assert(m_terms_end - m_terms == m_term_count);
 }
 
+/**
+ * Return the string, or "0" if the string is empty
+ */
+static const string e0(const string& s) {
+    return s.empty() ? "0" : s;
+}
 
 ParsedHardFactorTerm::ParsedHardFactorTerm(
     const string& name, const HardFactor::HardFactorOrder order, const IntegrationType* type, const string& Fs_real, const string& Fs_imag, const string& Fn_real, const string& Fn_imag, const string& Fd_real, const string& Fd_imag) :
   m_name(name),
   m_order(order),
   mp_type(type) {
-    Fs_parser.SetExpr(Fs_real + "," + Fs_imag);
-    Fn_parser.SetExpr(Fn_real + "," + Fn_imag);
-    Fd_parser.SetExpr(Fd_real + "," + Fd_imag);
+    Fs_parser.SetExpr(e0(Fs_real) + "," + e0(Fs_imag));
+    Fn_parser.SetExpr(e0(Fn_real) + "," + e0(Fn_imag));
+    Fd_parser.SetExpr(e0(Fd_real) + "," + e0(Fd_imag));
     // use GetUsedVar() to trigger an attempt to parse the expression
     // we want any parsing errors to be revealed now, not when evaluating expressions
     varmap_type all_variables;
@@ -349,10 +355,14 @@ void HardFactorParser::parse_file(const string& filename, bool (*error_handler)(
 }
 
 const bool HardFactorParser::hard_factor_definition_complete() const {
-    return type != NULL && registry != NULL && order != -1 && !(name.empty() 
-      || Fs_real.empty()  || Fs_imag.empty()
-      || Fn_real.empty()  || Fn_imag.empty()
-      || Fd_real.empty()  || Fd_imag.empty());
+    return
+      type != NULL &&
+      registry != NULL &&
+      order != -1 &&
+      !name.empty() &&
+      !(   Fs_real.empty() && Fs_imag.empty()
+        && Fn_real.empty() && Fn_imag.empty()
+        && Fd_real.empty() && Fd_imag.empty());
 }
 
 const ParsedHardFactorTerm* HardFactorParser::create_hard_factor_term() {
