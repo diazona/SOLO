@@ -312,12 +312,19 @@ void HardFactorParser::parse_line(const string& line) {
         HardFactorTermList hftlist;
         HardFactor::HardFactorOrder order = sentinel;
         for (vector<string>::const_iterator it = term_labels.begin(); it != term_labels.end(); it++) {
+            if (it->empty()) {
+                continue;
+            }
             // possible future enhancement: handle the case where *it names
             // a composite hard factor by extracting the terms and adding them
             // individually
-            const HardFactorTerm* hft = dynamic_cast<const HardFactorTerm*>(parse_hardfactor(*it));
+            const HardFactor* hf = parse_hardfactor(*it);
+            if (hf == NULL) {
+                throw InvalidHardFactorSpecException(*it, "no hard factor with that name");
+            }
+            const HardFactorTerm* hft = dynamic_cast<const HardFactorTerm*>(hf);
             if (hft == NULL) {
-                continue;
+                throw InvalidHardFactorSpecException(*it, "can't handle composite hard factors");
             }
             hftlist.push_back(hft);
             if (order == sentinel) {
@@ -326,6 +333,9 @@ void HardFactorParser::parse_line(const string& line) {
             else if (order != HardFactor::MIXED && order != hft->get_order()) {
                 order = HardFactor::MIXED;
             }
+        }
+        if (hftlist.empty()) {
+            throw InvalidHardFactorSpecException(parts[1], "no valid hard factors provided in definition");
         }
         string name;
         HardFactorRegistry* registry = parse_one_hardfactor_spec(parts[0], name, false);
