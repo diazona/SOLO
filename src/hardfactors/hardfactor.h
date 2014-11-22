@@ -130,6 +130,8 @@ public:
         using namespace std;
         string keystring(key);
         transform(keystring.begin(), keystring.end(), keystring.begin(), ::tolower);
+        // note that even if another HardFactor is later added with the
+        // same name, it doesn't cause a memory leak
         hardfactors[keystring] = hf;
         if (manage) {
             hardfactors_to_delete.push_back(hf);
