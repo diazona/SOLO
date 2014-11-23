@@ -57,7 +57,22 @@ int main(const int argc, char** argv) {
     HardFactorList hl = parser.get_hard_factors();
     cout << "Found " << hl.size() << " hard factors:" << endl;
     for (HardFactorList::const_iterator it = hl.begin(); it != hl.end(); it++) {
-        cout << "  " << (*it)->get_name() << " " << (((*it)->get_order() == HardFactor::LO) ? "leading order" : "not leading order") << endl;
+        cout << "  " << (*it)->get_name() << " ";
+        switch ((*it)->get_order()) {
+            case HardFactor::LO:
+                cout << "LO";
+                break;
+            case HardFactor::NLO:
+                cout << "NLO";
+                break;
+            case HardFactor::MIXED:
+                cout << "mixed";
+                break;
+            default:
+                cout << "unknown!";
+                break;
+        }
+        cout << endl;
     }
     return 0;
 }
