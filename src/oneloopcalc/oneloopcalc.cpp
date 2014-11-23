@@ -604,6 +604,7 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
 #include "../integration/ictx_var_list.inc"
 #undef process
     }
+    return out;
 }
 
 /* The output stream to write logging messages to. Declared in log.h. */

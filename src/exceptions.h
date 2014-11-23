@@ -46,13 +46,6 @@ public:
     GSLException(const GSLException& e) throw() :
         _reason(e._reason), _file(e._file), _line(e._line), _gsl_errno(e._gsl_errno), _message(e._message) {
     }
-    GSLException& operator=(const GSLException& e) throw() {
-        _reason = e._reason;
-        _file = e._file;
-        _line = e._line;
-        _gsl_errno = e._gsl_errno;
-        _message = e._message;
-    }
     ~GSLException() throw() {
     }
     const std::string& reason() const {

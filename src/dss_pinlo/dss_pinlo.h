@@ -38,7 +38,7 @@ public:
     FragmentationFunctionRangeException(const FragmentationFunctionRangeException& e) throw() :
         _z(e._z), _mu2(e._mu2), _message(e._message) {
     }
-    FragmentationFunctionRangeException& operator=(const FragmentationFunctionRangeException& e) throw() {
+    void operator=(const FragmentationFunctionRangeException& e) throw() {
         _z = e._z;
         _mu2 = e._mu2;
         _message = e._message;

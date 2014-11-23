@@ -47,7 +47,7 @@ evtype eqtype;
 RegType Reg;
 startstatus startup;
 
-main()
+int main()
 {
     const int FieldWidth = 18;
     const int FieldWidthQ2 = 18;
@@ -249,7 +249,8 @@ double input(double logr,double x)
             Qs2 = 0.01; 
             return r * r * Qs2 / 4.0 / ( 1.0 + r * r * Qs2 / 4.0);
             break;
-    }	
+    }
+    return 0;
 }
 //***************************************************************
 double Qsat2(double x)
@@ -528,6 +529,7 @@ double Kernel(double lrprim,double phi)
                 break;
         }
     }
+    return 0;
 }
 // **************************************************************
 double QGAUSS(double (*func)(double),double a,double b)

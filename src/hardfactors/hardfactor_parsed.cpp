@@ -38,14 +38,23 @@ using mu::valmap_type;
 using mu::varmap_type;
 
 ParsedCompositeHardFactor::ParsedCompositeHardFactor(const string& name, const HardFactor::HardFactorOrder order, const size_t term_count, const HardFactorTerm** terms) :
-  m_name(name.c_str()), m_order(order), m_term_count(term_count), m_terms(terms) {
+  HardFactor(), 
+  m_name(name.c_str()), m_order(order), m_term_count(term_count), m_terms(terms), need_to_free_m_terms(false) {
 }
 
 ParsedCompositeHardFactor::ParsedCompositeHardFactor(const string& name, const HardFactor::HardFactorOrder order, const HardFactorTermList terms) :
-  m_name(name.c_str()), m_order(order), m_term_count(terms.size()), m_terms(new const HardFactorTerm*[m_term_count]) {
+  HardFactor(), 
+  m_name(name.c_str()), m_order(order), m_term_count(terms.size()), m_terms(new const HardFactorTerm*[m_term_count]), need_to_free_m_terms(true) {
     const HardFactorTerm** m_terms_end = copy(terms.begin(), terms.end(), m_terms);
     assert(m_terms_end - m_terms == m_term_count);
 }
+
+ParsedCompositeHardFactor::~ParsedCompositeHardFactor() {
+    if (need_to_free_m_terms) {
+        delete[] m_terms;
+    }
+}
+
 
 /**
  * Return the string, or "0" if the string is empty
@@ -166,7 +175,7 @@ HardFactorParser::HardFactorParser() : order(sentinel), type(NULL), registry(NUL
 }
 
 HardFactorList HardFactorParser::get_hard_factors() {
-    return terms;
+    return hard_factors;
 }
 
 
@@ -185,26 +194,27 @@ void HardFactorParser::parse_line(const string& line) {
         throw InvalidHardFactorDefinitionException(line, parts[0], parts.size() > 1 ? parts[1] : "", "Incomplete or malformed property");
     }
     parts[0] = trim(parts[0]);
+    parts[1] = trim(parts[1]);
     if (parts[0] == "name") {
         if (!name.empty()) {
             create_hard_factor_term();
         }
-        name = trim(parts[1]);
+        name = parts[1];
     }
     else if (parts[0] == "order") {
-        if (order != -1) {
+        if (order != sentinel) {
             create_hard_factor_term();
         }
-        if (trim(parts[1]) == "lo") {
+        if (parts[1] == "lo") {
             order = HardFactor::LO;
         }
-        else if (trim(parts[1]) == "nlo") {
+        else if (parts[1] == "nlo") {
             order = HardFactor::NLO;
         }
         /* no support for mixed-order hard factors because
             * this function only creates HardFactorTerms which
             * can only be LO or NLO */
-        else if (trim(parts[1]) == "mixed") {
+        else if (parts[1] == "mixed") {
             throw InvalidHardFactorDefinitionException(line, parts[0], parts[1], "Mixed-order hard factors not supported:");
         }
         else {
@@ -215,7 +225,6 @@ void HardFactorParser::parse_line(const string& line) {
         if (type != NULL) {
             create_hard_factor_term();
         }
-        parts[1] = trim(parts[1]);
         if (parts[1] == "none") {
             type = &momentum::none;
             registry = momentum::registry::get_instance();
@@ -342,7 +351,9 @@ void HardFactorParser::parse_line(const string& line) {
         if (registry == NULL) {
             throw InvalidHardFactorSpecException(parts[0], "couldn't identify registry from hard factor name");
         }
-        registry->add_hard_factor(new ParsedCompositeHardFactor(name, order, hftlist), true);
+        ParsedCompositeHardFactor* hf = new ParsedCompositeHardFactor(name, order, hftlist);
+        registry->add_hard_factor(hf, true);
+        hard_factors.push_back(hf);
     }
     else {
         throw InvalidHardFactorDefinitionException(line, parts[0], parts[1], "Unknown property:");
@@ -380,7 +391,7 @@ const bool HardFactorParser::hard_factor_definition_complete() const {
     return
       type != NULL &&
       registry != NULL &&
-      order != -1 &&
+      order != sentinel &&
       !name.empty() &&
       !(   Fs_real.empty() && Fs_imag.empty()
         && Fn_real.empty() && Fn_imag.empty()
@@ -393,7 +404,7 @@ const ParsedHardFactorTerm* HardFactorParser::create_hard_factor_term() {
     }
     ParsedHardFactorTerm* hf = new ParsedHardFactorTerm(name, order, type, Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag);
     registry->add_hard_factor(hf, true);
-    terms.push_back(hf);
+    hard_factors.push_back(hf);
     reset_current_term();
     return hf;
 }

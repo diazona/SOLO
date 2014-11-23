@@ -309,7 +309,7 @@ FixedSaturationMVGluonDistribution* ContextCollection::create_fmv_gluon_distribu
     check_property(YMV, double, parse_double)
     logger << "Creating fMV gluon distribution with " << q2minMV << " < k2 < " << q2maxMV << ", Y = " << YMV << endl;
     check_property_default(gdist_subinterval_limit, size_t, parse_size, 10000)
-    gdist = new FixedSaturationMVGluonDistribution(lambdaMV, gammaMV, q2minMV, q2maxMV, YMV, Q02, x0, lambda, gdist_subinterval_limit);
+    return new FixedSaturationMVGluonDistribution(lambdaMV, gammaMV, q2minMV, q2maxMV, YMV, Q02, x0, lambda, gdist_subinterval_limit);
 }
 
 PlateauPowerGluonDistribution* ContextCollection::create_pp_gluon_distribution() {
@@ -324,7 +324,7 @@ PlateauPowerGluonDistribution* ContextCollection::create_pp_gluon_distribution()
     check_property_default(YmaxPP,  double, parse_double, Ymax - log(pTmin) + log(sqs))
     check_property_default(gdist_subinterval_limit, size_t, parse_size, 10000)
     logger << "Creating plateau-power gluon distribution with " << r2minPP << " < r2 < " << r2maxPP << ", " << YminPP << " < Y < " << YmaxPP << endl;
-    gdist = new PlateauPowerGluonDistribution(gammaPP, r2minPP, r2maxPP, YminPP, YmaxPP, Q02, x0, lambda, gdist_subinterval_limit);
+    return new PlateauPowerGluonDistribution(gammaPP, r2minPP, r2maxPP, YminPP, YmaxPP, Q02, x0, lambda, gdist_subinterval_limit);
 }
 
 FileDataGluonDistribution* ContextCollection::create_file_gluon_distribution(GluonDistribution* lower_dist = NULL, GluonDistribution* upper_dist = NULL, const bool extended = false) {
@@ -745,6 +745,7 @@ std::ostream& operator<<(std::ostream& out, const integration_strategy& strategy
             out << "quasi";
             break;
     }
+    return out;
 }
 
 std::ostream& operator<<(std::ostream& out, const projectile_type& proj) {
@@ -756,6 +757,7 @@ std::ostream& operator<<(std::ostream& out, const projectile_type& proj) {
             out << "deuteron";
             break;
     }
+    return out;
 }
 
 std::ostream& operator<<(std::ostream& out, const DSSpiNLO::hadron& hadron) {
@@ -770,6 +772,7 @@ std::ostream& operator<<(std::ostream& out, const DSSpiNLO::hadron& hadron) {
             out << "pi+";
             break;
     }
+    return out;
 }
 
 std::ostream& operator<<(std::ostream& out, Context& ctx) {

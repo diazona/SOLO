@@ -57,7 +57,7 @@ int main(const int argc, char** argv) {
     HardFactorList hl = parser.get_hard_factors();
     cout << "Found " << hl.size() << " hard factors:" << endl;
     for (HardFactorList::const_iterator it = hl.begin(); it != hl.end(); it++) {
-        cout << "  " << (*it)->get_name() << endl;
+        cout << "  " << (*it)->get_name() << " " << (((*it)->get_order() == HardFactor::LO) ? "leading order" : "not leading order") << endl;
     }
     return 0;
 }

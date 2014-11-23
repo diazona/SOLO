@@ -14,6 +14,7 @@ include_directories(${gslmuparser_SOURCE_DIR} ${interp2d_SOURCE_DIR})
 
 add_executable(hfparser
     hfparser.cpp
+    hardfactor.cpp
     hardfactor_parsed.cpp
     hardfactor_parser.cpp
     hardfactor_group_parser.cpp

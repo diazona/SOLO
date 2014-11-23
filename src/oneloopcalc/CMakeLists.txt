@@ -33,6 +33,7 @@ add_executable(oneloopcalc
     ${SOLO_SOURCE_DIR}/coupling.cpp
     ${SOLO_SOURCE_DIR}/factorizationscale.cpp
     ${SOLO_SOURCE_DIR}/configuration/context.cpp
+    ${SOLO_SOURCE_DIR}/hardfactors/hardfactor.cpp
     ${SOLO_SOURCE_DIR}/hardfactors/hardfactor_parsed.cpp
     ${SOLO_SOURCE_DIR}/hardfactors/hardfactor_parser.cpp
     ${SOLO_SOURCE_DIR}/hardfactors/hardfactor_group_parser.cpp

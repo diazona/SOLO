@@ -52,6 +52,7 @@ class HardFactorTerm;
 class HardFactor {
 public:
     typedef enum {LO, NLO, MIXED} HardFactorOrder;
+    virtual ~HardFactor();
     /** An identifying name for the hard factor. */
     virtual const char* get_name() const = 0;
     /** The number of HardFactorTerm objects this hard factor has. */
@@ -71,6 +72,9 @@ public:
         }
         else if (name.compare(0, 2, "H1") == 0) {
             return NLO;
+        }
+        else {
+            assert(false);
         }
     };
 };
