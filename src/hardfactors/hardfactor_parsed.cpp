@@ -158,14 +158,6 @@ void ParsedHardFactorTerm::Fd(const IntegrationContext* ictx, double* real, doub
     evaluate_hard_factor(Fd_parser, real, imag);
 }
 
-const char* ParsedHardFactorTerm::get_name() const {
-    return m_name.c_str();
-}
-
-const IntegrationType* ParsedHardFactorTerm::get_type() const {
-    return mp_type;
-}
-
 using std::ifstream;
 using std::vector;
 

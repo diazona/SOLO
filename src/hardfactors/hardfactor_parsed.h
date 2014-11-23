@@ -50,8 +50,9 @@ public:
         const string& Fd_real, const string& Fd_imag
     );
 
-    const char* get_name() const;
-    const IntegrationType* get_type() const;
+    const char* get_name() const { return m_name.c_str(); }
+    const IntegrationType* get_type() const { return mp_type; }
+    const HardFactorOrder get_order() const { return m_order; }
     void Fs(const IntegrationContext* ictx, double* real, double* imag) const;
     void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
