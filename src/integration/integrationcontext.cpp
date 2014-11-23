@@ -129,30 +129,15 @@ void IntegrationContext::update_momenta(double q1x, double q1y, double q2x, doub
     this->q22 = q2x*q2x + q2y*q2y;
     this->q32 = q3x*q3x + q3y*q3y;
     
-    if (q12 > 0) {
-        this->Fq1 = ctx->gdist->F(q12, this->Ya);
-        this->Fkq1 = ctx->gdist->F((kT - q1x)*(kT - q1x) + q1y*q1y, this->Ya);
-    }
-    else {
-        this->Fq1 = NAN;
-        this->Fkq1 = NAN;
-    }
-    if (q22 > 0) {
-        this->Fq2 = ctx->gdist->F(q22, this->Ya);
-        this->Fkq2 = ctx->gdist->F((kT - q2x)*(kT - q2x) + q2y*q2y, this->Ya);
-    }
-    else {
-        this->Fq2 = NAN;
-        this->Fkq2 = NAN;
-    }
-    if (q32 > 0) {
-        this->Fq3 = ctx->gdist->F(q32, this->Ya);
-        this->Fkq3 = ctx->gdist->F((kT - q3x)*(kT - q3x) + q3y*q3y, this->Ya);
-    }
-    else {
-        this->Fq3 = NAN;
-        this->Fkq3 = NAN;
-    }
+    assert(q12 >= 0);
+    assert(q22 >= 0);
+    assert(q32 >= 0);
+    this->Fq1 = ctx->gdist->F(q12, this->Ya);
+    this->Fkq1 = ctx->gdist->F((kT - q1x)*(kT - q1x) + q1y*q1y, this->Ya);
+    this->Fq2 = ctx->gdist->F(q22, this->Ya);
+    this->Fkq2 = ctx->gdist->F((kT - q2x)*(kT - q2x) + q2y*q2y, this->Ya);
+    this->Fq3 = ctx->gdist->F(q32, this->Ya);
+    this->Fkq3 = ctx->gdist->F((kT - q3x)*(kT - q3x) + q3y*q3y, this->Ya);
 }
 
 void IntegrationContext::update_auxiliary(double xiprime) {
