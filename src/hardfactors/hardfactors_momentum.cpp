@@ -33,6 +33,9 @@ namespace momentum {
     const MomentumIntegrationType momentum1(2);
     const MomentumIntegrationType momentum2(4);
     const MomentumIntegrationType momentum3(6);
+    const RadialMomentumIntegrationType radialmomentum1(2);
+    const RadialMomentumIntegrationType radialmomentum2(4);
+    const RadialMomentumIntegrationType radialmomentum3(6);
     const XiPIntegrationType momentumxip1(3);
     const XiPIntegrationType momentumxip2(5);
     const QLimitedMomentumIntegrationType qlim(2);

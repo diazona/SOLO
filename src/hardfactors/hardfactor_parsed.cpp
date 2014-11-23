@@ -233,6 +233,18 @@ void HardFactorParser::parse_line(const string& line) {
             type = &momentum::momentum3;
             registry = momentum::registry::get_instance();
         }
+        else if (parts[1] == "radial momentum1") {
+            type = &momentum::radialmomentum1;
+            registry = momentum::registry::get_instance();
+        }
+        else if (parts[1] == "radial momentum2") {
+            type = &momentum::radialmomentum2;
+            registry = momentum::registry::get_instance();
+        }
+        else if (parts[1] == "radial momentum3") {
+            type = &momentum::radialmomentum3;
+            registry = momentum::registry::get_instance();
+        }
         else if (parts[1] == "momentumxip1") {
             type = &momentum::momentumxip1;
             registry = momentum::registry::get_instance();

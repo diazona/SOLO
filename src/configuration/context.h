@@ -233,6 +233,8 @@ public:
 
     /** The limit of integration over infinite regions */
     double inf;
+    /** A cutoff close to zero */
+    double cutoff;
 
     /** The precomputed value of c A^(1/3) Q_0^2 x_0^(lambda) */
     double Q02x0lambda;
@@ -278,7 +280,8 @@ public:
         double css_r2_max,
         double resummation_constant,
         bool exact_kinematics,
-        double inf) :
+        double inf,
+        double cutoff) :
      x0(x0),
      mass_number(mass_number),
      centrality(centrality),
@@ -316,6 +319,7 @@ public:
      resummation_constant(resummation_constant),
      exact_kinematics(exact_kinematics),
      inf(inf),
+     cutoff(cutoff), 
      Q02x0lambda(centrality * pow(mass_number, 1.0d/3.0d) * pow(x0, lambda)),
      tau(sqrt(pT2)/sqs*exp(Y)),
      tauhat(sqrt(pT2)/sqs*(exp(Y)+exp(-Y))) {
@@ -367,6 +371,7 @@ public:
      resummation_constant(other.resummation_constant),
      exact_kinematics(other.exact_kinematics),
      inf(other.inf),
+     cutoff(other.cutoff), 
      Q02x0lambda(other.Q02x0lambda),
      tau(other.tau),
      tauhat(other.tauhat) {}

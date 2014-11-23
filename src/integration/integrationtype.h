@@ -129,7 +129,7 @@ protected:
 /**
  * Base class for integration types which have one or two dimensions (z and/or y)
  * with limits of tau and 1, and any number of other dimensions in pairs with limits
- * zero and infinity, and zero and 2pi, respectively.
+ * Context::cutoff and Context::inf, and zero and 2pi, respectively.
  */
 class RadialIntegrationType : public IntegrationType {
 public:

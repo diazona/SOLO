@@ -224,7 +224,7 @@ void RadialIntegrationType::fill_min(const Context* const ctx, const size_t core
     if (core_dimensions == 2) {
         min[i++] = ymin(ctx);
     }
-    while (i < core_dimensions + extra_dimensions) { min[i++] = 0; }
+    while (i < core_dimensions + extra_dimensions) { min[i++] = ctx->cutoff; }
 }
 void RadialIntegrationType::fill_max(const Context* const ctx, const size_t core_dimensions, double* max) const {
     assert(core_dimensions == 1 || core_dimensions == 2);

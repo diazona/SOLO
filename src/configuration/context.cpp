@@ -491,6 +491,9 @@ void ContextCollection::create_contexts() {
      */
     check_property_default( inf, double, parse_double, 40)
     
+    /* The default cutoff is zero, since most integrands are well-behaved at 0. */
+    check_property_default( cutoff, double, parse_double, 0)
+    
     this->Q02 = centrality * pow(mass_number, 1./3.);
     this->x0 = x0;
     this->lambda = lambda;
@@ -610,7 +613,8 @@ void ContextCollection::create_contexts() {
                         css_r2_max,
                         resummation_constant,
                         exact_kinematics,
-                        inf));
+                        inf,
+                        cutoff));
             }
             catch (const InvalidKinematicsException& e) {
                 logger << "Failed to create context at pT = " << *pTit << ", Y = " << *Yit << ": " << e.what() << endl;
@@ -801,6 +805,8 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "quasi_iterations\t= " << ctx.quasi_iterations << endl;
     out << "abserr\t= " << ctx.abserr << endl;
     out << "relerr\t= " << ctx.relerr << endl;
+    out << "inf\t= " << ctx.inf << endl;
+    out << "cutoff\t= " << ctx.cutoff << endl;
     out << "gluon distribution\t = " << ctx.gdist << endl;
     out << "coupling\t = " << ctx.cpl << endl;
     out << "factorization scale\t = " << ctx.fs << endl;
