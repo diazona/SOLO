@@ -39,12 +39,12 @@ using mu::varmap_type;
 
 ParsedCompositeHardFactor::ParsedCompositeHardFactor(const string& name, const HardFactor::HardFactorOrder order, const size_t term_count, const HardFactorTerm** terms) :
   HardFactor(), 
-  m_name(name.c_str()), m_order(order), m_term_count(term_count), m_terms(terms), need_to_free_m_terms(false) {
+  m_name(name), m_order(order), m_term_count(term_count), m_terms(terms), need_to_free_m_terms(false) {
 }
 
 ParsedCompositeHardFactor::ParsedCompositeHardFactor(const string& name, const HardFactor::HardFactorOrder order, const HardFactorTermList terms) :
   HardFactor(), 
-  m_name(name.c_str()), m_order(order), m_term_count(terms.size()), m_terms(new const HardFactorTerm*[m_term_count]), need_to_free_m_terms(true) {
+  m_name(name), m_order(order), m_term_count(terms.size()), m_terms(new const HardFactorTerm*[m_term_count]), need_to_free_m_terms(true) {
     const HardFactorTerm** m_terms_end = copy(terms.begin(), terms.end(), m_terms);
     assert(m_terms_end - m_terms == m_term_count);
 }

@@ -27,13 +27,13 @@ public:
     ParsedCompositeHardFactor(const string& name, const HardFactor::HardFactorOrder order, const HardFactorTermList terms);
     ~ParsedCompositeHardFactor();
     
-    const char* get_name() const { return m_name; }
+    const char* get_name() const { return m_name.c_str(); }
     const HardFactorOrder get_order() const { return m_order; }
     const size_t get_term_count() const { return m_term_count; }
     const HardFactorTerm* const* get_terms() const { return m_terms; }
 private:
     const bool need_to_free_m_terms;
-    const char* m_name;
+    const std::string m_name;
     const HardFactorOrder m_order;
     const size_t m_term_count;
     const HardFactorTerm** m_terms;
