@@ -332,6 +332,8 @@ private:
     registry() {
         add_hard_factor(new H02qq(), true);
 //         add_hard_factor(new H12qq(), true);
+        add_hard_factor(new H14qqSingular(), true);
+        add_hard_factor(new H14qqDelta(), true);
         add_hard_factor(new H14qq(), true);
         add_hard_factor(new H1qqCorrectionA(), true);
         add_hard_factor(new H1qqCorrectionB(), true);
