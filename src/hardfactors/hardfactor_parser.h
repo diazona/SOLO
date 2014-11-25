@@ -77,7 +77,7 @@ public:
      */
     InvalidHardFactorSpecException(const std::string& hfspec, const std::string& message) throw() : hfspec(hfspec) {
         std::ostringstream s;
-        s << message << " in hard factor " << hfspec;
+        s << message << "; spec " << hfspec;
         _message = s.str();
     }
     InvalidHardFactorSpecException(const InvalidHardFactorSpecException& other) throw() : _message(other._message) {}

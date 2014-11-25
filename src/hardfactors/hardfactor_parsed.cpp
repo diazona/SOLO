@@ -196,6 +196,18 @@ void ParsedHardFactorTerm::Fd(const IntegrationContext* ictx, double* real, doub
 # endif
 }
 
+const string ParsedHardFactorTerm::Fs_expr() const {
+    return Fs_parser.GetExpr();
+}
+
+const string ParsedHardFactorTerm::Fn_expr() const {
+    return Fn_parser.GetExpr();
+}
+
+const string ParsedHardFactorTerm::Fd_expr() const {
+    return Fd_parser.GetExpr();
+}
+
 using std::ifstream;
 using std::vector;
 

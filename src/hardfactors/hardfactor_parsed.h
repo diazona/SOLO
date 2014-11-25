@@ -57,6 +57,10 @@ public:
     void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
 
+    const std::string Fs_expr() const;
+    const std::string Fn_expr() const;
+    const std::string Fd_expr() const;
+
 private:
     /**
      * A memory of which IntegrationContext currently provides the variables

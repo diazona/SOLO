@@ -57,22 +57,47 @@ int main(const int argc, char** argv) {
     HardFactorList hl = parser.get_hard_factors();
     cout << "Found " << hl.size() << " hard factors:" << endl;
     for (HardFactorList::const_iterator it = hl.begin(); it != hl.end(); it++) {
-        cout << "  " << (*it)->get_name() << " ";
-        switch ((*it)->get_order()) {
-            case HardFactor::LO:
-                cout << "LO";
-                break;
-            case HardFactor::NLO:
-                cout << "NLO";
-                break;
-            case HardFactor::MIXED:
-                cout << "mixed";
-                break;
-            default:
-                cout << "unknown!";
-                break;
+        const HardFactor* hf = *it;
+        if (hf != NULL) {
+            cout << "- " << hf->get_name() << endl << "  ";
+            switch ((*it)->get_order()) {
+                case HardFactor::LO:
+                    cout << "LO";
+                    break;
+                case HardFactor::NLO:
+                    cout << "NLO";
+                    break;
+                case HardFactor::MIXED:
+                    cout << "mixed";
+                    break;
+                default:
+                    cout << "unknown!";
+                    break;
+            }
+            cout << endl;
         }
-        cout << endl;
+        const ParsedHardFactorTerm* phft = dynamic_cast<const ParsedHardFactorTerm*>(hf);
+        if (phft != NULL) {
+            cout << "  Fs = " << phft->Fs_expr() << endl;
+            cout << "  Fn = " << phft->Fn_expr() << endl;
+            cout << "  Fd = " << phft->Fd_expr() << endl;
+            cout << endl;
+        }
+        else {
+            const ParsedCompositeHardFactor* pchf = dynamic_cast<const ParsedCompositeHardFactor*>(hf);
+            if (pchf != NULL) {
+                cout << "  contains ";
+                const size_t nterms = pchf->get_term_count();
+                const HardFactorTerm* const* hfl = pchf->get_terms();
+                for (size_t i = 0; i < nterms; i++) {
+                    if (i > 0) {
+                        cout << ", ";
+                    }
+                    cout << hfl[i]->get_name();
+                }
+                cout << endl << endl;
+            }
+        }
     }
     return 0;
 }
