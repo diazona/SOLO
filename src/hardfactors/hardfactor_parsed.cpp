@@ -37,6 +37,29 @@ using mu::value_type;
 using mu::valmap_type;
 using mu::varmap_type;
 
+#ifndef NDEBUG
+// the only way to set this to 1 is through a debugger
+static int deep_debugging = 0;
+
+static inline void print_parser_info(const HardFactor* hf, const char* message, Parser& parser, double* real, double* imag) {
+    if (deep_debugging > 0) {
+        cerr << "(" << hf << ")" << hf->get_name();
+        if (message != NULL) {
+            cerr << " " << message;
+        }
+        cerr << ": " << parser.GetExpr();
+        if (real != NULL && imag != NULL) {
+            cerr << " = " << *real << " + " << *imag << "i";
+        }
+        cerr << endl;
+    }
+}
+
+static inline void print_parser_info(const HardFactor* hf, const char* message, Parser& parser) {
+    print_parser_info(hf, message, parser, NULL, NULL);
+}
+# endif
+
 ParsedCompositeHardFactor::ParsedCompositeHardFactor(const string& name, const HardFactor::HardFactorOrder order, const size_t term_count, const HardFactorTerm** terms) :
   HardFactor(), 
   m_name(name), m_order(order), m_term_count(term_count), m_terms(terms), need_to_free_m_terms(false) {
@@ -71,7 +94,13 @@ ParsedHardFactorTerm::ParsedHardFactorTerm(
     Fs_parser.SetExpr(e0(Fs_real) + "," + e0(Fs_imag));
     Fn_parser.SetExpr(e0(Fn_real) + "," + e0(Fn_imag));
     Fd_parser.SetExpr(e0(Fd_real) + "," + e0(Fd_imag));
-    
+
+#ifndef NDEBUG
+    print_parser_info(this, "Fs", Fs_parser);
+    print_parser_info(this, "Fn", Fn_parser);
+    print_parser_info(this, "Fd", Fd_parser);
+# endif
+
     mu_load_gsl(Fs_parser);
     mu_load_gsl(Fn_parser);
     mu_load_gsl(Fd_parser);
@@ -140,6 +169,9 @@ void ParsedHardFactorTerm::Fs(const IntegrationContext* ictx, double* real, doub
         define_variables(Fs_parser, ictx);
     }
     evaluate_hard_factor(Fs_parser, real, imag);
+#ifndef NDEBUG
+    print_parser_info(this, "Fs", Fs_parser, real, imag);
+# endif
 }
 
 void ParsedHardFactorTerm::Fn(const IntegrationContext* ictx, double* real, double* imag) const {
@@ -148,6 +180,9 @@ void ParsedHardFactorTerm::Fn(const IntegrationContext* ictx, double* real, doub
         define_variables(Fn_parser, ictx);
     }
     evaluate_hard_factor(Fn_parser, real, imag);
+#ifndef NDEBUG
+    print_parser_info(this, "Fn", Fn_parser, real, imag);
+# endif
 }
 
 void ParsedHardFactorTerm::Fd(const IntegrationContext* ictx, double* real, double* imag) const {
@@ -156,6 +191,9 @@ void ParsedHardFactorTerm::Fd(const IntegrationContext* ictx, double* real, doub
         define_variables(Fd_parser, ictx);
     }
     evaluate_hard_factor(Fd_parser, real, imag);
+#ifndef NDEBUG
+    print_parser_info(this, "Fd", Fd_parser, real, imag);
+# endif
 }
 
 using std::ifstream;
