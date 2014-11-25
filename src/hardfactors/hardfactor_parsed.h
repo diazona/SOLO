@@ -125,6 +125,7 @@ public:
 
 private:
     const bool hard_factor_definition_complete() const;
+    const bool hard_factor_definition_empty() const;
     const ParsedHardFactorTerm* create_hard_factor_term();
 
     HardFactorList hard_factors;

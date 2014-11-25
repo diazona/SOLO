@@ -356,6 +356,7 @@ void HardFactorParser::parse_line(const string& line) {
      * contains multiple terms.
      */
     else if (parts[0].find_first_of(" \t\r\n") == string::npos) {
+        create_hard_factor_term();
         vector<string> term_labels = split(parts[1], ",");
         if (term_labels.empty()) {
             throw InvalidHardFactorSpecException(parts[0], "no hard factor terms provided in definition");
@@ -400,10 +401,6 @@ void HardFactorParser::parse_line(const string& line) {
     else {
         throw InvalidHardFactorDefinitionException(line, parts[0], parts[1], "Unknown property:");
     }
-    
-    if (hard_factor_definition_complete()) {
-        create_hard_factor_term();
-    }
 }
 
 
@@ -418,15 +415,29 @@ void HardFactorParser::parse_file(const string& filename, bool (*error_handler)(
         }
         catch (const InvalidHardFactorDefinitionException& e) {
             if (error_handler == NULL || error_handler(e, line, i)) {
-                throw e;
+                throw;
             }
         }
         catch (const IncompleteHardFactorDefinitionException& e) {
             if (error_handler == NULL || error_handler(e, line, i)) {
-                throw e;
+                throw;
             }
         }
     }
+    if (!hard_factor_definition_empty()) {
+        create_hard_factor_term();
+    }
+}
+
+const bool HardFactorParser::hard_factor_definition_empty() const {
+    return
+      type == NULL &&
+      registry == NULL &&
+      order == sentinel &&
+      name.empty() &&
+       (   Fs_real.empty() && Fs_imag.empty()
+        && Fn_real.empty() && Fn_imag.empty()
+        && Fd_real.empty() && Fd_imag.empty());
 }
 
 const bool HardFactorParser::hard_factor_definition_complete() const {
@@ -464,5 +475,6 @@ void HardFactorParser::reset_current_term() {
     Fn_imag.erase();
     Fd_real.erase();
     Fd_imag.erase();
+    assert(hard_factor_definition_empty());
 }
 
