@@ -130,6 +130,23 @@ ParsedHardFactorTerm::ParsedHardFactorTerm(
     }
 }
 
+// until I get a better solution, whether altering muParser
+// or some sort of machine code voodoo
+static GluonDistribution* gdist = NULL;
+
+value_type gluon_distribution_F(const value_type k2, const value_type Y) {
+    assert(gdist != NULL);
+    return gdist->F(k2, Y);
+}
+value_type gluon_distribution_S2(const value_type r2, const value_type Y) {
+    assert(gdist != NULL);
+    return gdist->S2(r2, Y);
+}
+value_type gluon_distribution_S4(const value_type r2, const value_type s2, const value_type t2, const value_type Y) {
+    assert(gdist != NULL);
+    return gdist->S4(r2, s2, t2, Y);
+}
+
 void define_variables(Parser& parser, const IntegrationContext* ictx) {
     /* An alternative implementation would be to have an IntegrationContext
      * instance in ParsedHardFactorTerm itself - not just a pointer, a
@@ -139,7 +156,7 @@ void define_variables(Parser& parser, const IntegrationContext* ictx) {
      * But then, if the passed IntegrationContext has its values changed
      * elsewhere in the program, those changes won't be reflected in the
      * Parser. That's why I don't do that.
-     */     
+     */
 #define process(var) parser.DefineVar(#var, const_cast<value_type*>(&(ictx->var)));
 #include "../integration/ictx_var_list.inc"
 #undef process
@@ -149,6 +166,38 @@ void define_variables(Parser& parser, const IntegrationContext* ictx) {
     // and now some aliases
     parser.DefineVar("A", const_cast<value_type*>(&(ictx->ctx->mass_number)));
     parser.DefineVar("c", const_cast<value_type*>(&(ictx->ctx->centrality)));
+    
+    /* The last "variables" we need on a per-IntegrationContext basis are
+     * the gluon distribution functions. These functions need access to
+     * ictx->gdist so they can call ictx->gdist->F(k2, Y) or the like.
+     * However, when I add a two-argument function to the Parser lexicon,
+     * muParser's API doesn't let me pass &(ictx->gdist) to the underlying
+     * C function. The simplest way to work around this is to use a global
+     * variable to store the gluon distribution, which is fine as long as
+     * there is only ever one gluon distribution used. If the program ever
+     * changes to use more than one gluon distribution per run, then this
+     * static global variable will be insufficient and I'll need to come up
+     * with some more sophisticated plan.
+     */
+    if (gdist == NULL) {
+        gdist = ictx->ctx->gdist;
+    }
+    else {
+        /* I think it's safe to make this an assertion (which gets stripped
+         * in a release build) rather than a simple if statement (which would
+         * still be included in a release build) because in the current version
+         * of the program there's no way this assertion should ever be false.
+         * The program doesn't allow you to define multiple gluon distributions.
+         */
+        assert(gdist == ictx->ctx->gdist);
+    }
+    
+    // just in case ictx->ctx->gdist is NULL or something,  I dunno
+    assert(gdist != NULL);
+    
+    parser.DefineFun("F", gluon_distribution_F);
+    parser.DefineFun("S2", gluon_distribution_S2);
+    parser.DefineFun("S4", gluon_distribution_S4);
 }
 
 void evaluate_hard_factor(Parser& parser, double* real, double* imag) {
