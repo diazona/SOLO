@@ -37,29 +37,6 @@ using mu::value_type;
 using mu::valmap_type;
 using mu::varmap_type;
 
-#ifndef NDEBUG
-// the only way to set this to 1 is through a debugger
-static int deep_debugging = 0;
-
-static inline void print_parser_info(const HardFactor* hf, const char* message, Parser& parser, double* real, double* imag) {
-    if (deep_debugging > 0) {
-        cerr << "(" << hf << ")" << hf->get_name();
-        if (message != NULL) {
-            cerr << " " << message;
-        }
-        cerr << ": " << parser.GetExpr();
-        if (real != NULL && imag != NULL) {
-            cerr << " = " << *real << " + " << *imag << "i";
-        }
-        cerr << endl;
-    }
-}
-
-static inline void print_parser_info(const HardFactor* hf, const char* message, Parser& parser) {
-    print_parser_info(hf, message, parser, NULL, NULL);
-}
-# endif
-
 ParsedCompositeHardFactor::ParsedCompositeHardFactor(const string& name, const HardFactor::HardFactorOrder order, const size_t term_count, const HardFactorTerm** terms) :
   HardFactor(), 
   m_name(name), m_order(order), m_term_count(term_count), m_terms(terms), need_to_free_m_terms(false) {
@@ -86,49 +63,28 @@ static const string e0(const string& s) {
     return s.empty() ? "0" : s;
 }
 
-ParsedHardFactorTerm::ParsedHardFactorTerm(
-    const string& name, const HardFactor::HardFactorOrder order, const IntegrationType* type, const string& Fs_real, const string& Fs_imag, const string& Fn_real, const string& Fn_imag, const string& Fd_real, const string& Fd_imag) :
-  m_name(name),
-  m_order(order),
-  mp_type(type) {
-    Fs_parser.SetExpr(e0(Fs_real) + "," + e0(Fs_imag));
-    Fn_parser.SetExpr(e0(Fn_real) + "," + e0(Fn_imag));
-    Fd_parser.SetExpr(e0(Fd_real) + "," + e0(Fd_imag));
-
 #ifndef NDEBUG
-    print_parser_info(this, "Fs", Fs_parser);
-    print_parser_info(this, "Fn", Fn_parser);
-    print_parser_info(this, "Fd", Fd_parser);
-# endif
+// the only way to set this to 1 is through a debugger
+static volatile int deep_debugging = 0;
 
-    mu_load_gsl(Fs_parser);
-    mu_load_gsl(Fn_parser);
-    mu_load_gsl(Fd_parser);
-    
-    // use GetUsedVar() to trigger an attempt to parse the expression
-    // we want any parsing errors to be revealed now, not when evaluating expressions
-    varmap_type all_variables;
-    varmap_type variables_from_parser;
-    variables_from_parser = Fs_parser.GetUsedVar();
-    all_variables.insert(variables_from_parser.begin(), variables_from_parser.end());
-    variables_from_parser = Fn_parser.GetUsedVar();
-    all_variables.insert(variables_from_parser.begin(), variables_from_parser.end());
-    variables_from_parser = Fd_parser.GetUsedVar();
-    all_variables.insert(variables_from_parser.begin(), variables_from_parser.end());
-    // make sure only existing variables are used
-#define process(var) all_variables.erase(#var);
-#include "../integration/ictx_var_list.inc"
-#include "../configuration/ctx_var_list.inc"
-#undef process
-    if (!all_variables.empty()) {
-        ostringstream oss;
-        oss << "Invalid variables used:";
-        for (varmap_type::const_iterator it = all_variables.begin(); it != all_variables.end(); it++) {
-            oss << " " << it->first;
+void ParsedHardFactorTerm::print_parser_info(const char* message, Parser& parser, const double* real, const double* imag) const {
+    if (deep_debugging > 0) {
+        cerr << "(" << this << ")" << get_name();
+        if (message != NULL) {
+            cerr << " " << message;
         }
-        throw mu::ParserError(oss.str());
+        cerr << ": " << parser.GetExpr();
+        if (real != NULL && imag != NULL) {
+            cerr << " = " << *real << " + " << *imag << "i";
+        }
+        cerr << endl;
     }
 }
+
+void ParsedHardFactorTerm::print_parser_info(const char* message, Parser& parser) const {
+    print_parser_info(message, parser, NULL, NULL);
+}
+# endif
 
 // until I get a better solution, whether altering muParser
 // or some sort of machine code voodoo
@@ -145,6 +101,51 @@ value_type gluon_distribution_S2(const value_type r2, const value_type Y) {
 value_type gluon_distribution_S4(const value_type r2, const value_type s2, const value_type t2, const value_type Y) {
     assert(gdist != NULL);
     return gdist->S4(r2, s2, t2, Y);
+}
+
+void ParsedHardFactorTerm::init_parser(Parser& parser, varmap_type& all_variables, const string& real_expr, const string& imag_expr, const char* debug_message) {
+    parser.SetExpr(e0(real_expr) + "," + e0(imag_expr));
+    mu_load_gsl(parser);
+    parser.DefineFun("F", gluon_distribution_F);
+    parser.DefineFun("S2", gluon_distribution_S2);
+    parser.DefineFun("S4", gluon_distribution_S4);
+#ifndef NDEBUG
+    print_parser_info(debug_message, parser);
+# endif
+    // use GetUsedVar() to trigger an attempt to parse the expression
+    // we want any parsing errors to be revealed now, not when evaluating expressions
+    varmap_type variables_from_parser = parser.GetUsedVar();
+    all_variables.insert(variables_from_parser.begin(), variables_from_parser.end());
+}
+
+ParsedHardFactorTerm::ParsedHardFactorTerm(
+    const string& name,
+    const HardFactor::HardFactorOrder order,
+    const IntegrationType* type,
+    const string& Fs_real, const string& Fs_imag,
+    const string& Fn_real, const string& Fn_imag,
+    const string& Fd_real, const string& Fd_imag) :
+  m_name(name),
+  m_order(order),
+  mp_type(type) {
+    varmap_type all_variables;
+    init_parser(Fs_parser, all_variables, Fs_real, Fs_imag, "Fs");
+    init_parser(Fn_parser, all_variables, Fn_real, Fn_imag, "Fn");
+    init_parser(Fd_parser, all_variables, Fd_real, Fd_imag, "Fd");
+
+    // make sure only existing variables are used
+#define process(var) all_variables.erase(#var);
+#include "../integration/ictx_var_list.inc"
+#include "../configuration/ctx_var_list.inc"
+#undef process
+    if (!all_variables.empty()) {
+        ostringstream oss;
+        oss << "Invalid variables used:";
+        for (varmap_type::const_iterator it = all_variables.begin(); it != all_variables.end(); it++) {
+            oss << " " << it->first;
+        }
+        throw mu::ParserError(oss.str());
+    }
 }
 
 void define_variables(Parser& parser, const IntegrationContext* ictx) {
@@ -194,10 +195,6 @@ void define_variables(Parser& parser, const IntegrationContext* ictx) {
     
     // just in case ictx->ctx->gdist is NULL or something,  I dunno
     assert(gdist != NULL);
-    
-    parser.DefineFun("F", gluon_distribution_F);
-    parser.DefineFun("S2", gluon_distribution_S2);
-    parser.DefineFun("S4", gluon_distribution_S4);
 }
 
 void evaluate_hard_factor(Parser& parser, double* real, double* imag) {
@@ -219,7 +216,7 @@ void ParsedHardFactorTerm::Fs(const IntegrationContext* ictx, double* real, doub
     }
     evaluate_hard_factor(Fs_parser, real, imag);
 #ifndef NDEBUG
-    print_parser_info(this, "Fs", Fs_parser, real, imag);
+    print_parser_info("Fs", Fs_parser, real, imag);
 # endif
 }
 
@@ -230,7 +227,7 @@ void ParsedHardFactorTerm::Fn(const IntegrationContext* ictx, double* real, doub
     }
     evaluate_hard_factor(Fn_parser, real, imag);
 #ifndef NDEBUG
-    print_parser_info(this, "Fn", Fn_parser, real, imag);
+    print_parser_info("Fn", Fn_parser, real, imag);
 # endif
 }
 
@@ -241,7 +238,7 @@ void ParsedHardFactorTerm::Fd(const IntegrationContext* ictx, double* real, doub
     }
     evaluate_hard_factor(Fd_parser, real, imag);
 #ifndef NDEBUG
-    print_parser_info(this, "Fd", Fd_parser, real, imag);
+    print_parser_info("Fd", Fd_parser, real, imag);
 # endif
 }
 

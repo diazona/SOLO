@@ -116,6 +116,12 @@ private:
     const std::string m_name;
     const HardFactorOrder m_order;
     const IntegrationType* mp_type;
+    
+    void init_parser(mu::Parser& parser, mu::varmap_type& all_variables, const string& real_expr, const string& imag_expr, const char* debug_message);
+#ifndef NDEBUG
+    void print_parser_info(const char* message, mu::Parser& parser, const double* real, const double* imag) const;
+    void print_parser_info(const char* message, mu::Parser& parser) const;
+# endif
 };
 
 // This class is NOT thread-safe
