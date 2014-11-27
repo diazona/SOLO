@@ -343,6 +343,8 @@ private:
 //         add_hard_factor(new H12gg(), true);
         add_hard_factor(new H12qqbar(), true);
         add_hard_factor(new H16gg(), true);
+        add_hard_factor(new H16ggSingular(), true);
+        add_hard_factor(new H16ggDelta(), true);
         add_hard_factor(new H1ggCorrection(), true);
         add_hard_factor(new H1ggExact(), true);
 //         add_hard_factor(new H112gq(), true);
