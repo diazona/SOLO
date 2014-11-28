@@ -163,7 +163,7 @@ void IntegrationContext::update_auxiliary(double xiprime) {
 }
 
 void IntegrationContext::update_parton_functions() {
-    double qqfactor = 0.0d, ggfactor = 0.0d, gqfactor = 0.0d, qgfactor = 0.0d;
+    double qqfactor = 0.0, ggfactor = 0.0, gqfactor = 0.0, qgfactor = 0.0;
     c_mstwpdf* pdf_object = tlctx->pdf_object;
     DSSpiNLO* ff_object = tlctx->ff_object;
     

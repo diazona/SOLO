@@ -728,22 +728,24 @@ void ResultsCalculator::integrate_hard_factor(const Context& ctx, const ThreadLo
  * Write the list of results in a ResultsCalculator to the given output stream.
  */
 ostream& operator<<(ostream& out, ResultsCalculator& rc) {
+    using std::setw;
     bool all_valid = true, row_valid = true;
-    _Setw lw = setw(6), rw = setw(26); // "label width" and "result width"
+    size_t lw = 6;
+    size_t rw = 26; // "label width" and "result width"
     // write headers
     if (rc.separate) {
-        out << lw << left << "pT" << lw << "Y";
+        out << setw(lw) << left << "pT" << setw(lw) << "Y";
         for (size_t hfgindex = 0; hfgindex < rc._hfglen; hfgindex++) {
-            out << rw << rc.hfgnames[hfgindex];
+            out << setw(rw) << rc.hfgnames[hfgindex];
             size_t hflen = rc.hfgroups[hfgindex]->size();
             for (size_t hfindex = 1; hfindex < hflen; hfindex++) {
-                out << rw << " ";
+                out << setw(rw) << " ";
             }
         }
-        out << rw << "total" << endl;
-        out << lw << " " << lw << " ";
+        out << setw(rw) << "total" << std::endl;
+        out << setw(lw) << " " << setw(lw) << " ";
         for (vector<string>::iterator termname_iterator = rc.hfnames.begin(); termname_iterator != rc.hfnames.end(); termname_iterator++) {
-            out << rw << *termname_iterator;
+            out << setw(rw) << *termname_iterator;
         }
         out << endl;
     }

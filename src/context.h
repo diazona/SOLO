@@ -307,7 +307,7 @@ public:
      resummation_constant(resummation_constant),
      exact_kinematics(exact_kinematics),
      inf(inf),
-     Q02x0lambda(centrality * pow(mass_number, 1.0d/3.0d) * pow(x0, lambda)),
+     Q02x0lambda(centrality * pow(mass_number, 1.0/3.0) * pow(x0, lambda)),
      tau(sqrt(pT2)/sqs*exp(Y)),
      tauhat(sqrt(pT2)/sqs*(exp(Y)+exp(-Y))) {
         if (tau > 1) {

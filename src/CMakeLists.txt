@@ -7,9 +7,8 @@ set(LIBS ${LIBS} ${OPENSSL_LIBRARIES})
 
 find_package(GSL REQUIRED)
 include_directories(${GSL_INCLUDE_DIRS})
+link_directories(${GSL_LIBRARY_DIRS})
 set(LIBS ${LIBS} ${GSL_LIBRARIES})
-
-set(LIBS ${LIBS} m)
 
 find_package(Git)
 if(GIT_FOUND)
