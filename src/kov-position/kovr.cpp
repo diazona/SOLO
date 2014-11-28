@@ -47,7 +47,7 @@ evtype eqtype;
 RegType Reg;
 startstatus startup;
 
-int main()
+int main(int argc, char** argv)
 {
     const int FieldWidth = 18;
     const int FieldWidthQ2 = 18;

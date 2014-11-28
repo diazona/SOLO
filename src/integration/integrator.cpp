@@ -117,7 +117,7 @@ void Integrator::evaluate_1D_integrand(double* real, double* imag) {
     checkfinite(log_factor);
     HardFactorTermList& current_terms = terms[current_type];
     assert(current_terms.size() > 0);
-    assert(ictx.xi == 1.0d);
+    assert(ictx.xi == 1.0);
     for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
         const HardFactorTerm* h = (*it);
         h->Fs(&ictx, &t_real, &t_imag);
