@@ -25,7 +25,7 @@ else()
     add_custom_target(git_revision.h echo >> git_revision.h WORKING_DIRECTORY ${SOLO_oneloopcalc_BINARY_DIR} VERBATIM)
 endif()
 
-include_directories(${gslmuparser_SOURCE_DIR} ${interp2d_SOURCE_DIR} ${quasimontecarlo_SOURCE_DIR})
+include_directories(${gslmuparser_SOURCE_DIR} ${interp2d_SOURCE_DIR} ${quasimontecarlo_SOURCE_DIR} ${SOLO_oneloopcalc_BINARY_DIR})
 
 add_executable(oneloopcalc
     oneloopcalc.cpp
