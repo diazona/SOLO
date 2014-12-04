@@ -559,18 +559,18 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
         out << endl;
     }
     else {
-        out << lw << left << "pT" << lw << "Y";
+        out << setw(lw) << left << "pT" << setw(lw) << "Y";
         for (vector<string>::iterator it = rc.hfgnames.begin(); it != rc.hfgnames.end(); it++) {
-            out << rw << *it;
+            out << setw(rw) << *it;
         }
-        out << rw << "total" << endl;
+        out << setw(rw) << "total" << endl;
     }
     
     // write data
     double l_real, l_imag, l_error;
     for (size_t ccindex = 0; ccindex < rc.cc.size(); ccindex++) {
-        out << lw << sqrt(rc.cc[ccindex].pT2);
-        out << lw << rc.cc[ccindex].Y;
+        out << setw(lw) << sqrt(rc.cc[ccindex].pT2);
+        out << setw(lw) << rc.cc[ccindex].Y;
 
         double total = 0;
         size_t hfglen = rc.separate ? rc._hflen : rc._hfglen;
@@ -581,19 +581,19 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
                 s << l_real << "±" << l_error;
                 /* needs an extra space because the "±" counts as two chars for computing the
                  * field width, but only displays as one character */
-                out << rw << s.str() << " ";
+                out << setw(rw) << s.str() << " ";
                 total += l_real;
             }
             else {
-                out << rw << "---";
+                out << setw(rw) << "---";
                 all_valid = row_valid = false;
             }
         }
         if (row_valid) {
-            out << rw << total << endl;
+            out << setw(rw) << total << endl;
         }
         else {
-            out << rw << "---" << endl;
+            out << setw(rw) << "---" << endl;
         }
         row_valid = true;
     }
