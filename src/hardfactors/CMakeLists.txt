@@ -26,3 +26,5 @@ add_executable(hfparser
     ${SOLO_SOURCE_DIR}/mstwpdf.cc
     ${SOLO_SOURCE_DIR}/utils/utils.cpp)
 target_link_libraries(hfparser gslmuparser interp2d dsspinlo ${LIBS})
+
+install(FILES hardfactors.cfg DESTINATION config/)
