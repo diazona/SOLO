@@ -539,29 +539,43 @@ void ResultsCalculator::integrate_hard_factor(const Context& ctx, const ThreadLo
 ostream& operator<<(ostream& out, ResultsCalculator& rc) {
     using std::setw;
     bool all_valid = true, row_valid = true;
+    const string OFS = " ";   // output field separator - make sure fields are space-separated
+    const string BLANK = " "; // a blank field
     size_t lw = 6;
-    size_t rw = 26; // "label width" and "result width"
+    size_t rw = 14; // "label width" and "result width"
+
     // write headers
     if (rc.separate) {
-        out << setw(lw) << left << "pT" << setw(lw) << "Y";
+        out << setw(lw) << left << "pT" << OFS << setw(lw) << "Y" << OFS;
         for (size_t hfgindex = 0; hfgindex < rc._hfglen; hfgindex++) {
-            out << setw(rw) << rc.hfgnames[hfgindex];
+            out << setw(rw) << rc.hfgnames[hfgindex] << OFS;
             size_t hflen = rc.hfgroups[hfgindex]->size();
-            for (size_t hfindex = 1; hfindex < hflen; hfindex++) {
-                out << setw(rw) << " ";
+            for (size_t hfindex = 1; hfindex < 2 * hflen; hfindex++) {
+                out << setw(rw) << BLANK << OFS;
             }
         }
-        out << setw(rw) << "total" << std::endl;
-        out << setw(lw) << " " << setw(lw) << " ";
+        out << setw(rw) << "total" << endl;
+
+        out << setw(lw) << BLANK << OFS << setw(lw) << BLANK << OFS;
         for (vector<string>::iterator termname_iterator = rc.hfnames.begin(); termname_iterator != rc.hfnames.end(); termname_iterator++) {
-            out << setw(rw) << *termname_iterator;
+            ostringstream valstream;
+            valstream << *termname_iterator << "-val";
+            out << setw(rw) << valstream.str() << OFS;
+            ostringstream errstream;
+            errstream << *termname_iterator << "-err";
+            out << setw(rw) << errstream.str() << OFS;
         }
         out << endl;
     }
     else {
-        out << setw(lw) << left << "pT" << setw(lw) << "Y";
+        out << setw(lw) << left << "pT" << OFS << setw(lw) << "Y" << OFS;
         for (vector<string>::iterator it = rc.hfgnames.begin(); it != rc.hfgnames.end(); it++) {
-            out << setw(rw) << *it;
+            ostringstream valstream;
+            valstream << *it << "-val";
+            out << setw(rw) << valstream.str() << OFS;
+            ostringstream errstream;
+            errstream << *it << "-err";
+            out << setw(rw) << errstream.str() << OFS;
         }
         out << setw(rw) << "total" << endl;
     }
@@ -569,23 +583,19 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
     // write data
     double l_real, l_imag, l_error;
     for (size_t ccindex = 0; ccindex < rc.cc.size(); ccindex++) {
-        out << setw(lw) << sqrt(rc.cc[ccindex].pT2);
-        out << setw(lw) << rc.cc[ccindex].Y;
+        out << setw(lw) << sqrt(rc.cc[ccindex].pT2) << OFS;
+        out << setw(lw) << rc.cc[ccindex].Y << OFS;
 
         double total = 0;
         size_t hfglen = rc.separate ? rc._hflen : rc._hfglen;
         for (size_t hfgindex = 0; hfgindex < hfglen; hfgindex++) {
             if (rc.valid(ccindex, hfgindex)) {
                 rc.result(ccindex, hfgindex, &l_real, &l_imag, &l_error);
-                ostringstream s;
-                s << l_real << "±" << l_error;
-                /* needs an extra space because the "±" counts as two chars for computing the
-                 * field width, but only displays as one character */
-                out << setw(rw) << s.str() << " ";
+                out << setw(rw) << l_real << OFS << setw(rw) << l_error << OFS;
                 total += l_real;
             }
             else {
-                out << setw(rw) << "---";
+                out << setw(rw) << "---" << OFS;
                 all_valid = row_valid = false;
             }
         }
@@ -707,6 +717,12 @@ int run(int argc, char** argv) {
             // TODO: make the gdist compute the hashes itself
             cout << "# momentum gdist file hash: " << sha1_file(cc.get("gdist_momentum_filename")) << endl;
             cout << "# position gdist file hash: " << sha1_file(cc.get("gdist_position_filename")) << endl;
+        }
+        string hf_definition_filename = cc.get("hf_definitions");
+        if (!hf_definition_filename.empty()) {
+            cout << "# hard factor definition file hash: " << sha1_file(hf_definition_filename) << endl;
+            ifstream hfdefs(hf_definition_filename);
+            cerr << "BEGIN hf definition file" << endl << hfdefs.rdbuf() << "END hf definition file" << endl;
         }
     }
 
