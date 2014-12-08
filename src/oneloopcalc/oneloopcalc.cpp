@@ -721,7 +721,7 @@ int run(int argc, char** argv) {
         string hf_definition_filename = cc.get("hf_definitions");
         if (!hf_definition_filename.empty()) {
             cout << "# hard factor definition file hash: " << sha1_file(hf_definition_filename) << endl;
-            ifstream hfdefs(hf_definition_filename);
+            ifstream hfdefs(hf_definition_filename.c_str());
             cerr << "BEGIN hf definition file" << endl << hfdefs.rdbuf() << "END hf definition file" << endl;
         }
     }
