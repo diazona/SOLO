@@ -873,6 +873,30 @@ ContextCollection::iterator ContextCollection::end() {
     return contexts.end();
 }
 
+ThreadLocalContext::ThreadLocalContext(const Context& ctx) :
+  pdf_object(new c_mstwpdf(ctx.pdf_filename.c_str())),
+  ff_object(new DSSpiNLO(ctx.ff_filename.c_str())) {
+}
+
+ThreadLocalContext::ThreadLocalContext(const ContextCollection& cc) :
+  pdf_object(NULL), ff_object(NULL) {
+    multimap<string,string>::const_iterator it = cc.options.find("pdf_filename");
+    if (it == cc.options.end()) {
+        throw "no PDF filename";
+    }
+    pdf_object = new c_mstwpdf(it->second.c_str());
+    it = cc.options.find("ff_filename");
+    if (it == cc.options.end()) {
+        throw "no FF filename";
+    }
+    ff_object = new DSSpiNLO(it->second.c_str());
+}
+
+ThreadLocalContext::~ThreadLocalContext() {
+    delete pdf_object;
+    delete ff_object;
+}
+
 
 #ifdef CONTEXT_TEST
 const double inf = 10;

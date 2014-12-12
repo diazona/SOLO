@@ -10,8 +10,9 @@ include_directories(${interp2d_SOURCE_DIR} ${quasimontecarlo_SOURCE_DIR})
 
 add_executable(contextreader
   context.cpp
+  ${SOLO_SOURCE_DIR}/mstwpdf.cc
   ${SOLO_SOURCE_DIR}/utils/utils.cpp
   ${SOLO_SOURCE_DIR}/coupling.cpp
   ${SOLO_SOURCE_DIR}/factorizationscale.cpp)
-target_link_libraries(contextreader interp2d gdist ${LIBS})
+target_link_libraries(contextreader dsspinlo interp2d gdist ${LIBS})
 set_target_properties(contextreader PROPERTIES COMPILE_DEFINITIONS CONTEXT_TEST)
