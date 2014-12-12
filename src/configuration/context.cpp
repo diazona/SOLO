@@ -574,50 +574,31 @@ void ContextCollection::create_contexts() {
     // create contexts
     for (vector<double>::iterator pTit = pT.begin(); pTit != pT.end(); pTit++) {
         for (vector<double>::iterator Yit = Y.begin(); Yit != Y.end(); Yit++) {
+            double pT = *pTit;
+            double Y = *Yit;
             try {
-                contexts.push_back(
-                    Context(
-                        x0,
-                        mass_number,
-                        centrality,
-                        lambda,
-                        Nc,
-                        Nf,
-                        CF,
-                        TR,
-                        Sperp,
-                        gsl_pow_2(*pTit),
-                        sqs,
-                        *Yit,
-                        hf_definitions,
-                        pdf_filename,
-                        ff_filename,
-                        projectile,
-                        hadron,
-                        integration_strategy,
-                        cubature_iterations,
-                        miser_iterations,
-                        vegas_initial_iterations,
-                        vegas_incremental_iterations,
-                        quasi_iterations,
-                        abserr,
-                        relerr,
-                        quasirandom_generator_type,
-                        pseudorandom_generator_type,
-                        pseudorandom_generator_seed,
-                        gdist,
-                        cpl,
-                        fs,
-                        _c0r_optimization,
-                        css_r_regularization,
-                        css_r2_max,
-                        resummation_constant,
-                        exact_kinematics,
-                        inf,
-                        cutoff));
+                const Context c = {
+                  x0, mass_number, centrality, lambda, Nc, Nf, CF, TR, Sperp,
+                  gsl_pow_2(pT), sqs, Y,
+                  hf_definitions, pdf_filename, ff_filename,
+                  quasirandom_generator_type, pseudorandom_generator_type, pseudorandom_generator_seed,
+                  gdist, cpl, fs, _c0r_optimization, css_r_regularization, css_r2_max, resummation_constant,
+                  exact_kinematics,
+                  projectile, hadron,
+                  integration_strategy,
+                  abserr, relerr,
+                  cubature_iterations, miser_iterations,
+                  vegas_initial_iterations, vegas_incremental_iterations, quasi_iterations,
+                  inf, cutoff,
+                  Context::compute_Q02x0lambda(centrality, mass_number, x0, lambda),
+                  Context::compute_tau(pT, sqs, Y),
+                  Context::compute_tauhat(pT, sqs, Y)
+                };
+                c.check_kinematics();
+                contexts.push_back(c);
             }
             catch (const InvalidKinematicsException& e) {
-                logger << "Failed to create context at pT = " << *pTit << ", Y = " << *Yit << ": " << e.what() << endl;
+                logger << "Failed to create context at pT = " << pT << ", Y = " << Y << ": " << e.what() << endl;
             }
         }
     }

@@ -130,12 +130,25 @@ public:
 
 /**
  * Storage for all the assorted parameters that get used in the integration.
- * 
+ * `Context` is an aggregator so you can initialize it like this:
+ *
+ *     Context c = { x0, mass_number, ...,
+ *       Context::compute_Q02x0lambda(...),
+ *       Context::compute_tau(...),
+ *       Context::compute_tauhat(...),
+ *     };
+ *
+ * After creating a `Context`, call check_kinematics() on it to make sure the
+ * calculated values are consistent! check_kinematics() will throw an exception
+ * if anything is wrong, otherwise it will return silently.
+ *
  * There is a different Context object for each distinct set of parameters
  * that a result is computed for.
- * 
- * Other code should treat the contents of a Context as constant, and not
- * modify it.
+ *
+ * Instances of `Context` are meant to be immutable. The member variables
+ * aren't declared `const` because who wants to type out `const` 35 times,
+ * but the instance will generally be declared `const`, and other code may
+ * rely on the content of a `Context` not changing.
  */
 class Context {
 public:
@@ -242,87 +255,27 @@ public:
     double tau;
     /** The precomputed value of tauhat = pT / sqs * (exp(Y) + exp(-Y)) */
     double tauhat;
-    
-    Context(
-        double x0,
-        double mass_number,
-        double centrality,
-        double lambda,
-        double Nc,
-        double Nf,
-        double CF,
-        double TR,
-        double Sperp,
-        double pT2,
-        double sqs,
-        double Y,
-        std::string hf_definitions,
-        std::string pdf_filename,
-        std::string ff_filename,
-        projectile_type projectile,
-        DSSpiNLO::hadron hadron,
-        integration_strategy strategy,
-        size_t cubature_iterations,
-        size_t miser_iterations,
-        size_t vegas_initial_iterations,
-        size_t vegas_incremental_iterations,
-        size_t quasi_iterations,
-        double abserr,
-        double relerr,
-        const gsl_qrng_type* quasirandom_generator_type,
-        const gsl_rng_type* pseudorandom_generator_type,
-        unsigned long int pseudorandom_generator_seed,
-        GluonDistribution* gdist,
-        Coupling* cpl,
-        FactorizationScale* fs,
-        bool c0r_optimization,
-        bool css_r_regularization,
-        double css_r2_max,
-        double resummation_constant,
-        bool exact_kinematics,
-        double inf,
-        double cutoff) :
-     x0(x0),
-     mass_number(mass_number),
-     centrality(centrality),
-     lambda(lambda),
-     Nc(Nc),
-     Nf(Nf),
-     CF(CF),
-     TR(TR),
-     Sperp(Sperp),
-     pT2(pT2),
-     sqs(sqs),
-     Y(Y),
-     hf_definitions(hf_definitions),
-     pdf_filename(pdf_filename),
-     ff_filename(ff_filename),
-     projectile(projectile),
-     hadron(hadron),
-     strategy(strategy),
-     cubature_iterations(cubature_iterations),
-     miser_iterations(miser_iterations),
-     vegas_initial_iterations(vegas_initial_iterations),
-     vegas_incremental_iterations(vegas_incremental_iterations),
-     quasi_iterations(quasi_iterations),
-     abserr(abserr),
-     relerr(relerr),
-     quasirandom_generator_type(quasirandom_generator_type),
-     pseudorandom_generator_type(pseudorandom_generator_type),
-     pseudorandom_generator_seed(pseudorandom_generator_seed),
-     gdist(gdist),
-     cpl(cpl),
-     fs(fs),
-     c0r_optimization(c0r_optimization),
-     css_r_regularization(css_r_regularization),
-     css_r2_max(css_r2_max),
-     resummation_constant(resummation_constant),
-     exact_kinematics(exact_kinematics),
-     inf(inf),
-     cutoff(cutoff), 
-     Q02x0lambda(centrality * pow(mass_number, 1.0/3.0) * pow(x0, lambda)),
-     tau(sqrt(pT2)/sqs*exp(Y)),
-     tauhat(sqrt(pT2)/sqs*(exp(Y)+exp(-Y))) {
+
+    static inline double compute_Q02x0lambda(double centrality, double mass_number, double x0, double lambda) {
+        return centrality * pow(mass_number, 1.0/3.0) * pow(x0, lambda);
+    }
+    static inline double compute_tau(double pT, double sqs, double Y) {
+        return pT / sqs * exp(Y);
+    }
+    static inline double compute_tauhat(double pT, double sqs, double Y) {
+        return pT / sqs * (exp(Y) + exp(-Y));
+    }
+
+    void check_kinematics() const {
+        if (compute_Q02x0lambda(centrality, mass_number, x0, lambda) != Q02x0lambda) {
+            throw InvalidPropertyValueException<double>("Q02x0lambda", Q02x0lambda, "value provided in initializer does not match the one calculated from other context parameters");
+        }
+        if (compute_tau(sqrt(pT2), sqs, Y) != tau) {
+            throw InvalidPropertyValueException<double>("tau", tau, "value provided in initializer does not match the one calculated from other context parameters");
+        }
+        if (compute_tauhat(sqrt(pT2), sqs, Y) != tauhat) {
+            throw InvalidPropertyValueException<double>("tauhat", tauhat, "value provided in initializer does not match the one calculated from other context parameters");
+        }
         if (tau > 1) {
             throw InvalidKinematicsException("τ > 1: empty phase space");
         }
@@ -333,48 +286,6 @@ public:
             assert(css_r2_max > 0);
         }
     }
-    Context(const Context& other) :
-     x0(other.x0),
-     mass_number(other.mass_number),
-     centrality(other.centrality),
-     lambda(other.lambda),
-     Nc(other.Nc),
-     Nf(other.Nf),
-     CF(other.CF),
-     TR(other.TR),
-     Sperp(other.Sperp),
-     pT2(other.pT2),
-     sqs(other.sqs),
-     Y(other.Y),
-     hf_definitions(other.hf_definitions),
-     pdf_filename(other.pdf_filename),
-     ff_filename(other.ff_filename),
-     projectile(other.projectile),
-     hadron(other.hadron),
-     strategy(other.strategy),
-     cubature_iterations(other.cubature_iterations),
-     miser_iterations(other.miser_iterations),
-     vegas_initial_iterations(other.vegas_initial_iterations),
-     vegas_incremental_iterations(other.vegas_incremental_iterations),
-     quasi_iterations(other.quasi_iterations),
-     abserr(other.abserr),
-     relerr(other.relerr),
-     quasirandom_generator_type(other.quasirandom_generator_type),
-     pseudorandom_generator_type(other.pseudorandom_generator_type),
-     pseudorandom_generator_seed(other.pseudorandom_generator_seed),
-     gdist(other.gdist),
-     cpl(other.cpl),
-     fs(other.fs),
-     c0r_optimization(other.c0r_optimization),
-     css_r_regularization(other.css_r_regularization),
-     css_r2_max(other.css_r2_max),
-     resummation_constant(other.resummation_constant),
-     exact_kinematics(other.exact_kinematics),
-     inf(other.inf),
-     cutoff(other.cutoff), 
-     Q02x0lambda(other.Q02x0lambda),
-     tau(other.tau),
-     tauhat(other.tauhat) {}
 };
 
 /**
