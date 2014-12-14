@@ -1,10 +1,10 @@
 /*
  * A calculation of the NLO cross section of pA->pion collisions
- * 
+ *
  * This file contains the driver code, including main() and some other stuff
- * 
+ *
  * Copyright 2012 David Zaslavsky
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -193,7 +193,7 @@ private:
     double* imag;
     /** Array to hold the error bounds of the results */
     double* error;
-    
+
     friend ostream& operator<<(ostream&, ResultsCalculator&);
 public:
     /** Whether to trace execution */
@@ -202,7 +202,7 @@ public:
     const bool minmax;
     /** Whether to calculate individual hard factors separately */
     const bool separate;
-    
+
     ResultsCalculator(ContextCollection& cc, ThreadLocalContext& tlctx, ProgramConfiguration& pc);
     ~ResultsCalculator();
     /**
@@ -413,7 +413,7 @@ void ProgramConfiguration::parse_hf_specs() {
         parser.parse_file(cc[0].hf_definitions);
         // it adds the parsed hard factors to the registry
     }
-    
+
     assert(hfgroups.empty());
     for (vector<string>::const_iterator it = hfspecs.begin(); it!= hfspecs.end(); it++) {
         const ParsedHardFactorGroup* hfg = ParsedHardFactorGroup::parse(*it, cc[0].exact_kinematics);
@@ -579,7 +579,7 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
         }
         out << setw(rw) << "total" << endl;
     }
-    
+
     // write data
     double l_real, l_imag, l_error;
     for (size_t ccindex = 0; ccindex < rc.cc.size(); ccindex++) {
@@ -627,7 +627,7 @@ static ResultsCalculator* p_rc = NULL;
 
 /**
  * Takes care of finishing the program if it gets interrupted by a signal.
- * 
+ *
  * This happens when a PBS job is cut off before it finishes, for example. This
  * function will write out all results computed so far by writing the
  * ResultsCalculator object to standard output, and then exit the program.
@@ -637,7 +637,7 @@ void termination_handler(int signal) {
     if (!terminated) {
         terminated = true;
         cout << *p_rc;
-        
+
         time_t rawtime;
         time(&rawtime);
         logger << "Terminating at " << ctime(&rawtime) << endl;
@@ -680,7 +680,7 @@ void gsl_error_throw(const char* reason, const char* file, int line, int gsl_err
 
 /**
  * Runs the program.
- * 
+ *
  * This is like main() except that it can throw exceptions, which will
  * be caught in the real main().
  */
@@ -691,14 +691,14 @@ int run(int argc, char** argv) {
     logger << "Starting at " << ctime(&rawtime) << endl;
 
     gsl_set_error_handler(&gsl_error_throw);
-    
+
     ProgramConfiguration pc(argc, argv);
     ContextCollection cc = pc.context_collection();
     if (cc.empty()) {
         logger << "No momenta or no rapidities specified!" << endl;
         return 1;
     }
-    
+
     /* First write out all the configuration variables. Having the configuration written
      * out as part of the output file makes it easy to tell what parameters were used in
      * and given run, and is also useful in case we want to reproduce a run.
@@ -733,7 +733,7 @@ int run(int argc, char** argv) {
 #endif
 
     cout << cc << "------------" << endl;
-    
+
     cc.create_contexts();
     if (cc.empty()) {
         logger << "No valid momentum/rapidity combinations specified!" << endl;
@@ -768,10 +768,10 @@ int run(int argc, char** argv) {
     sigaction(SIGINT, &oldsiga, NULL);
     // And print out results
     cout << rc;
-    
+
     time(&rawtime);
     logger << "Ending at " << ctime(&rawtime) << endl;
-    
+
     return 0;
 }
 

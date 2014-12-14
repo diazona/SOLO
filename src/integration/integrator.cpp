@@ -1,8 +1,8 @@
 /*
  * Part of oneloopcalc
- * 
+ *
  * Copyright 2012 David Zaslavsky
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -31,23 +31,23 @@
 
 /*
  * Here's the overall "usage map" of the code in this file:
- * 
+ *
  * The program constructs an Integrator object,
  * sets any relevant callbacks,
  * and calls integrate() on it.
  * (this happens in ResultsCalculator::calculate())
- * 
+ *
  * integrate() iterates over the IntegrationTypes, and for each, calls
  *   integrate_impl() to do the "2D" integral, which calls
  *     vegas_integrate(), which calls
- *       gsl_monte_vegas_integrate(), passing the wrapper function gsl_monte_wrapper_2D as the function to be integrated. 
+ *       gsl_monte_vegas_integrate(), passing the wrapper function gsl_monte_wrapper_2D as the function to be integrated.
  *         gsl_monte_wrapper_2D() calls
  *           Integrator::update2D() to update the values in the IntegrationContext, and then calls
  *           Integrator::evaluate_2D_integrand() to actually calculate the result
  *   Then integrate() calls
  *   integrate_impl() to do the "1D" integral, which calls
  *     vegas_integrate(), which calls
- *       gsl_monte_vegas_integrate(), passing the wrapper function gsl_monte_wrapper_1D as the function to be integrated. 
+ *       gsl_monte_vegas_integrate(), passing the wrapper function gsl_monte_wrapper_1D as the function to be integrated.
  *         gsl_monte_wrapper_1D() calls
  *           Integrator::update1D() to update the values in the IntegrationContext, and then calls
  *           Integrator::evaluate_1D_integrand() to actually calculate the result
@@ -205,7 +205,7 @@ void Integrator::evaluate_2D_integrand(double* real, double* imag) {
 /**
  * A wrapper function that can be passed to the cubature integration code
  * to do the 1D integrand.
- * 
+ *
  * This updates the IntegrationContext using the values in `coordinates`
  * and then evaluates the current list of hard factors. The `coordinates`
  * are interpreted as z, (xiprime if applicable), rx, ry, etc.
@@ -228,7 +228,7 @@ void cubature_wrapper_1D(unsigned int ncoords, const double* coordinates, void* 
 /**
  * A wrapper function that can be passed to the cubature integration code
  * to do the 2D integrand.
- * 
+ *
  * This updates the IntegrationContext using the values in `coordinates`
  * and then evaluates the current list of hard factors. The `coordinates`
  * are interpreted as z, y, (xiprime if applicable), rx, ry, etc.
@@ -251,7 +251,7 @@ void cubature_wrapper_2D(unsigned int ncoords, const double* coordinates, void* 
 /**
  * A wrapper function that can be passed to the GSL integration code
  * to do the 1D integrand.
- * 
+ *
  * This updates the IntegrationContext using the values in `coordinates`
  * and then evaluates the current list of hard factors. The `coordinates`
  * are interpreted as z, (xiprime if applicable), rx, ry, etc.
@@ -270,7 +270,7 @@ double gsl_monte_wrapper_1D(double* coordinates, size_t ncoords, void* closure) 
 /**
  * A wrapper function that can be passed to the GSL integration code
  * to do the 2D integrand.
- * 
+ *
  * This updates the IntegrationContext using the values in `coordinates`
  * and then evaluates the current list of hard factors. The `coordinates`
  * are interpreted as z, y, (xiprime if applicable), rx, ry, etc.
@@ -288,7 +288,7 @@ double gsl_monte_wrapper_2D(double* coordinates, size_t ncoords, void* closure) 
 
 /**
  * A wrapper function that calls the GSL integration routine for MISER integration.
- * 
+ *
  * @param func the integrand
  * @param dim the number of dimensions it's being integrated over
  * @param closure something to be passed to the integrand as its last argument
@@ -320,7 +320,7 @@ void miser_integrate(double (*func)(double*, size_t, void*), size_t dim, void* c
 
 /**
  * A wrapper function that calls the GSL integration routine for VEGAS integration.
- * 
+ *
  * @param func the integrand
  * @param dim the number of dimensions it's being integrated over
  * @param closure something to be passed to the integrand as its last argument
@@ -363,7 +363,7 @@ void vegas_integrate(double (*func)(double*, size_t, void*), size_t dim, void* c
 
 /**
  * A wrapper function that calls the integration routine for quasi Monte Carlo integration.
- * 
+ *
  * @param func the integrand
  * @param dim the number of dimensions it's being integrated over
  * @param closure something to be passed to the integrand as its last argument
@@ -469,9 +469,7 @@ void Integrator::integrate(double* real, double* imag, double* error) {
     double result = 0.0;
     double abserr = 0.0;
     double tmp_result, tmp_error;
-    // cubature doesn't work because of the endpoint singularity at xi = 1
-    
-    // dipole
+
     for (HardFactorTypeMap::iterator it = terms.begin(); it != terms.end(); it++) {
         assert(it->second.size() > 0);
         set_current_integration_type(it->first);

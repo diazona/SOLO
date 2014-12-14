@@ -1,8 +1,8 @@
 /*
  * Part of oneloopcalc
- * 
+ *
  * Copyright 2012 David Zaslavsky
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -176,18 +176,18 @@ public:
     double sqs;
     /** The rapidity */
     double Y;
-    
+
     /**
      * Path to the file, if any, containing the expressions
      * for hard factor terms to be integrated
      */
     std::string hf_definitions;
-    
+
     /** Name of the file PDF data was read from */
     std::string pdf_filename;
     /** Name of the file FF data was read from */
     std::string ff_filename;
-    
+
     /** GSL quasirandom number generator algorithm */
     const gsl_qrng_type* quasirandom_generator_type;
     /** GSL pseudorandom number generator algorithm */
@@ -210,10 +210,10 @@ public:
     bool css_r_regularization;
     /** The cutoff value for the CSS r regularization */
     double css_r2_max;
-    
+
     /** The factor in front of the resummation term, see H1qqCorrection */
     double resummation_constant;
-    
+
     /** Whether to use exact (or approximate) kinematic expressions */
     bool exact_kinematics;
 
@@ -223,12 +223,12 @@ public:
     DSSpiNLO::hadron hadron;
     /** The type of integration to be used */
     integration_strategy strategy;
-    
+
     /** Maximum allowed absolute error, for integration strategies that use it */
     double abserr;
     /** Maximum allowed relative error, for integration strategies that use it */
     double relerr;
-    
+
     /** Number of iterations for cubature */
     size_t cubature_iterations;
     /** Number of MISER iterations
@@ -290,19 +290,19 @@ public:
 
 /**
  * The "context factory" and a repository for all settings.
- * 
+ *
  * A ContextCollection is able to read a configuration file in
  *  key = value
  * format, and store all the settings read. It allows multiple values
  * of pT and/or Y, but only one value of any other setting.
- * 
+ *
  * After all configuration files have been read, the ContextCollection
  * can be used to create a list of Context objects, one for each
  * combination of pT and Y. Calling any of the accessor methods
  * (get_context(), operator[](), begin(), end()) causes the set of
  * Contexts to be created, and also freezes the ContextCollection so
  * that the settings it holds can no longer be modified.
- * 
+ *
  * Several methods are named similar to, and behave similar to, their
  * counterparts in std::vector, allowing a ContextCollection to be
  * indexed or iterated over much like a vector. (It should be considered
@@ -353,33 +353,33 @@ public:
      * - Context N-1 has pT[0] and Y[N-1]
      * - Context N has pT[1] and Y[0]
      * and so on.
-     * 
+     *
      * When this method is called, if the Context objects have not already
      * been created, this creates the Contexts and freezes the ContextCollection.
      */
     Context& get_context(size_t n);
     /**
      * Allows access to contexts by subscript notation.
-     * 
+     *
      * This is exactly equivalent to get_context().
-     * 
+     *
      * When this method is called, if the Context objects have not already
      * been created, this creates the Contexts and freezes the ContextCollection.
      */
     Context& operator[](size_t n);
     /**
      * Tests whether the ContextCollection is empty.
-     * 
+     *
      * This will return true if the number of pT values or the number
      * of Y values held by the ContextCollection is zero.
-     * 
+     *
      * If this returns true, calling get_context() with any argument
      * will cause an error.
      */
     bool empty();
     /**
      * Returns the size of this ContextCollection.
-     * 
+     *
      * This returns the product of the number of pT values specified so far
      * and the number of Y values specified so far. Before Contexts are created,
      * the return value can change as more settings are added. After Contexts
@@ -388,19 +388,19 @@ public:
     size_t size();
     /**
      * Returns an iterator to the first Context.
-     * 
+     *
      * When this method is called, if the Context objects have not already
      * been created, this creates the Contexts and freezes the ContextCollection.
      */
     iterator begin();
     /**
      * Returns an iterator to one past the last Context.
-     * 
+     *
      * When this method is called, if the Context objects have not already
      * been created, this creates the Contexts and freezes the ContextCollection.
      */
     iterator end();
-    
+
     /**
      * Removes all settings with the given key.
      */
@@ -419,7 +419,7 @@ public:
      * identically to set().
      */
     void add(std::string key, std::string value);
-    
+
     /**
      * Create the Context objects.
      */
@@ -434,7 +434,7 @@ public:
      * Process a string representing one line of a config file (i.e. one setting)
      */
     void read_config_line(std::string& line);
-    
+
     /**
      * Whether to use the tracing gluon distribution wrapper. (See gluondist.h/cpp)
      * Changes made to this variable after contexts are created have no effect.
@@ -445,7 +445,7 @@ public:
     friend std::istream& operator>>(std::istream& in, ContextCollection& cc);
     friend std::ostream& operator<<(std::ostream& out, ContextCollection& cc);
     friend class ThreadLocalContext;
-    
+
 private:
     /**
      * The gluon distribution. NULL until contexts are created.
@@ -475,7 +475,7 @@ private:
      * Called from the constructor to set default values.
      */
     void setup_defaults();
-    
+
     /* Auxiliary methods and variables used to create gluon distributions */
     double Q02, x0, lambda, sqs, inf;
     vector<double> pT, Y;
@@ -497,7 +497,7 @@ ContextCollection& operator>>(std::string& line, ContextCollection& cc);
 std::istream& operator>>(std::istream& in, ContextCollection& cc);
 /**
  * Allows writing a ContextCollection out to a stream using << notation.
- * 
+ *
  * What is written out is just the list of key-value pairs. The output
  * could be read in to reconstruct the ContextCollection.
  */
@@ -505,7 +505,7 @@ std::ostream& operator<<(std::ostream& out, ContextCollection& cc);
 
 /**
  * Allows writing a Context out to a stream using << notation.
- * 
+ *
  * This is a human-readable representation and cannot necessarily
  * be used to reconstruct the Context programmatically.
  */
@@ -514,7 +514,7 @@ std::ostream& operator<<(std::ostream& out, Context& ctx);
 /**
  * Another Context-like class that holds objects which should not be shared
  * among threads or processes.
- * 
+ *
  * In the current state of the program, there isn't any particular reason
  * to have this, because there is no multithreading or multiprocessing being
  * used.

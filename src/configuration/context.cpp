@@ -1,8 +1,8 @@
 /*
  * Part of oneloopcalc
- * 
+ *
  * Copyright 2012 David Zaslavsky
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -60,7 +60,7 @@ const string trim_lower(const string& i_str) {
     transform(str.begin(), str.end(), str.begin(), ::tolower);
     return str;
 }
-    
+
 const string canonicalize(const string& i_key) {
     const string key = trim_lower(i_key);
     if (key == "lambda_qcd") {
@@ -333,13 +333,13 @@ FileDataGluonDistribution* ContextCollection::create_file_gluon_distribution(Glu
     // anything for lower_dist or upper_dist, just to make sure there are
     // no programmer misconceptions about what the method is doing
     assert(extended || (lower_dist == NULL && upper_dist == NULL));
-    
+
     check_property(gdist_position_filename, string, parse_string)
     check_property(gdist_momentum_filename, string, parse_string)
     check_property_default(satscale_source, string, parse_string, "analytic")
     check_property_default(xinit, double, parse_double, 0.01)
     logger << "Reading gluon distribution from " << gdist_position_filename << " (pos) and " << gdist_momentum_filename << " (mom)" << endl;
-    
+
     if (satscale_source == "analytic") {
         if (extended) {
             return new ExtendedFileDataGluonDistribution(
@@ -490,10 +490,10 @@ void ContextCollection::create_contexts() {
      * peak in the integrand entirely and just output zero all the time.
      */
     check_property_default( inf, double, parse_double, 40)
-    
+
     /* The default cutoff is zero, since most integrands are well-behaved at 0. */
     check_property_default( cutoff, double, parse_double, 0)
-    
+
     this->Q02 = centrality * pow(mass_number, 1./3.);
     this->x0 = x0;
     this->lambda = lambda;
@@ -501,11 +501,11 @@ void ContextCollection::create_contexts() {
     this->Y = Y;
     this->sqs = sqs;
     this->inf = inf;
-    
+
     if (css_r_regularization && css_r2_max <= 0) {
         GSL_ERROR_VOID("invalid r_max", GSL_EINVAL);
     }
-    
+
     // create gluon distribution
     assert (gdist == NULL);
     check_property(gdist_type, string, parse_string)
@@ -535,7 +535,7 @@ void ContextCollection::create_contexts() {
         throw InvalidPropertyValueException<string>("coupling_type", coupling_type);
     }
     assert(cpl != NULL);
-    
+
     // create factorization scale strategy
     assert(fs == NULL);
     check_property_default(factorization_scale, string, parse_string, "fixed")
@@ -569,7 +569,7 @@ void ContextCollection::create_contexts() {
         fs = new RPerpFactorizationScale(4 * exp(-2*M_EULER)); // this value is c_0^2, with c_0 defined in the long paper
     }
     assert(fs != NULL);
-    
+
     contexts_created = true;
     // create contexts
     for (vector<double>::iterator pTit = pT.begin(); pTit != pT.end(); pTit++) {
