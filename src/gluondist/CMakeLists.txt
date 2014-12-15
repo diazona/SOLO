@@ -15,8 +15,9 @@ target_link_libraries(gdist interp2d ${LIBS})
 add_executable(gluondisteval
   gluondist_driver.cpp
   gluondist.cpp
+  ../mstwpdf.cc
   ../coupling.cpp
   ../factorizationscale.cpp
   ../configuration/context.cpp
   ../utils/utils.cpp)
-target_link_libraries(gluondisteval interp2d ${LIBS})
+target_link_libraries(gluondisteval dsspinlo interp2d ${LIBS})
