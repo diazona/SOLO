@@ -408,7 +408,7 @@ void cubature_integrate(integrand func, size_t dim, void* closure, double* min, 
 void Integrator::integrate_impl(size_t core_dimensions, double* result, double* error) {
     // it should already have been checked that there is at least one term of the appropriate type
     // and the type should be set appropriately
-    assert(core_dimensions == 1 || core_dimensions == 2);
+    assert(core_dimensions >= 0 && core_dimensions <= 2);
     size_t dimensions = core_dimensions + current_type->extra_dimensions;
     double min[10];
     double max[10];
@@ -477,6 +477,26 @@ void Integrator::integrate(double* real, double* imag, double* error) {
         result += tmp_result;
         abserr += tmp_error;
         integrate_impl(1, &tmp_result, &tmp_error);
+        result += tmp_result;
+        abserr += tmp_error;
+    }
+
+    *real = result;
+    *imag = 0;
+    *error = abserr;
+}
+
+void Integrator::inner_integrate(const double z, const double xi, double* real, double* imag, double* error) {
+    double result = 0.0;
+    double abserr = 0.0;
+    double tmp_result, tmp_error;
+
+    ictx.update_kinematics(z, xi, 0);
+
+    for (HardFactorTypeMap::iterator it = terms.begin(); it != terms.end(); it++) {
+        assert(it->second.size() > 0);
+        set_current_integration_type(it->first);
+        integrate_impl(0, &tmp_result, &tmp_error);
         result += tmp_result;
         abserr += tmp_error;
     }

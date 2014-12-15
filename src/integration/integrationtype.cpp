@@ -93,7 +93,7 @@ static double xi_zy(const Context* const ctx, size_t core_dimensions, double z, 
 
 /*
  * In general, the values passed as the third argument to update() are interpreted as
- *  values[0]: z
+ *  values[0]: z (if applicable)
  *  values[1]: y (if applicable)
  *  values[2]: rx or sx or q1x
  *  values[3]: ry or sy or q1y
@@ -116,26 +116,30 @@ double IntegrationType::jacobian(IntegrationContext& ictx, const size_t core_dim
 void PlainIntegrationType::fill_min(const Context* const ctx, const size_t core_dimensions, double* min) const {
     assert(ctx->tau < 1);
     assert(ctx->tauhat < 1);
-    assert(core_dimensions == 1 || core_dimensions == 2);
+    assert(core_dimensions >= 0 && core_dimensions <= 2);
     size_t i = 0;
-    min[i++] = zmin(ctx);
-    if (core_dimensions == 2) {
-        min[i++] = ymin(ctx);
+    if (core_dimensions >= 1) {
+        min[i++] = zmin(ctx);
+        if (core_dimensions >= 2) {
+            min[i++] = ymin(ctx);
+        }
     }
     while (i < core_dimensions + extra_dimensions) { min[i++] = -ctx->inf; }
 }
 void PlainIntegrationType::fill_max(const Context* const ctx, const size_t core_dimensions, double* max) const {
-    assert(core_dimensions == 1 || core_dimensions == 2);
+    assert(core_dimensions >= 0 && core_dimensions <= 2);
     size_t i = 0;
-    max[i++] = zmax(ctx);
-    if (core_dimensions == 2) {
-        max[i++] = ymax(ctx);
+    if (core_dimensions >= 1) {
+        max[i++] = zmax(ctx);
+        if (core_dimensions >= 2) {
+            max[i++] = ymax(ctx);
+        }
     }
     while (i < core_dimensions + extra_dimensions) { max[i++] = ctx->inf; }
 }
 
 void PositionIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
-    assert(core_dimensions == 1 || core_dimensions == 2);
+    assert(core_dimensions >= 0 && core_dimensions <= 2);
     ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
     ictx.update_positions(
         extra_dimensions > 0 ? values[core_dimensions + 0] : 0,
@@ -148,7 +152,7 @@ void PositionIntegrationType::update(IntegrationContext& ictx, const size_t core
     ictx.update_parton_functions();
 }
 void MomentumIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
-    assert(core_dimensions == 1 || core_dimensions == 2);
+    assert(core_dimensions >= 0 && core_dimensions <= 2);
     ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
     ictx.update_momenta(
         extra_dimensions > 0 ? values[core_dimensions + 0] : 0,
@@ -176,28 +180,32 @@ void NoIntegrationType::update(IntegrationContext& ictx, const size_t core_dimen
 void XiPIntegrationType::fill_min(const Context* const ctx, const size_t core_dimensions, double* min) const {
     assert(ctx->tau < 1);
     assert(ctx->tauhat < 1);
-    assert(core_dimensions == 1 || core_dimensions == 2);
+    assert(core_dimensions >= 0 && core_dimensions <= 2);
     size_t i = 0;
-    min[i++] = zmin(ctx);
-    if (core_dimensions == 2) {
-        min[i++] = ymin(ctx);
+    if (core_dimensions >= 1) {
+        min[i++] = zmin(ctx);
+        if (core_dimensions >= 2) {
+            min[i++] = ymin(ctx);
+        }
     }
-    min[i++] = 0; // xiprime
+    min[i++] = 0; // xiprime; doesn't count in core_dimensions (this is bad design, TODO fix)
     while (i < core_dimensions + extra_dimensions) { min[i++] = -ctx->inf; }
 }
 void XiPIntegrationType::fill_max(const Context* const ctx, const size_t core_dimensions, double* max) const {
-    assert(core_dimensions == 1 || core_dimensions == 2);
+    assert(core_dimensions >= 0 && core_dimensions <= 2);
     size_t i = 0;
-    max[i++] = zmax(ctx);
-    if (core_dimensions == 2) {
-        max[i++] = ymax(ctx);
+    if (core_dimensions >= 1) {
+        max[i++] = zmax(ctx);
+        if (core_dimensions >= 2) {
+            max[i++] = ymax(ctx);
+        }
     }
     max[i++] = 1; // xiprime
     while (i < core_dimensions + extra_dimensions) { max[i++] = ctx->inf; }
 }
 
 void XiPIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
-    assert(core_dimensions == 1 || core_dimensions == 2);
+    assert(core_dimensions >= 0 && core_dimensions <= 2);
     ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
     ictx.update_auxiliary(values[core_dimensions]);
     ictx.update_momenta(
@@ -218,20 +226,24 @@ void XiPIntegrationType::update(IntegrationContext& ictx, const size_t core_dime
 void RadialIntegrationType::fill_min(const Context* const ctx, const size_t core_dimensions, double* min) const {
     assert(ctx->tau < 1);
     assert(ctx->tauhat < 1);
-    assert(core_dimensions == 1 || core_dimensions == 2);
+    assert(core_dimensions >= 0 && core_dimensions <= 2);
     size_t i = 0;
-    min[i++] = zmin(ctx);
-    if (core_dimensions == 2) {
-        min[i++] = ymin(ctx);
+    if (core_dimensions >= 1) {
+        min[i++] = zmin(ctx);
+        if (core_dimensions == 2) {
+            min[i++] = ymin(ctx);
+        }
     }
     while (i < core_dimensions + extra_dimensions) { min[i++] = ctx->cutoff; }
 }
 void RadialIntegrationType::fill_max(const Context* const ctx, const size_t core_dimensions, double* max) const {
-    assert(core_dimensions == 1 || core_dimensions == 2);
+    assert(core_dimensions >= 0 && core_dimensions <= 2);
     size_t i = 0;
-    max[i++] = zmax(ctx);
-    if (core_dimensions == 2) {
-        max[i++] = ymax(ctx);
+    if (core_dimensions >= 1) {
+        max[i++] = zmax(ctx);
+        if (core_dimensions >= 2) {
+            max[i++] = ymax(ctx);
+        }
     }
     while (i < core_dimensions + extra_dimensions) {
         max[i++] = ctx->inf;
@@ -259,7 +271,7 @@ double RadialPositionIntegrationType::jacobian(IntegrationContext& ictx, const s
     return jacobian;
 }
 void RadialPositionIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
-    assert(core_dimensions == 1 || core_dimensions == 2);
+    assert(core_dimensions >= 0 && core_dimensions <= 2);
     ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
     ictx.update_positions(
         extra_dimensions > 0 ? values[core_dimensions + 0] * cos(values[core_dimensions + 1]) : 0,
@@ -292,7 +304,7 @@ double RadialMomentumIntegrationType::jacobian(IntegrationContext& ictx, const s
     return jacobian;
 }
 void RadialMomentumIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
-    assert(core_dimensions == 1 || core_dimensions == 2);
+    assert(core_dimensions >= 0 && core_dimensions <= 2);
     ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
     ictx.update_momenta(
         extra_dimensions > 0 ? values[core_dimensions + 0] * cos(values[core_dimensions + 1]) : 0,
@@ -308,21 +320,25 @@ void RadialMomentumIntegrationType::update(IntegrationContext& ictx, const size_
 void AngleIndependentPositionIntegrationType::fill_min(const Context*const ctx, const size_t core_dimensions, double* min) const {
     assert(ctx->tau < 1);
     assert(ctx->tauhat < 1);
-    assert(core_dimensions == 1 || core_dimensions == 2);
+    assert(core_dimensions >= 0 && core_dimensions <= 2);
     size_t i = 0;
-    min[i++] = zmin(ctx);
-    if (core_dimensions == 2) {
-        min[i++] = ymin(ctx);
+    if (core_dimensions >= 1) {
+        min[i++] = zmin(ctx);
+        if (core_dimensions >= 2) {
+            min[i++] = ymin(ctx);
+        }
     }
     while (i < core_dimensions + extra_dimensions) { min[i++] = 0; }
 }
 
 void AngleIndependentPositionIntegrationType::fill_max(const Context* const ctx, const size_t core_dimensions, double* max) const {
-    assert(core_dimensions == 1 || core_dimensions == 2);
+    assert(core_dimensions >= 0 && core_dimensions <= 2);
     size_t i = 0;
-    max[i++] = zmax(ctx);
-    if (core_dimensions == 2) {
-        max[i++] = ymax(ctx);
+    if (core_dimensions >= 1) {
+        max[i++] = zmax(ctx);
+        if (core_dimensions == 2) {
+            max[i++] = ymax(ctx);
+        }
     }
     while (i < core_dimensions + extra_dimensions) {
         max[i++] = ctx->inf;
@@ -350,7 +366,7 @@ double AngleIndependentPositionIntegrationType::jacobian(IntegrationContext& ict
     return jacobian;
 }
 void AngleIndependentPositionIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
-    assert(core_dimensions == 1 || core_dimensions == 2);
+    assert(core_dimensions >= 0 && core_dimensions <= 2);
     ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
     ictx.update_positions(
         extra_dimensions > 0 ? values[core_dimensions + 0] : 0,
@@ -364,11 +380,13 @@ void AngleIndependentPositionIntegrationType::update(IntegrationContext& ictx, c
 }
 
 void QLimitedMomentumIntegrationType::fill_max(const Context*const ctx, const size_t core_dimensions, double* max) const {
-    assert(core_dimensions == 1 || core_dimensions == 2);
+    assert(core_dimensions >= 0 && core_dimensions <= 2);
     size_t i = 0;
-    max[i++] = zmax(ctx);
-    if (core_dimensions == 2) {
-        max[i++] = ymax(ctx);
+    if (core_dimensions >= 1) {
+        max[i++] = zmax(ctx);
+        if (core_dimensions >= 2) {
+            max[i++] = ymax(ctx);
+        }
     }
     while (i < core_dimensions + extra_dimensions) {
         max[i++] = 1;
@@ -387,7 +405,7 @@ double QLimitedMomentumIntegrationType::jacobian(IntegrationContext& ictx, const
 
 void QLimitedMomentumIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     // the thing in the array is a scaled integration variable between 0 and 1, so convert it to q
-    assert(core_dimensions == 1 || core_dimensions == 2);
+    assert(core_dimensions >= 0 && core_dimensions <= 2);
     ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
     // qmax is computed in update_kinematics
     double qmax = ictx.qmax;

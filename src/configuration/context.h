@@ -183,6 +183,19 @@ public:
      */
     std::string hf_definitions;
 
+    /**
+     * Whether to include the PDF and FF in the computation.
+     *
+     * If this is `false`, the calculation simply skips the integration over
+     * `z` and `xi` and sets the variables representing the product of
+     * PDFs and FFs to 1.
+     *
+     * @see IntegrationContext::qqfactor
+     * @see IntegrationContext::ggfactor
+     * @see IntegrationContext::qgfactor
+     * @see IntegrationContext::gqfactor
+     */
+    bool use_parton_functions;
     /** Name of the file PDF data was read from */
     std::string pdf_filename;
     /** Name of the file FF data was read from */

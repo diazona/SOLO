@@ -34,8 +34,12 @@ void IntegrationContext::update_kinematics(double z, double xi, size_t core_dime
      * when NOT using exact kinematics, this correlation does NOT hold
      *  core_dimensions == 1 can be either type of term
      *  core_dimensions == 2 still means we are calculating an NLO term
+     *
+     * in either case
+     *  core_dimensions == 0 means we are calculating the hard factors
+     *  only, without the parton distribution and fragmentation function
      */
-    assert(core_dimensions == 1 || core_dimensions == 2);
+    assert(core_dimensions >= 0 && core_dimensions <= 2);
     assert(z <= 1);
     assert(z >= ctx->tau);
 
@@ -49,6 +53,7 @@ void IntegrationContext::update_kinematics(double z, double xi, size_t core_dime
 
     this->xp = ctx->tau / (this->z * xi);
     if (ctx->exact_kinematics) {
+        assert(core_dimensions != 0);
         if (core_dimensions == 1) {
             // means we are calculating an LO term
             this->xa = xg;
@@ -148,6 +153,14 @@ void IntegrationContext::update_auxiliary(double xiprime) {
 }
 
 void IntegrationContext::update_parton_functions() {
+    if (!ctx->use_parton_functions) {
+        qqfactor = 1.0;
+        ggfactor = 1.0;
+        gqfactor = 1.0;
+        qgfactor = 1.0;
+        return;
+    }
+
     double qqfactor = 0.0, ggfactor = 0.0, gqfactor = 0.0, qgfactor = 0.0;
 
     c_mstwpdf* pdf_object = tlctx->pdf_object;

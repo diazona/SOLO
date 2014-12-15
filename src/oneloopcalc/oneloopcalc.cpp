@@ -356,6 +356,9 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
         else if (a == "--separate") {
             separate = true;
         }
+        else if (a == "--no-parton-factors") {
+            cc.set("use_parton_functions", "false");
+        }
         else if (a == "-o" || a == "--option") {
             current_arg_is_config_line = true;
         }
@@ -526,7 +529,12 @@ void ResultsCalculator::integrate_hard_factor(const Context& ctx, const ThreadLo
     integrator.set_miser_callback(miser_eprint_callback);
     integrator.set_vegas_callback(vegas_eprint_callback);
     integrator.set_quasi_callback(quasi_eprint_callback);
-    integrator.integrate(&l_real, &l_imag, &l_error);
+    if (ctx.use_parton_functions) {
+        integrator.inner_integrate(1, 1, &l_real, &l_imag, &l_error);
+    }
+    else {
+        integrator.integrate(&l_real, &l_imag, &l_error);
+    }
     real[index] = l_real;
     imag[index] = l_imag;
     error[index] = l_error;

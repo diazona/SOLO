@@ -122,6 +122,11 @@ public:
      */
     void integrate(double* real, double* imag, double* error);
     /**
+     * Performs only the position and momentum integrals, but does not integrate
+     * over z or xi.
+     */
+    void inner_integrate(const double z, const double xi, double* real, double* imag, double* error);
+    /**
      * Sets the current integration type.
      */
     void set_current_integration_type(IntegrationType const* new_type) {
