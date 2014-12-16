@@ -81,32 +81,18 @@ private:
     /** A callback function to call each time a quasi Monte Carlo integration finishes */
     void (*quasi_callback)(double*, double*, quasi_monte_state*);
 
+    size_t core_dimensions;
+    
     double xg_min, xg_max;
 public:
     Integrator(const Context* ctx, const ThreadLocalContext* tlctx, const HardFactorList& hflist, const double xg_min, const double xg_max);
     ~Integrator();
     /**
-     * Updates the kinematic variables during a "1D" integration.
-     * This just passes the call on to IntegrationContext.
-     */
-    void update1D(const double* values);
-    /**
-     * Updates the kinematic variables during a "2D" integration.
-     * This just passes the call on to IntegrationContext.
-     */
-    void update2D(const double* values);
-    /**
-     * Evaluates the "1D" integrand, using the values of variables currently stored
+     * Evaluates the 1D or 2D integrand, using the values of variables currently stored
      * in the IntegrationContext, and stores the real and imaginary parts of the
      * result in the given variables.
      */
-    void evaluate_1D_integrand(double* real, double* imag);
-    /**
-     * Evaluates the "2D" integrand, using the values of variables currently stored
-     * in the IntegrationContext, and stores the real and imaginary parts of the
-     * result in the given variables.
-     */
-    void evaluate_2D_integrand(double* real, double* imag);
+    void evaluate_integrand(double* real, double* imag);
     /**
      * Performs the 1D and 2D integrals, and stores the result and error bound
      * in the variables `real` and `error`. The variable `imag` is set to zero
@@ -163,6 +149,10 @@ private:
      * abstracted into this method.
      */
     void integrate_impl(const size_t core_dimensions, double* result, double* error);
+    
+    // the non-member functions that actually implement the integration
+    friend void cubature_wrapper(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nresults, double* results);
+    friend double gsl_monte_wrapper(double* coordinates, size_t ncoords, void* closure);
 };
 
 #endif // _INTEGRATOR_H_

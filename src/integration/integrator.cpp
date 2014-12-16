@@ -40,17 +40,17 @@
  * integrate() iterates over the IntegrationTypes, and for each, calls
  *   integrate_impl() to do the "2D" integral, which calls
  *     vegas_integrate(), which calls
- *       gsl_monte_vegas_integrate(), passing the wrapper function gsl_monte_wrapper_2D as the function to be integrated.
- *         gsl_monte_wrapper_2D() calls
- *           Integrator::update2D() to update the values in the IntegrationContext, and then calls
- *           Integrator::evaluate_2D_integrand() to actually calculate the result
+ *       gsl_monte_vegas_integrate(), passing the wrapper function gsl_monte_wrapper as the function to be integrated.
+ *         gsl_monte_wrapper() calls
+ *           IntegrationContext::update() to update the values in the IntegrationContext, and then calls
+ *           Integrator::evaluate_integrand() to actually calculate the result
  *   Then integrate() calls
  *   integrate_impl() to do the "1D" integral, which calls
  *     vegas_integrate(), which calls
- *       gsl_monte_vegas_integrate(), passing the wrapper function gsl_monte_wrapper_1D as the function to be integrated.
- *         gsl_monte_wrapper_1D() calls
- *           Integrator::update1D() to update the values in the IntegrationContext, and then calls
- *           Integrator::evaluate_1D_integrand() to actually calculate the result
+ *       gsl_monte_vegas_integrate(), passing the wrapper function gsl_monte_wrapper as the function to be integrated.
+ *         gsl_monte_wrapper() calls
+ *           IntegrationContext::update() to update the values in the IntegrationContext, and then calls
+ *           Integrator::evaluate_integrand() to actually calculate the result
  */
 
 /**
@@ -59,7 +59,7 @@
 #define checkfinite(d) assert(gsl_finite(d))
 
 Integrator::Integrator(const Context* ctx, const ThreadLocalContext* tlctx, const HardFactorList& hflist, const double xg_min, const double xg_max) :
-  ictx(ctx, tlctx), current_type(NULL), terms(compare_integration_types), xg_min(xg_min), xg_max(xg_max),
+  ictx(ctx, tlctx), current_type(NULL), core_dimensions(0), terms(compare_integration_types), xg_min(xg_min), xg_max(xg_max),
   callback(NULL), cubature_callback(NULL), miser_callback(NULL), vegas_callback(NULL), quasi_callback(NULL) {
     assert(hflist.size() > 0);
 #ifndef NDEBUG
@@ -92,132 +92,107 @@ Integrator::Integrator(const Context* ctx, const ThreadLocalContext* tlctx, cons
 Integrator::~Integrator() {
 }
 
-void Integrator::update1D(const double* values) {
-    current_type->update(ictx, 1, values);
-}
-
-void Integrator::update2D(const double* values) {
-    current_type->update(ictx, 2, values);
-}
-
 static inline bool xg_in_range(const double xg, const double xg_min, const double xg_max) {
     assert(xg_min <= xg_max);
     return xg > xg_min && xg <= xg_max;
 }
 
-void Integrator::evaluate_1D_integrand(double* real, double* imag) {
+void Integrator::evaluate_integrand(double* real, double* imag) {
     if (!xg_in_range(ictx.xa, xg_min, xg_max)) {
         *real = *imag = 0.0;
         return;
     }
     double l_real = 0.0, l_imag = 0.0; // l for "local"
     double t_real, t_imag;             // t for temporary
-    double jacobian = current_type->jacobian(ictx, 1);
-    double log_factor = log(1 - ictx.ctx->tau / ictx.z);
-    checkfinite(log_factor);
+    double jacobian = current_type->jacobian(ictx, core_dimensions);
     HardFactorTermList& current_terms = terms[current_type];
     assert(current_terms.size() > 0);
-    assert(ictx.xi == 1.0);
-    for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
-        const HardFactorTerm* h = (*it);
-        h->Fs(&ictx, &t_real, &t_imag);
-        checkfinite(t_real);
-        checkfinite(t_imag);
-        l_real += t_real * log_factor;
-        l_imag += t_imag * log_factor;
-        h->Fd(&ictx, &t_real, &t_imag);
-        checkfinite(t_real);
-        checkfinite(t_imag);
-        l_real += t_real;
-        l_imag += t_imag;
+    if (core_dimensions == 1) {
+        assert(ictx.xi == 1.0);
+        double log_factor = log(1 - ictx.ctx->tau / ictx.z);
+        checkfinite(log_factor);
+        for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
+            const HardFactorTerm* h = (*it);
+            h->Fs(&ictx, &t_real, &t_imag);
+            checkfinite(t_real);
+            checkfinite(t_imag);
+            l_real += t_real * log_factor;
+            l_imag += t_imag * log_factor;
+            h->Fd(&ictx, &t_real, &t_imag);
+            checkfinite(t_real);
+            checkfinite(t_imag);
+            l_real += t_real;
+            l_imag += t_imag;
+        }
     }
-    if (callback) {
-        callback(&ictx, jacobian * l_real, jacobian * l_imag);
+    else {
+        assert(core_dimensions == 2);
+        double xi_factor = 1.0 / (1 - ictx.xi);
+        checkfinite(xi_factor);
+        for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
+            const HardFactorTerm* h = (*it);
+            if (ictx.ctx->exact_kinematics) {
+                // double check that there are no mixed-order hard factors when using exact kinematics
+                assert(h->get_order() == HardFactor::LO || h->get_order() == HardFactor::NLO);
+            }
+
+            h->Fs(&ictx, &t_real, &t_imag);
+            checkfinite(t_real);
+            checkfinite(t_imag);
+            if (h->get_order() == HardFactor::LO) {
+                /* Leading order hard factors are supposed to only have Fd, not Fs or Fn.
+                * If this assumption is violated, it could break things.
+                *
+                * Exercise for the reader: what things? (mwahaha)
+                */
+                assert(t_real == 0);
+                assert(t_imag == 0);
+            }
+            l_real += t_real * xi_factor;
+            l_imag += t_imag * xi_factor;
+
+            h->Fn(&ictx, &t_real, &t_imag);
+            checkfinite(t_real);
+            checkfinite(t_imag);
+            if (h->get_order() == HardFactor::LO) {
+                assert(t_real == 0);
+                assert(t_imag == 0);
+            }
+            l_real += t_real;
+            l_imag += t_imag;
+        }
+        ictx.set_xi_to_1(2);
+        for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
+            const HardFactorTerm* h = (*it);
+            h->Fs(&ictx, &t_real, &t_imag);
+            checkfinite(t_real);
+            checkfinite(t_imag);
+            l_real -= t_real * xi_factor;
+            l_imag -= t_imag * xi_factor;
+        }
     }
     *real = jacobian * l_real;
     *imag = jacobian * l_imag;
-}
-
-void Integrator::evaluate_2D_integrand(double* real, double* imag) {
-    if (!xg_in_range(ictx.xa, xg_min, xg_max)) {
-        *real = *imag = 0.0;
-        return;
-    }
-    double l_real = 0.0, l_imag = 0.0; // l for "local"
-    double t_real, t_imag;             // t for temporary
-    double jacobian = current_type->jacobian(ictx, 2);
-    checkfinite(jacobian);
-    double xi_factor = 1.0 / (1 - ictx.xi);
-    checkfinite(xi_factor);
-    HardFactorTermList& current_terms = terms[current_type];
-    assert(current_terms.size() > 0);
-    for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
-        const HardFactorTerm* h = (*it);
-        if (ictx.ctx->exact_kinematics) {
-            // double check that there are no mixed-order hard factors when using exact kinematics
-            assert(h->get_order() == HardFactor::LO || h->get_order() == HardFactor::NLO);
-        }
-
-        h->Fs(&ictx, &t_real, &t_imag);
-        checkfinite(t_real);
-        checkfinite(t_imag);
-        if (h->get_order() == HardFactor::LO) {
-            /* Leading order hard factors are supposed to only have Fd, not Fs or Fn.
-             * If this assumption is violated, it could break things.
-             *
-             * Exercise for the reader: what things? (mwahaha)
-             */
-            assert(t_real == 0);
-            assert(t_imag == 0);
-        }
-        l_real += t_real * xi_factor;
-        l_imag += t_imag * xi_factor;
-
-        h->Fn(&ictx, &t_real, &t_imag);
-        checkfinite(t_real);
-        checkfinite(t_imag);
-        if (h->get_order() == HardFactor::LO) {
-            assert(t_real == 0);
-            assert(t_imag == 0);
-        }
-        l_real += t_real;
-        l_imag += t_imag;
-    }
     if (callback) {
-        callback(&ictx, jacobian * l_real, jacobian * l_imag);
+        callback(&ictx, *real, *imag);
     }
-    ictx.set_xi_to_1(2);
-    for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
-        const HardFactorTerm* h = (*it);
-        h->Fs(&ictx, &t_real, &t_imag);
-        checkfinite(t_real);
-        checkfinite(t_imag);
-        l_real -= t_real * xi_factor;
-        l_imag -= t_imag * xi_factor;
-    }
-    if (callback) {
-        callback(&ictx, jacobian * l_real, jacobian * l_imag);
-    }
-    *real = jacobian * l_real;
-    *imag = jacobian * l_imag;
+    checkfinite(*real);
+    checkfinite(*imag);
 }
 
 /**
- * A wrapper function that can be passed to the cubature integration code
- * to do the 1D integrand.
+ * A wrapper function that can be passed to the cubature integration code.
  *
  * This updates the IntegrationContext using the values in `coordinates`
  * and then evaluates the current list of hard factors. The `coordinates`
- * are interpreted as z, (xiprime if applicable), rx, ry, etc.
+ * are interpreted as z, (y if applicable), (xiprime if applicable), rx, ry, etc.
  */
-void cubature_wrapper_1D(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nresults, double* results) {
+void cubature_wrapper(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nresults, double* results) {
     double real;
     double imag;
     Integrator* integrator = (Integrator*)closure;
-    integrator->update1D(coordinates);
-    integrator->evaluate_1D_integrand(&real, &imag);
-    checkfinite(real);
-    checkfinite(imag);
+    integrator->current_type->update(integrator->ictx, integrator->core_dimensions, coordinates);
+    integrator->evaluate_integrand(&real, &imag);
     assert(nresults == 1 || nresults == 2);
     results[0] = real;
     if (nresults == 2) {
@@ -226,63 +201,16 @@ void cubature_wrapper_1D(unsigned int ncoords, const double* coordinates, void* 
 }
 
 /**
- * A wrapper function that can be passed to the cubature integration code
- * to do the 2D integrand.
+ * A wrapper function that can be passed to the GSL integration code.
  *
  * This updates the IntegrationContext using the values in `coordinates`
  * and then evaluates the current list of hard factors. The `coordinates`
- * are interpreted as z, y, (xiprime if applicable), rx, ry, etc.
+ * are interpreted as z, (y if applicable), (xiprime if applicable), rx, ry, etc.
  */
-void cubature_wrapper_2D(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nresults, double* results) {
+double gsl_monte_wrapper(double* coordinates, size_t ncoords, void* closure) {
     double real;
-    double imag;
-    Integrator* integrator = (Integrator*)closure;
-    integrator->update2D(coordinates);
-    integrator->evaluate_2D_integrand(&real, &imag);
-    checkfinite(real);
-    checkfinite(imag);
-    assert(nresults == 1 || nresults == 2);
-    results[0] = real;
-    if (nresults == 2) {
-        results[1] = imag;
-    }
-}
-
-/**
- * A wrapper function that can be passed to the GSL integration code
- * to do the 1D integrand.
- *
- * This updates the IntegrationContext using the values in `coordinates`
- * and then evaluates the current list of hard factors. The `coordinates`
- * are interpreted as z, (xiprime if applicable), rx, ry, etc.
- */
-double gsl_monte_wrapper_1D(double* coordinates, size_t ncoords, void* closure) {
-    double real;
-    double imag;
-    Integrator* integrator = (Integrator*)closure;
-    integrator->update1D(coordinates);
-    integrator->evaluate_1D_integrand(&real, &imag);
-    checkfinite(real);
-    checkfinite(imag);
-    return real;
-}
-
-/**
- * A wrapper function that can be passed to the GSL integration code
- * to do the 2D integrand.
- *
- * This updates the IntegrationContext using the values in `coordinates`
- * and then evaluates the current list of hard factors. The `coordinates`
- * are interpreted as z, y, (xiprime if applicable), rx, ry, etc.
- */
-double gsl_monte_wrapper_2D(double* coordinates, size_t ncoords, void* closure) {
-    double real;
-    double imag;
-    Integrator* integrator = (Integrator*)closure;
-    integrator->update2D(coordinates);
-    integrator->evaluate_2D_integrand(&real, &imag);
-    checkfinite(real);
-    checkfinite(imag);
+    // this does basically the same thing as cubature_wrapper but with a different signature
+    cubature_wrapper(ncoords,  coordinates,  closure, 1, &real);
     return real;
 }
 
@@ -409,6 +337,7 @@ void Integrator::integrate_impl(size_t core_dimensions, double* result, double* 
     // it should already have been checked that there is at least one term of the appropriate type
     // and the type should be set appropriately
     assert(core_dimensions == 1 || core_dimensions == 2);
+    this->core_dimensions = core_dimensions;
     size_t dimensions = core_dimensions + current_type->extra_dimensions;
     double min[10];
     double max[10];
@@ -417,27 +346,12 @@ void Integrator::integrate_impl(size_t core_dimensions, double* result, double* 
     switch (dimensions) {
         case 1:
         case 2:
-            integrand cubature_wrapper;
-            if (core_dimensions == 2) {
-                cubature_wrapper = cubature_wrapper_2D;
-            }
-            else {
-                cubature_wrapper = cubature_wrapper_1D;
-            }
             cubature_integrate(cubature_wrapper, dimensions, this, min, max, result, error, ictx.ctx->cubature_iterations, ictx.ctx->relerr, ictx.ctx->abserr, cubature_callback);
             break;
         default:
-            double (*monte_wrapper)(double*, size_t, void*);
-            if (core_dimensions == 2) {
-                monte_wrapper = gsl_monte_wrapper_2D;
-            }
-            else {
-                monte_wrapper = gsl_monte_wrapper_1D;
-            }
-
             if (ictx.ctx->strategy == MC_QUASI) {
                 gsl_qrng* qrng = gsl_qrng_alloc(ictx.ctx->quasirandom_generator_type, dimensions);
-                quasi_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->quasi_iterations, ictx.ctx->relerr, ictx.ctx->abserr, qrng, quasi_callback);
+                quasi_integrate(gsl_monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->quasi_iterations, ictx.ctx->relerr, ictx.ctx->abserr, qrng, quasi_callback);
                 gsl_qrng_free(qrng);
                 qrng = NULL;
             }
@@ -446,10 +360,10 @@ void Integrator::integrate_impl(size_t core_dimensions, double* result, double* 
                 gsl_rng_set(rng, ictx.ctx->pseudorandom_generator_seed);
                 switch (ictx.ctx->strategy) {
                     case MC_VEGAS:
-                        vegas_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->vegas_initial_iterations, ictx.ctx->vegas_incremental_iterations, rng, vegas_callback);
+                        vegas_integrate(gsl_monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->vegas_initial_iterations, ictx.ctx->vegas_incremental_iterations, rng, vegas_callback);
                         break;
                     case MC_MISER:
-                        miser_integrate(monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->miser_iterations, rng, miser_callback);
+                        miser_integrate(gsl_monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->miser_iterations, rng, miser_callback);
                         break;
                     case MC_PLAIN:
                         throw "Unsupported integration method PLAIN";
