@@ -22,6 +22,7 @@
 #include <istream>
 #include <sstream>
 #include <muParser.h>
+#include <gsl/gsl_math.h>
 #include "gsl_mu.h"
 #include "hardfactor.h"
 #include "hardfactors_position.h"
@@ -103,12 +104,34 @@ value_type gluon_distribution_S4(const value_type r2, const value_type s2, const
     return gdist->S4(r2, s2, t2, Y);
 }
 
+/**
+ * Dot product of 2D vectors.
+ */
+value_type dot2(const value_type a1, const value_type a2, const value_type b1, const value_type b2) {
+    return a1*b1 + a2*b2;
+}
+/**
+ * Square of a 2D vector.
+ */
+value_type square2(const value_type a1, const value_type a2) {
+    return dot2(a1, a2, a1, a2);
+}
+/**
+ * Norm (magnitude) of a 2D vector.
+ */
+value_type norm2(const value_type a1, const value_type a2) {
+    return gsl_hypot(a1, a2);
+}
+
 void ParsedHardFactorTerm::init_parser(Parser& parser, varmap_type& all_variables, const string& real_expr, const string& imag_expr, const char* debug_message) {
     parser.SetExpr(e0(real_expr) + "," + e0(imag_expr));
     mu_load_gsl(parser);
     parser.DefineFun("F", gluon_distribution_F);
     parser.DefineFun("S2", gluon_distribution_S2);
     parser.DefineFun("S4", gluon_distribution_S4);
+    parser.DefineFun("dot", dot2);
+    parser.DefineFun("square", square2);
+    parser.DefineFun("norm", norm2);
 #ifndef NDEBUG
     print_parser_info(debug_message, parser);
 # endif
