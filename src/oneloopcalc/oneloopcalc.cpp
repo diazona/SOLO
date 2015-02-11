@@ -538,7 +538,6 @@ void ResultsCalculator::integrate_hard_factor(const Context& ctx, const ThreadLo
  */
 ostream& operator<<(ostream& out, ResultsCalculator& rc) {
     using std::setw;
-    bool all_valid = true, row_valid = true;
     const string OFS = " ";   // output field separator - make sure fields are space-separated
     const string BLANK = " "; // a blank field
     size_t lw = 6;
@@ -582,12 +581,14 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
 
     // write data
     double l_real, l_imag, l_error;
+    bool all_valid = true;
     for (size_t ccindex = 0; ccindex < rc.cc.size(); ccindex++) {
         out << setw(lw) << sqrt(rc.cc[ccindex].pT2) << OFS;
         out << setw(lw) << rc.cc[ccindex].Y << OFS;
 
         double total = 0;
         size_t hfglen = rc.separate ? rc._hflen : rc._hfglen;
+        bool row_valid = true;
         for (size_t hfgindex = 0; hfgindex < hfglen; hfgindex++) {
             if (rc.valid(ccindex, hfgindex)) {
                 rc.result(ccindex, hfgindex, &l_real, &l_imag, &l_error);
@@ -595,7 +596,7 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
                 total += l_real;
             }
             else {
-                out << setw(rw) << "---" << OFS;
+                out << setw(rw) << "---" << OFS << setw(rw) << "---" << OFS;
                 all_valid = row_valid = false;
             }
         }
@@ -605,7 +606,6 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
         else {
             out << setw(rw) << "---" << endl;
         }
-        row_valid = true;
     }
     if (!all_valid) {
         out << "WARNING: some results were not computed" << endl;
