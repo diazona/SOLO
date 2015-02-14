@@ -662,6 +662,11 @@ string sha1_file(string filename) {
     SHA_CTX c;
     SHA1_Init(&c);
     ifstream i(filename.c_str());
+    if (!i) {
+        ostringstream oss;
+        oss << "Error opening file for SHA checksum: " << filename;
+        throw ios_base::failure(oss.str());
+    }
     while (i) {
         i.read(buffer, sizeof(buffer));
         SHA1_Update(&c, buffer, i.gcount());
@@ -722,6 +727,11 @@ int run(int argc, char** argv) {
         if (!hf_definition_filename.empty()) {
             cout << "# hard factor definition file hash: " << sha1_file(hf_definition_filename) << endl;
             ifstream hfdefs(hf_definition_filename.c_str());
+            if (!hfdefs) {
+                ostringstream oss;
+                oss << "Error opening hard factor definition file: " << hf_definition_filename;
+                throw ios_base::failure(oss.str());
+            }
             cerr << "BEGIN hf definition file" << endl << hfdefs.rdbuf() << "END hf definition file" << endl;
         }
     }
@@ -783,15 +793,15 @@ int main(int argc, char** argv) {
         return run(argc, argv);
     }
     catch (const exception& e) {
-        cerr << e.what() << endl;
+        cerr << "Caught exception:" << endl << e.what() << endl;
         return 1;
     }
     catch (const char* c) {
-        cerr << c << endl;
+        cerr << "Caught error message:" << endl << c << endl;
         return 1;
     }
     catch (...) {
-        cerr << "unknown error" << endl;
+        cerr << "Unknown error" << endl;
         return 1;
     }
 }
