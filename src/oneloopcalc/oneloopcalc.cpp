@@ -793,7 +793,11 @@ int main(int argc, char** argv) {
         return run(argc, argv);
     }
     catch (const mu::ParserError& e) {
-        cerr << "Caught parser exception:" << endl << e.GetMsg() << endl << "at position " << e.GetPos() << " in expression:" << endl << e.GetExpr() << endl;
+        string spaces(e.GetPos(), ' ');
+        cerr << "Parser error: " << e.GetMsg() << endl;
+        cerr << "in expression:" << endl;
+        cerr << e.GetExpr() << endl;
+        cerr << spaces << "^" << endl;
         return 1;
     }
     catch (const exception& e) {
