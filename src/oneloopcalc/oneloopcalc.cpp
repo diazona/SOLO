@@ -792,6 +792,10 @@ int main(int argc, char** argv) {
     try {
         return run(argc, argv);
     }
+    catch (const mu::ParserError& e) {
+        cerr << "Caught parser exception:" << endl << e.GetMsg() << endl << "at position " << e.GetPos() << " in expression:" << endl << e.GetExpr() << endl;
+        return 1;
+    }
     catch (const exception& e) {
         cerr << "Caught exception:" << endl << e.what() << endl;
         return 1;
