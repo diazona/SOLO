@@ -392,6 +392,14 @@ void HardFactorParser::parse_line(const string& line) {
             type = &radial::quadrupole;
             registry = radial::registry::get_instance();
         }
+        else if (parts[1] == "radial rescaled dipole") {
+            type = &radial::rescaled_dipole;
+            registry = radial::registry::get_instance();
+        }
+        else if (parts[1] == "radial rescaled quadrupole") {
+            type = &radial::rescaled_quadrupole;
+            registry = radial::registry::get_instance();
+        }
         else {
             throw InvalidHardFactorDefinitionException(line, parts[0], parts[1], "Unknown integration type:");
         }

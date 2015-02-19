@@ -161,6 +161,13 @@ public:
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };
 
+class RescaledAngleIndependentPositionIntegrationType : public AngleIndependentPositionIntegrationType {
+public:
+    RescaledAngleIndependentPositionIntegrationType(const size_t extra_dimensions) : AngleIndependentPositionIntegrationType(extra_dimensions) {}
+    double jacobian(IntegrationContext& ictx, const size_t core_dimensions) const;
+    void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
+};
+
 class QLimitedMomentumIntegrationType : public RadialMomentumIntegrationType {
 public:
     QLimitedMomentumIntegrationType(const size_t extra_dimensions) : RadialMomentumIntegrationType(extra_dimensions) {}

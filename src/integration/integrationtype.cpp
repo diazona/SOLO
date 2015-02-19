@@ -362,6 +362,39 @@ void AngleIndependentPositionIntegrationType::update(IntegrationContext& ictx, c
     ictx.update_parton_functions();
 }
 
+double RescaledAngleIndependentPositionIntegrationType::jacobian(IntegrationContext& ictx, const size_t core_dimensions) const {
+    assert(extra_dimensions <= 3);
+    double jacobian = IntegrationType::jacobian(ictx, core_dimensions); // y to xi
+    // now (r,theta) to (x,y)
+    if (extra_dimensions > 0) {
+        assert(ictx.xy == 0);
+        jacobian *= 2 * M_PI * ictx.xx * ictx.xi;
+    }
+    if (extra_dimensions > 1) {
+        assert(ictx.yy == 0);
+        jacobian *= 2 * M_PI * ictx.yx * ictx.xi;
+    }
+    if (extra_dimensions > 2) {
+        assert(ictx.by == 0);
+        jacobian *= 2 * M_PI * ictx.bx * ictx.xi;
+    }
+    checkfinite(jacobian);
+    return jacobian;
+}
+void RescaledAngleIndependentPositionIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
+    assert(core_dimensions == 1 || core_dimensions == 2);
+    ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
+    ictx.update_positions(
+        extra_dimensions > 0 ? values[core_dimensions + 0] * ictx.xi : 0,
+        0,
+        extra_dimensions > 1 ? values[core_dimensions + 1] * ictx.xi : 0,
+        0,
+        extra_dimensions > 2 ? values[core_dimensions + 2] * ictx.xi : 0,
+        0
+    );
+    ictx.update_parton_functions();
+}
+
 void QLimitedMomentumIntegrationType::fill_max(const Context*const ctx, const size_t core_dimensions, double* max) const {
     assert(core_dimensions == 1 || core_dimensions == 2);
     size_t i = 0;

@@ -32,6 +32,8 @@
 namespace radial {
     const AngleIndependentPositionIntegrationType dipole(1);
     const AngleIndependentPositionIntegrationType quadrupole(2);
+    const RescaledAngleIndependentPositionIntegrationType rescaled_dipole(1);
+    const RescaledAngleIndependentPositionIntegrationType rescaled_quadrupole(2);
 }
 
 using namespace radial;

@@ -29,6 +29,8 @@ namespace radial {
 
 extern const AngleIndependentPositionIntegrationType dipole;
 extern const AngleIndependentPositionIntegrationType quadrupole;
+extern const RescaledAngleIndependentPositionIntegrationType rescaled_dipole;
+extern const RescaledAngleIndependentPositionIntegrationType rescaled_quadrupole;
 
 class H02qq : public HardFactorTerm {
 public:
