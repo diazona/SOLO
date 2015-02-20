@@ -726,16 +726,19 @@ int run(int argc, char** argv) {
             cout << "# momentum gdist file hash: " << sha1_file(cc.get("gdist_momentum_filename")) << endl;
             cout << "# position gdist file hash: " << sha1_file(cc.get("gdist_position_filename")) << endl;
         }
-        string hf_definition_filename = cc.get("hf_definitions");
-        if (!hf_definition_filename.empty()) {
-            cout << "# hard factor definition file hash: " << sha1_file(hf_definition_filename) << endl;
+
+        vector<string> hfdefs = cc[0].hardfactor_definitions;
+        for (vector<string>::const_iterator it = hfdefs.begin(); it != hfdefs.end(); it++) {
+            string hf_definition_filename = *it;
             ifstream hfdefs(hf_definition_filename.c_str());
             if (!hfdefs) {
                 ostringstream oss;
                 oss << "Error opening hard factor definition file: " << hf_definition_filename;
                 throw ios_base::failure(oss.str());
             }
-            cerr << "BEGIN hf definition file" << endl << hfdefs.rdbuf() << "END hf definition file" << endl;
+            cerr << "BEGIN hf definition file " << hf_definition_filename << endl << hfdefs.rdbuf() << "END hf definition file " << hf_definition_filename << endl;
+            hfdefs.close();
+            cout << "# hard factor definition file hash: " << hf_definition_filename << ": " << sha1_file(hf_definition_filename) << endl;
         }
     }
 
