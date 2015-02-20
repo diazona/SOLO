@@ -329,31 +329,7 @@ public:
         return &instance;
     }
 private:
-    registry() {
-        add_hard_factor(new H02qq(), true);
-//         add_hard_factor(new H12qq(), true);
-        add_hard_factor(new H14qqSingular(), true);
-        add_hard_factor(new H14qqDelta(), true);
-        add_hard_factor(new H14qq(), true);
-        add_hard_factor(new H1qqCorrectionA(), true);
-        add_hard_factor(new H1qqCorrectionB(), true);
-        add_hard_factor(new H1qqCorrection(), true);
-        add_hard_factor(new H1qqExact(), true);
-        add_hard_factor(new H02gg(), true);
-//         add_hard_factor(new H12gg(), true);
-        add_hard_factor(new H12qqbar(), true);
-        add_hard_factor(new H16gg(), true);
-        add_hard_factor(new H16ggSingular(), true);
-        add_hard_factor(new H16ggDelta(), true);
-        add_hard_factor(new H1ggCorrection(), true);
-        add_hard_factor(new H1ggExact(), true);
-//         add_hard_factor(new H112gq(), true);
-//         add_hard_factor(new H122gq(), true);
-        add_hard_factor(new H14gq(), true);
-//         add_hard_factor(new H112qg(), true);
-//         add_hard_factor(new H122qg(), true);
-        add_hard_factor(new H14qg(), true);
-    }
+    registry() {}
 };
 
 }
