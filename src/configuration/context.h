@@ -181,7 +181,7 @@ public:
      * Path to the file, if any, containing the expressions
      * for hard factor terms to be integrated
      */
-    std::string hf_definitions;
+    std::vector<std::string> hardfactor_definitions;
 
     /** Name of the file PDF data was read from */
     std::string pdf_filename;
@@ -414,9 +414,8 @@ public:
      */
     void set(std::string key, std::string value);
     /**
-     * Add a setting. If the key is "pT" or "Y" (case insensitive), any existing
-     * settings with the same key are left alone. For other keys, this behaves
-     * identically to set().
+     * Add a setting. Any existing settings with the same key are left alone;
+     * in this case there will be multiple values with that key.
      */
     void add(std::string key, std::string value);
 

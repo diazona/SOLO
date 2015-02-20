@@ -408,10 +408,13 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
 }
 
 void ProgramConfiguration::parse_hf_specs() {
-    if (!cc[0].hf_definitions.empty()) {
-        HardFactorParser parser;
-        parser.parse_file(cc[0].hf_definitions);
-        // it adds the parsed hard factors to the registry
+    if (cc[0].hardfactor_definitions.empty()) {
+        throw MissingPropertyException("no hard factors defined");
+    }
+
+    HardFactorParser parser;
+    for (vector<string>::const_iterator it = cc[0].hardfactor_definitions.begin(); it != cc[0].hardfactor_definitions.end(); it++) {
+        parser.parse_file(*it);
     }
 
     assert(hfgroups.empty());

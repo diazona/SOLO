@@ -81,6 +81,9 @@ const string canonicalize(const string& i_key) {
     else if (key == "colorfactor") {
         return "cf";
     }
+    else if (key == "hf_definitions") {
+        return "hardfactor_definitions";
+    }
     else if (key == "alpha_s") {
         return "alphas";
     }
@@ -256,10 +259,18 @@ const gsl_qrng_type* parse_qrng_type(pair<multimap<string, string>::iterator, mu
     }
 }
 
-vector<double> parse_vector(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
+vector<double> parse_double_vector(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
     vector<double> v;
     for (multimap<string, string>::iterator it = range.first; it != range.second; it++) {
         v.push_back(strtod(it->second.c_str(), NULL));
+    }
+    return v;
+}
+
+vector<string> parse_string_vector(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
+    vector<string> v;
+    for (multimap<string, string>::iterator it = range.first; it != range.second; it++) {
+        v.push_back(it->second);
     }
     return v;
 }
@@ -461,11 +472,11 @@ void ContextCollection::create_contexts() {
     check_property_default( TR,           double, parse_double, 0.5)
     check_property(         Sperp,        double, parse_double)
     check_property(         sqs,          double, parse_double)
-    check_property(         pT,           vector<double>, parse_vector)
-    check_property(         Y,            vector<double>, parse_vector)
+    check_property(         pT,           vector<double>, parse_double_vector)
+    check_property(         Y,            vector<double>, parse_double_vector)
     check_property(         projectile,   projectile_type, parse_projectile_type)
     check_property(         hadron,       DSSpiNLO::hadron, parse_hadron)
-    check_property_default( hf_definitions, string, parse_string, "")
+    check_property(         hardfactor_definitions, vector<string>, parse_string_vector)
     check_property_default( pdf_filename, string, parse_string, "mstw2008nlo.00.dat")
     check_property_default( ff_filename,  string, parse_string, "PINLO.DAT")
     check_property_default( integration_strategy, integration_strategy, parse_strategy, MC_VEGAS)
@@ -580,7 +591,7 @@ void ContextCollection::create_contexts() {
                 const Context c = {
                   x0, mass_number, centrality, lambda, Nc, Nf, CF, TR, Sperp,
                   gsl_pow_2(pT), sqs, Y,
-                  hf_definitions, pdf_filename, ff_filename,
+                  hardfactor_definitions, pdf_filename, ff_filename,
                   quasirandom_generator_type, pseudorandom_generator_type, pseudorandom_generator_seed,
                   gdist, cpl, fs, _c0r_optimization, css_r_regularization, css_r2_max, resummation_constant,
                   exact_kinematics,
@@ -645,10 +656,8 @@ string ContextCollection::get(string key, size_t index) {
 
 
 void ContextCollection::set(string key, string value) {
-    assert(!contexts_created); // TODO throw a proper exception here
-    key = canonicalize(key);
-    options.erase(key);
-    options.insert(pair<string, string>(key, value));
+    erase(key);
+    add(key, value);
 }
 
 void ContextCollection::erase(string key) {
@@ -660,10 +669,6 @@ void ContextCollection::erase(string key) {
 void ContextCollection::add(string key, string value) {
     assert(!contexts_created);
     key = canonicalize(key);
-    // these are the keys that allow multiple values
-    if (!(key == "pt" || key == "y")) {
-        options.erase(key);
-    }
     options.insert(pair<string, string>(key, value));
 }
 
@@ -760,6 +765,17 @@ std::ostream& operator<<(std::ostream& out, const DSSpiNLO::hadron& hadron) {
     return out;
 }
 
+template<typename T>
+ostream& operator<<(ostream& out, vector<T>& vec) {
+    for (typename vector<T>::iterator it = vec.begin(); it != vec.end(); it++) {
+        if (it != vec.begin()) {
+            out << ", ";
+        }
+        out << *it;
+    }
+    return out;
+}
+
 std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "x0\t= "         << ctx.x0           << endl;
     out << "mass number\t= "<< ctx.mass_number  << endl;
@@ -773,7 +789,7 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "pT2\t= "        << ctx.pT2          << endl;
     out << "sqs\t= "        << ctx.sqs          << endl;
     out << "Y\t= "          << ctx.Y            << endl;
-    out << "hf_definitions\t= " << ctx.hf_definitions << endl;
+    out << "hf_definitions\t= " << ctx.hardfactor_definitions << endl;
     out << "pdf_filename\t= " << ctx.pdf_filename << endl;
     out << "ff_filename\t= " << ctx.ff_filename  << endl;
     out << "projectile\t= " << ctx.projectile << endl;
@@ -799,17 +815,6 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "quasirandom generator type: " <<  ctx.quasirandom_generator_type->name << endl;
     out << "pseudorandom generator type: " <<  ctx.pseudorandom_generator_type->name << endl;
     out << "pseudorandom generator seed: " << ctx.pseudorandom_generator_seed << endl;
-    return out;
-}
-
-template<typename T>
-ostream& operator<<(ostream& out, vector<T>& vec) {
-    for (typename vector<T>::iterator it = vec.begin(); it != vec.end(); it++) {
-        if (it != vec.begin()) {
-            out << ", ";
-        }
-        out << *it;
-    }
     return out;
 }
 
