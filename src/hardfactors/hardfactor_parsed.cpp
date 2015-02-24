@@ -565,3 +565,31 @@ void HardFactorParser::reset_current_term() {
     assert(hard_factor_definition_empty());
 }
 
+IncompleteHardFactorDefinitionException::IncompleteHardFactorDefinitionException(const string& message) throw() {
+    if (message.empty()) {
+        _message = "Incomplete hard factor definition";
+    }
+    else {
+        _message = "Incomplete hard factor definition: " + message;
+    }
+}
+
+const char* IncompleteHardFactorDefinitionException::what() const throw() {
+    return _message.c_str();
+}
+
+InvalidHardFactorDefinitionException::InvalidHardFactorDefinitionException(const string& line, const string& key, const string& value, const string& message) throw() {
+    std::ostringstream oss;
+    if (message.empty()) {
+        oss << "Invalid hard factor definition: ";
+    }
+    else {
+        oss << message << " ";
+    }
+    oss << key << " = " << value;
+    _message = oss.str();
+}
+
+const char* InvalidHardFactorDefinitionException::what() const throw() {
+    return _message.c_str();
+}

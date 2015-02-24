@@ -33,12 +33,7 @@ class HardFactorTerm;
  * Something that can be integrated using the program.
  * 
  * A `HardFactor` is a named collection of one or more ::HardFactorTerm
- * instances. It represents a mathematical expression. The actual
- * implementation of the formulas is left for subclasses
- * of `HardFactorTerm`.
- * 
- * A `HardFactor` can be either a single `HardFactorTerm`,
- * or a group of them. When a `HardFactor` is integrated, the program
+ * instances. When a `HardFactor` is integrated, the program
  * queries it for its `HardFactorTerm`s and sorts those terms out by
  * their `IntegrationType`. It then iterates through the `IntegrationType`s
  * and for each type, integrates the terms. The integrand for a given
@@ -46,37 +41,29 @@ class HardFactorTerm;
  * 
  * In practice, what is usually integrated is a hard factor group,
  * which is a list of multiple `HardFactor` objects. The procedure is
- * the same, it just puts all the `HardFactorTerm`s together into one
- * big map.
+ * the same; the program queries all the `HardFactor`s for their terms
+ * and puts them all together into one big map of `IntegrationType`s to sets
+ * of `HardFactorTerm`s. The difference is that, when the `--separate` option
+ * is passed to the main program, the `HardFactor`s in a hard factor group
+ * will be integrated separately. But the `HardFactorTerm`s within a single
+ * `HardFactor` are always kept together.
  */
 class HardFactor {
 public:
     typedef enum {LO, NLO, MIXED} HardFactorOrder;
     virtual ~HardFactor();
-    /** An identifying name for the hard factor. */
+    /** The human-readable name of the hard factor. */
     virtual const char* get_name() const = 0;
     /** The number of HardFactorTerm objects this hard factor has. */
     virtual const size_t get_term_count() const = 0;
     /** A pointer to the list of HardFactorTerm objects. */
     virtual const HardFactorTerm* const* get_terms() const = 0;
-    /** The order of the term (LO, NLO, mixed) */
-    virtual const HardFactorOrder get_order() const {
-        // relies on a particular convention for get_name()
-        // but can be overridden for hard factors where that convention doesn't apply
-        std::string name = get_name();
-        if (name.compare(0, 3, "H01") == 0) {
-            return MIXED;
-        }
-        else if (name.compare(0, 2, "H0") == 0) {
-            return LO;
-        }
-        else if (name.compare(0, 2, "H1") == 0) {
-            return NLO;
-        }
-        else {
-            assert(false);
-        }
-    };
+    /**
+     * The order of the term (LO, NLO, mixed). This sets which definitions
+     * of kinematic variables (IntegrationContext::xp, IntegrationContext::xg)
+     * are used when evaluating the `HardFactor`.
+     */
+    virtual const HardFactorOrder get_order() const;
 };
 
 /**
@@ -92,19 +79,25 @@ public:
 class HardFactorTerm : public HardFactor {
 public:
     HardFactorTerm() : p_this(this) {};
-    /** Returns the IntegrationType needed to integrate this term. */
+    /** The IntegrationType needed to integrate this term. */
     virtual const IntegrationType* get_type() const = 0;
+    /** The plus-regulated ("singular") part of the term. */
     virtual void Fs(const IntegrationContext* ictx, double* real, double* imag) const { *real = 0; *imag = 0; }
+    /** The normal part of the term. */
     virtual void Fn(const IntegrationContext* ictx, double* real, double* imag) const { *real = 0; *imag = 0; }
+    /** The delta-function part of the term. */
     virtual void Fd(const IntegrationContext* ictx, double* real, double* imag) const { *real = 0; *imag = 0; }
-    const size_t get_term_count() const {
-        return 1;
-    }
-    const HardFactorTerm* const* get_terms() const {
-        return &p_this;
-    }
+    /**
+     * @return 1
+     */
+    const size_t get_term_count() const;
+    /**
+     * @return `this`
+     */
+    const HardFactorTerm* const* get_terms() const;
 private:
-    const HardFactorTerm* p_this; // wtf why do I have to do this
+    // necessary because `this` isn't an actual pointer that is stored anywhere
+    const HardFactorTerm* p_this;
 };
 
 /**
@@ -120,9 +113,7 @@ public:
      * @param manage true if the HardFactor object should be deleted
      * by the registry
      */
-    void add_hard_factor(const HardFactor* hf, bool manage=false) {
-        add_hard_factor(hf->get_name(), hf, manage);
-    }
+    void add_hard_factor(const HardFactor* hf, bool manage=false);
     /**
      * Adds a HardFactor pointer to the registry under a custom key.
      * It can later be retrieved by the provided key.
@@ -130,40 +121,13 @@ public:
      * @param manage true if the HardFactor object should be deleted
      * by the registry
      */
-    void add_hard_factor(const char* key, const HardFactor* hf, bool manage=false) {
-        using namespace std;
-        string keystring(key);
-        transform(keystring.begin(), keystring.end(), keystring.begin(), ::tolower);
-        // note that even if another HardFactor is later added with the
-        // same name, it doesn't cause a memory leak
-        hardfactors[keystring] = hf;
-        if (manage) {
-            hardfactors_to_delete.push_back(hf);
-        }
-    }
+    void add_hard_factor(const char* key, const HardFactor* hf, bool manage=false);
     /**
      * Returns the hard factor corresponding to the given key, or NULL if none
      */
-    const HardFactor* get_hard_factor(const std::string& key) const {
-        using namespace std;
-        string keystring(key);
-        transform(keystring.begin(), keystring.end(), keystring.begin(), ::tolower);
-        map<const string, const HardFactor*>::const_iterator it = hardfactors.find(key);
-        if (it == hardfactors.end()) {
-            return NULL;
-        }
-        else {
-            return it->second;
-        }
-    }
+    const HardFactor* get_hard_factor(const std::string& key) const;
 protected:
-    ~HardFactorRegistry() {
-        hardfactors.clear();
-        for (std::list<const HardFactor*>::iterator it = hardfactors_to_delete.begin(); it != hardfactors_to_delete.end(); it++) {
-            delete (*it);
-        }
-        hardfactors_to_delete.clear();
-    }
+    ~HardFactorRegistry();
 private:
     std::map<const std::string, const HardFactor*> hardfactors;
     std::list<const HardFactor*> hardfactors_to_delete;
@@ -178,19 +142,11 @@ class KinematicSchemeMismatchException : public std::exception {
 private:
     string _message;
 public:
-    KinematicSchemeMismatchException(const HardFactor& hf) throw() {
-        _message = "Mixed-order hard factor ";
-        _message += hf.get_name();
-        _message += " cannot be integrated in exact kinematics";
-    }
+    KinematicSchemeMismatchException(const HardFactor& hf) throw();
     KinematicSchemeMismatchException(const KinematicSchemeMismatchException& other) throw() : _message(other._message) {}
     ~KinematicSchemeMismatchException() throw() {}
-    void operator=(const KinematicSchemeMismatchException& other) {
-        _message = other._message;
-    }
-    const char* what() const throw() {
-        return _message.c_str();
-    }
+    void operator=(const KinematicSchemeMismatchException& other);
+    const char* what() const throw();
 };
 
 namespace position {

@@ -172,18 +172,9 @@ public:
      *
      * @param message a descriptive human-readable message
      */
-    IncompleteHardFactorDefinitionException(const string& message = "") throw() {
-        if (message.empty()) {
-            _message = "Incomplete hard factor definition";
-        }
-        else {
-            _message = "Incomplete hard factor definition: " + message;
-        }
-    }
+    IncompleteHardFactorDefinitionException(const string& message = "") throw();
     ~IncompleteHardFactorDefinitionException() throw() {};
-    const char* what() const throw() {
-        return _message.c_str();
-    }
+    const char* what() const throw();
 };
 
 /**
@@ -201,20 +192,8 @@ public:
      *
      * @param message a descriptive human-readable message
      */
-    InvalidHardFactorDefinitionException(const std::string& line, const std::string& key, const std::string& value, const std::string& message = "") throw() {
-        std::ostringstream oss;
-        if (message.empty()) {
-            oss << "Invalid hard factor definition: ";
-        }
-        else {
-            oss << message << " ";
-        }
-        oss << key << " = " << value;
-        _message = oss.str();
-    }
+    InvalidHardFactorDefinitionException(const std::string& line, const std::string& key, const std::string& value, const std::string& message = "") throw();
     virtual ~InvalidHardFactorDefinitionException() throw() {};
-    const char* what() const throw() {
-        return _message.c_str();
-    }
+    const char* what() const throw();
 };
 

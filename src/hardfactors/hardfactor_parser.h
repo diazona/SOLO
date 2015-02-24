@@ -75,17 +75,9 @@ public:
      * @param message a descriptive human-readable message indicating why hfspec
      *  could not be parsed
      */
-    InvalidHardFactorSpecException(const std::string& hfspec, const std::string& message) throw() : hfspec(hfspec) {
-        std::ostringstream s;
-        s << message << "; spec " << hfspec;
-        _message = s.str();
-    }
+    InvalidHardFactorSpecException(const std::string& hfspec, const std::string& message) throw();
     InvalidHardFactorSpecException(const InvalidHardFactorSpecException& other) throw() : _message(other._message) {}
     ~InvalidHardFactorSpecException() throw() {}
-    void operator=(const InvalidHardFactorSpecException& other) {
-        _message = other._message;
-    }
-    const char* what() const throw() {
-        return _message.c_str();
-    }
+    void operator=(const InvalidHardFactorSpecException& other);
+    const char* what() const throw();
 };

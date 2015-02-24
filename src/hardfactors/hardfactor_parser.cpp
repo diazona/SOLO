@@ -74,3 +74,17 @@ const HardFactor* parse_hardfactor(const string& spec) {
     const HardFactorRegistry* registry = parse_one_hardfactor_spec(spec, name, true);
     return registry == NULL ? NULL : registry->get_hard_factor(name);
 }
+
+InvalidHardFactorSpecException::InvalidHardFactorSpecException(const string& hfspec, const string& message) throw() : hfspec(hfspec) {
+    std::ostringstream s;
+    s << message << "; spec " << hfspec;
+    _message = s.str();
+}
+
+void InvalidHardFactorSpecException::operator=(const InvalidHardFactorSpecException& other) throw() {
+    _message = other._message;
+}
+
+const char* InvalidHardFactorSpecException::what() const throw() {
+    return _message.c_str();
+}

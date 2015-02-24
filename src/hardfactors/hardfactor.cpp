@@ -46,3 +46,82 @@ namespace momentum {
 
 // for weird technical reasons, this needs to be in a .cpp file, not a header
 HardFactor::~HardFactor() {}
+
+const HardFactor::HardFactorOrder HardFactor::get_order() const {
+    /* This default implementation relies on a particular convention
+     * for get_name(), but can be overridden for hard factors where
+     * that convention doesn't apply.
+     */
+    std::string name = get_name();
+    if (name.compare(0, 3, "H01") == 0) {
+        return MIXED;
+    }
+    else if (name.compare(0, 2, "H0") == 0) {
+        return LO;
+    }
+    else if (name.compare(0, 2, "H1") == 0) {
+        return NLO;
+    }
+    else {
+        assert(false);
+    }
+};
+
+const size_t HardFactorTerm::get_term_count() const {
+    return 1;
+}
+
+const HardFactorTerm* const* HardFactorTerm::get_terms() const {
+    return &p_this;
+}
+
+void HardFactorRegistry::add_hard_factor(const HardFactor* hf, bool manage) {
+    add_hard_factor(hf->get_name(), hf, manage);
+}
+
+void HardFactorRegistry::add_hard_factor(const char* key, const HardFactor* hf, bool manage) {
+    using namespace std;
+    string keystring(key);
+    transform(keystring.begin(), keystring.end(), keystring.begin(), ::tolower);
+    // note that even if another HardFactor is later added with the
+    // same name, it doesn't cause a memory leak
+    hardfactors[keystring] = hf;
+    if (manage) {
+        hardfactors_to_delete.push_back(hf);
+    }
+}
+
+const HardFactor* HardFactorRegistry::get_hard_factor(const string& key) const {
+    using namespace std;
+    string keystring(key);
+    transform(keystring.begin(), keystring.end(), keystring.begin(), ::tolower);
+    map<const string, const HardFactor*>::const_iterator it = hardfactors.find(key);
+    if (it == hardfactors.end()) {
+        return NULL;
+    }
+    else {
+        return it->second;
+    }
+}
+
+HardFactorRegistry::~HardFactorRegistry() {
+    hardfactors.clear();
+    for (std::list<const HardFactor*>::iterator it = hardfactors_to_delete.begin(); it != hardfactors_to_delete.end(); it++) {
+        delete (*it);
+    }
+    hardfactors_to_delete.clear();
+}
+
+KinematicSchemeMismatchException::KinematicSchemeMismatchException(const HardFactor& hf) throw() {
+    _message = "Mixed-order hard factor ";
+    _message += hf.get_name();
+    _message += " cannot be integrated in exact kinematics";
+}
+
+void KinematicSchemeMismatchException::operator=(const KinematicSchemeMismatchException& other) {
+    _message = other._message;
+}
+
+const char* KinematicSchemeMismatchException::what() const throw() {
+    return _message.c_str();
+}
