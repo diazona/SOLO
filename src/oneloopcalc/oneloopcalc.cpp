@@ -40,12 +40,9 @@
 #include "../gluondist/gluondist.h"
 #include "../configuration/context.h"
 #include "../integration/integrationcontext.h"
-#include "../hardfactors/hardfactors_position.h"
-#include "../hardfactors/hardfactors_momentum.h"
 #include "../integration/integrator.h"
 #include "../utils/utils.h"
 #include "../log.h"
-#include "../hardfactors/hardfactors_radial.h"
 #include "../hardfactors/hardfactor_group_parser.h"
 #include "../hardfactors/hardfactor_parsed.h"
 

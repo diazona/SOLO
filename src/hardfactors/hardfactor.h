@@ -193,4 +193,66 @@ public:
     }
 };
 
+namespace position {
+
+extern const PositionIntegrationType dipole;
+extern const PositionIntegrationType quadrupole;
+
+class registry : public HardFactorRegistry {
+public:
+    static registry* get_instance() {
+        static registry instance;
+        return &instance;
+    }
+private:
+    registry() {}
+};
+
+}
+
+namespace radial {
+
+extern const AngleIndependentPositionIntegrationType dipole;
+extern const AngleIndependentPositionIntegrationType quadrupole;
+extern const RescaledAngleIndependentPositionIntegrationType rescaled_dipole;
+extern const RescaledAngleIndependentPositionIntegrationType rescaled_quadrupole;
+
+class registry : public HardFactorRegistry {
+public:
+    static registry* get_instance() {
+        static registry instance;
+        return &instance;
+    }
+private:
+    registry() {}
+};
+
+}
+
+namespace momentum {
+
+extern const NoIntegrationType none;
+extern const MomentumIntegrationType momentum1;
+extern const MomentumIntegrationType momentum2;
+extern const MomentumIntegrationType momentum3;
+extern const RadialMomentumIntegrationType radialmomentum1;
+extern const RadialMomentumIntegrationType radialmomentum2;
+extern const RadialMomentumIntegrationType radialmomentum3;
+extern const XiPIntegrationType momentumxip1;
+extern const XiPIntegrationType momentumxip2;
+extern const QLimitedMomentumIntegrationType qlim;
+
+class registry : public HardFactorRegistry {
+public:
+    static registry* get_instance() {
+        static registry instance;
+        return &instance;
+    }
+private:
+    registry() {}
+};
+
+}
+
+
 #endif // _HARD_FACTOR_H_

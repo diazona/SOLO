@@ -18,9 +18,6 @@ add_executable(hfparser
     hardfactor_parsed.cpp
     hardfactor_parser.cpp
     hardfactor_group_parser.cpp
-    hardfactors_position.cpp
-    hardfactors_radial.cpp
-    hardfactors_momentum.cpp
     ${SOLO_SOURCE_DIR}/integration/integrationtype.cpp
     ${SOLO_SOURCE_DIR}/integration/integrationcontext.cpp
     ${SOLO_SOURCE_DIR}/mstwpdf.cc

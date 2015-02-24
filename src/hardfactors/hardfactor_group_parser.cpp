@@ -18,9 +18,6 @@
  */
 
 #include <cassert>
-#include "hardfactors_momentum.h"
-#include "hardfactors_position.h"
-#include "hardfactors_radial.h"
 #include "hardfactor_group_parser.h"
 #include "hardfactor_parser.h"
 #include "../utils/utils.h"

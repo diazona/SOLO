@@ -25,9 +25,6 @@
 #include <gsl/gsl_math.h>
 #include "gsl_mu.h"
 #include "hardfactor.h"
-#include "hardfactors_position.h"
-#include "hardfactors_radial.h"
-#include "hardfactors_momentum.h"
 #include "hardfactor_parsed.h"
 #include "hardfactor_parser.h"
 #include "../typedefs.h"
