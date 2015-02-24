@@ -43,7 +43,7 @@ static const char* standard_nlo_spec = "r.h12qq,m.h14qq,r.h12gg,m.h12qqbar,m.h16
  */
 static const char* highpt_nlo_spec = "m.h1qqexact,m.h1ggexact,r.h112gq,r.h122gq,m.h14gq,r.h112qg,r.h122qg,m.h14qg";
 
-const ParsedHardFactorGroup* ParsedHardFactorGroup::parse(const string& spec, bool exact_kinematics) {
+const HardFactorGroup* HardFactorGroup::parse(const string& spec, bool exact_kinematics) {
     vector<string> splitspec;
     string specname(spec);
     // Split the specification string on commas to get individual hard factor names
@@ -114,6 +114,6 @@ const ParsedHardFactorGroup* ParsedHardFactorGroup::parse(const string& spec, bo
     else {
         HardFactorList* p_hfobjs = new HardFactorList(hfobjs);
         // parsing seems to have succeeded, so go ahead and create the object
-        return new ParsedHardFactorGroup(specname, p_hfobjs, splitspec);
+        return new HardFactorGroup(specname, p_hfobjs, splitspec);
     }
 }

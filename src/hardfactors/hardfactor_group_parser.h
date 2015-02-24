@@ -26,20 +26,20 @@
 /**
  * A class to parse a hard factor specification.
  */
-class ParsedHardFactorGroup {
+class HardFactorGroup {
 private:
-    ParsedHardFactorGroup(const std::string& label, const HardFactorList* objects, const std::vector<std::string>& specifications) :
+    HardFactorGroup(const std::string& label, const HardFactorList* objects, const std::vector<std::string>& specifications) :
      label(label), objects(objects), specifications(specifications) {}
 public:
     /**
      * Attempts to parse a string as a hard factor group specification.
-     * 
+     *
      * The specification passed should take the form
-     * 
+     *
      *     name:x.hfname,x.hfname,x.hfname,...
-     * 
+     *
      * where
-     * 
+     *
      * - `name` is the descriptive name of the hard factor group,  which can
      *   be used to refer to it on the command line of `oneloopcalc`. The name
      *   is optional; if one is not provided, the hard factor group's name will
@@ -51,13 +51,13 @@ public:
      * - `hfname` is the descriptive name of the hard factor itself. The registry
      *   identified by the implementation code will be queried for the hard factor
      *   by passing `hfname` to the HardFactorRegistry::get_hard_factor() method.
-     * 
+     *
      * For backwards compatibility, the period in `x.hfname` can be a colon
      * instead.
      *
      * Returns `NULL` if the parsing failed to produce a valid group.
      */
-    static const ParsedHardFactorGroup* parse(const std::string& spec, bool exact_kinematics);
+    static const HardFactorGroup* parse(const std::string& spec, bool exact_kinematics);
 
     const std::string label;
     const HardFactorList* objects;

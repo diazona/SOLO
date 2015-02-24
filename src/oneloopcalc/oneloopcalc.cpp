@@ -416,7 +416,7 @@ void ProgramConfiguration::parse_hf_specs() {
 
     assert(hfgroups.empty());
     for (vector<string>::const_iterator it = hfspecs.begin(); it!= hfspecs.end(); it++) {
-        const ParsedHardFactorGroup* hfg = ParsedHardFactorGroup::parse(*it, cc[0].exact_kinematics);
+        const HardFactorGroup* hfg = HardFactorGroup::parse(*it, cc[0].exact_kinematics);
         hfgroups.push_back(hfg->objects);
         hfgnames.push_back(hfg->label);
         hfnames.insert(hfnames.end(), hfg->specifications.begin(), hfg->specifications.end());
