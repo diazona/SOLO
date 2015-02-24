@@ -17,7 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "hardfactor.h"
-#include "hardfactor_parser.h"
+#include "parsing.h"
 
 HardFactorRegistry* parse_one_hardfactor_spec(const string& spec, string& name, const bool check_for_existing) {
     char hf_type = '\000'; // dummy value, as a default
