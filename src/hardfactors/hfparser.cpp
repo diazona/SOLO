@@ -21,7 +21,6 @@
 #include <muParser.h>
 #include "hardfactor.h"
 #include "hardfactor_parsed.h"
-#include "hardfactor_group_parser.h"
 
 using std::vector;
 using std::cerr;

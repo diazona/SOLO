@@ -43,7 +43,6 @@
 #include "../integration/integrator.h"
 #include "../utils/utils.h"
 #include "../log.h"
-#include "../hardfactors/hardfactor_group_parser.h"
 #include "../hardfactors/hardfactor_parsed.h"
 
 using namespace std;

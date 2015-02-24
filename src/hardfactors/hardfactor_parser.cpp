@@ -81,7 +81,7 @@ InvalidHardFactorSpecException::InvalidHardFactorSpecException(const string& hfs
     _message = s.str();
 }
 
-void InvalidHardFactorSpecException::operator=(const InvalidHardFactorSpecException& other) throw() {
+void InvalidHardFactorSpecException::operator=(const InvalidHardFactorSpecException& other) {
     _message = other._message;
 }
 

@@ -21,8 +21,11 @@
 
 #include <map>
 #include <vector>
-#include "hardfactors/hardfactor.h"
 #include "integration/integrationtype.h"
+
+// declared in hardfactor.h
+class HardFactor;
+class HardFactorTerm;
 
 typedef std::vector<const HardFactor*> HardFactorList;
 typedef std::vector<const HardFactorTerm*> HardFactorTermList;

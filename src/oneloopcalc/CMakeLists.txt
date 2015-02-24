@@ -36,7 +36,6 @@ add_executable(oneloopcalc
     ${SOLO_SOURCE_DIR}/hardfactors/hardfactor.cpp
     ${SOLO_SOURCE_DIR}/hardfactors/hardfactor_parsed.cpp
     ${SOLO_SOURCE_DIR}/hardfactors/hardfactor_parser.cpp
-    ${SOLO_SOURCE_DIR}/hardfactors/hardfactor_group_parser.cpp
     ${SOLO_SOURCE_DIR}/integration/cubature.c
     ${SOLO_SOURCE_DIR}/integration/integrationcontext.cpp
     ${SOLO_SOURCE_DIR}/integration/integrationtype.cpp
