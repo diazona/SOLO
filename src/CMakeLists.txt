@@ -6,7 +6,6 @@ include_directories(${OPENSSL_INCLUDE_DIR})
 set(LIBS ${LIBS} ${OPENSSL_LIBRARIES})
 
 link_directories(${GSL_LIBRARY_DIRS})
-link_directories(${GSL_LIBRARY_DIRS})
 add_executable(kovr kov-position/gauleg.cpp kov-position/interr.cpp kov-position/kovr.cpp)
 target_link_libraries(kovr m)
 add_subdirectory(configuration)
