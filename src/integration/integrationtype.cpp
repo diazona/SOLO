@@ -1,8 +1,8 @@
 /*
  * Part of oneloopcalc
- * 
+ *
  * Copyright 2012 David Zaslavsky
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -224,7 +224,7 @@ void RadialIntegrationType::fill_min(const Context* const ctx, const size_t core
     if (core_dimensions == 2) {
         min[i++] = ymin(ctx);
     }
-    while (i < core_dimensions + extra_dimensions) { min[i++] = 0; }
+    while (i < core_dimensions + extra_dimensions) { min[i++] = ctx->cutoff; }
 }
 void RadialIntegrationType::fill_max(const Context* const ctx, const size_t core_dimensions, double* max) const {
     assert(core_dimensions == 1 || core_dimensions == 2);
@@ -332,19 +332,18 @@ void AngleIndependentPositionIntegrationType::fill_max(const Context* const ctx,
 double AngleIndependentPositionIntegrationType::jacobian(IntegrationContext& ictx, const size_t core_dimensions) const {
     assert(extra_dimensions <= 3);
     double jacobian = IntegrationType::jacobian(ictx, core_dimensions); // y to xi
-    jacobian *= 2 * M_PI;
     // now (r,theta) to (x,y)
     if (extra_dimensions > 0) {
         assert(ictx.xy == 0);
-        jacobian *= ictx.xx;
+        jacobian *= 2 * M_PI * ictx.xx;
     }
     if (extra_dimensions > 1) {
         assert(ictx.yy == 0);
-        jacobian *= ictx.yx;
+        jacobian *= 2 * M_PI * ictx.yx;
     }
     if (extra_dimensions > 2) {
         assert(ictx.by == 0);
-        jacobian *= ictx.bx;
+        jacobian *= 2 * M_PI * ictx.bx;
     }
     checkfinite(jacobian);
     return jacobian;
@@ -358,6 +357,39 @@ void AngleIndependentPositionIntegrationType::update(IntegrationContext& ictx, c
         extra_dimensions > 1 ? values[core_dimensions + 1] : 0,
         0,
         extra_dimensions > 2 ? values[core_dimensions + 2] : 0,
+        0
+    );
+    ictx.update_parton_functions();
+}
+
+double RescaledAngleIndependentPositionIntegrationType::jacobian(IntegrationContext& ictx, const size_t core_dimensions) const {
+    assert(extra_dimensions <= 3);
+    double jacobian = IntegrationType::jacobian(ictx, core_dimensions); // y to xi
+    // now (r,theta) to (x,y)
+    if (extra_dimensions > 0) {
+        assert(ictx.xy == 0);
+        jacobian *= 2 * M_PI * ictx.xx * ictx.xi;
+    }
+    if (extra_dimensions > 1) {
+        assert(ictx.yy == 0);
+        jacobian *= 2 * M_PI * ictx.yx * ictx.xi;
+    }
+    if (extra_dimensions > 2) {
+        assert(ictx.by == 0);
+        jacobian *= 2 * M_PI * ictx.bx * ictx.xi;
+    }
+    checkfinite(jacobian);
+    return jacobian;
+}
+void RescaledAngleIndependentPositionIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
+    assert(core_dimensions == 1 || core_dimensions == 2);
+    ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
+    ictx.update_positions(
+        extra_dimensions > 0 ? values[core_dimensions + 0] * ictx.xi : 0,
+        0,
+        extra_dimensions > 1 ? values[core_dimensions + 1] * ictx.xi : 0,
+        0,
+        extra_dimensions > 2 ? values[core_dimensions + 2] * ictx.xi : 0,
         0
     );
     ictx.update_parton_functions();

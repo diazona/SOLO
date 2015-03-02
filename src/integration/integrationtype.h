@@ -129,7 +129,7 @@ protected:
 /**
  * Base class for integration types which have one or two dimensions (z and/or y)
  * with limits of tau and 1, and any number of other dimensions in pairs with limits
- * zero and infinity, and zero and 2pi, respectively.
+ * Context::cutoff and Context::inf, and zero and 2pi, respectively.
  */
 class RadialIntegrationType : public IntegrationType {
 public:
@@ -157,6 +157,13 @@ public:
     AngleIndependentPositionIntegrationType(const size_t extra_dimensions) : IntegrationType(extra_dimensions) {}
     void fill_min(const Context* const ctx, const size_t core_dimensions, double *min) const;
     void fill_max(const Context* const ctx, const size_t core_dimensions, double *max) const;
+    double jacobian(IntegrationContext& ictx, const size_t core_dimensions) const;
+    void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
+};
+
+class RescaledAngleIndependentPositionIntegrationType : public AngleIndependentPositionIntegrationType {
+public:
+    RescaledAngleIndependentPositionIntegrationType(const size_t extra_dimensions) : AngleIndependentPositionIntegrationType(extra_dimensions) {}
     double jacobian(IntegrationContext& ictx, const size_t core_dimensions) const;
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };

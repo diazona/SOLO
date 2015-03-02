@@ -28,6 +28,19 @@
 
 #define checkfinite(d) assert(gsl_finite(d))
 
+namespace momentum {
+    const NoIntegrationType none;
+    const MomentumIntegrationType momentum1(2);
+    const MomentumIntegrationType momentum2(4);
+    const MomentumIntegrationType momentum3(6);
+    const RadialMomentumIntegrationType radialmomentum1(2);
+    const RadialMomentumIntegrationType radialmomentum2(4);
+    const RadialMomentumIntegrationType radialmomentum3(6);
+    const XiPIntegrationType momentumxip1(3);
+    const XiPIntegrationType momentumxip2(5);
+    const QLimitedMomentumIntegrationType qlim(2);
+}
+
 using namespace momentum;
 
 void H02qq::Fd(const IntegrationContext* ictx, double* real, double* imag) const {

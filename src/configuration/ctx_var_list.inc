@@ -1,0 +1,21 @@
+#ifdef process
+// list taken from context.h
+process(x0)
+process(mass_number)
+process(centrality)
+process(lambda)
+process(Nc)
+process(Nf)
+process(CF)
+process(TR)
+process(Sperp)
+process(pT2)
+process(sqs)
+process(Y)
+process(css_r2_max)
+process(resummation_constant)
+process(inf)
+process(Q02x0lambda)
+process(tau)
+process(tauhat)
+#endif

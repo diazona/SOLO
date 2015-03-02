@@ -1,10 +1,10 @@
 /*
  * A calculation of the NLO cross section of pA->pion collisions
- * 
+ *
  * This file contains the driver code, including main() and some other stuff
- * 
+ *
  * Copyright 2012 David Zaslavsky
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -33,19 +33,21 @@
 #include <gsl/gsl_rng.h>
 #include <openssl/sha.h>
 #include "git_revision.h"
-#include "exceptions.h"
-#include "mstwpdf.h"
-#include "dss_pinlo.h"
-#include "coupling.h"
-#include "gluondist.h"
-#include "context.h"
-#include "integrationcontext.h"
-#include "hardfactors_position.h"
-#include "hardfactors_momentum.h"
-#include "integrator.h"
-#include "utils.h"
-#include "log.h"
-#include "hardfactors_radial.h"
+#include "../exceptions.h"
+#include "../mstwpdf.h"
+#include "../dss_pinlo/dss_pinlo.h"
+#include "../coupling.h"
+#include "../gluondist/gluondist.h"
+#include "../configuration/context.h"
+#include "../integration/integrationcontext.h"
+#include "../hardfactors/hardfactors_position.h"
+#include "../hardfactors/hardfactors_momentum.h"
+#include "../integration/integrator.h"
+#include "../utils/utils.h"
+#include "../log.h"
+#include "../hardfactors/hardfactors_radial.h"
+#include "../hardfactors/hardfactor_group_parser.h"
+#include "../hardfactors/hardfactor_parsed.h"
 
 using namespace std;
 
@@ -57,7 +59,7 @@ using namespace std;
 namespace trace_variable {
 enum {
 #define process(v) v,
-#include "ictx_var_list.inc"
+#include "../integration/ictx_var_list.inc"
 #undef process
     COUNT
 };
@@ -75,7 +77,7 @@ void write_data_point(const IntegrationContext* ictx, const double real, const d
         return;
     }
 #define process(v) if (trace_vars[(size_t)trace_variable::v]) { trace_stream << ictx->v << "\t"; }
-#include "ictx_var_list.inc"
+#include "../integration/ictx_var_list.inc"
 #undef process
     trace_stream << real << "\t" << imag << "\t";
     trace_stream << endl;
@@ -102,7 +104,7 @@ void store_minmax(const IntegrationContext* ictx, const double real, const doubl
     if (ictx == NULL) {
         return;
     }
-#include "ictx_var_list.inc"
+#include "../integration/ictx_var_list.inc"
 }
 #undef process
 
@@ -191,7 +193,7 @@ private:
     double* imag;
     /** Array to hold the error bounds of the results */
     double* error;
-    
+
     friend ostream& operator<<(ostream&, ResultsCalculator&);
 public:
     /** Whether to trace execution */
@@ -200,7 +202,7 @@ public:
     const bool minmax;
     /** Whether to calculate individual hard factors separately */
     const bool separate;
-    
+
     ResultsCalculator(ContextCollection& cc, ThreadLocalContext& tlctx, ProgramConfiguration& pc);
     ~ResultsCalculator();
     /**
@@ -293,58 +295,6 @@ private:
     double xg_min, xg_max;
 };
 
-/**
- * A class to parse a hard factor specification.
- */
-class ParsedHardFactorGroup {
-private:
-    ParsedHardFactorGroup(const string& label, const HardFactorList* objects, const vector<string>& specifications) :
-     label(label), objects(objects), specifications(specifications) {}
-public:
-    /**
-     * Attempts to parse a string as a hard factor group specification.
-     *
-     * Returns NULL if the parsing failed to produce a valid group.
-     */
-    static const ParsedHardFactorGroup* parse(const string& spec, bool exact_kinematics);
-
-    const string label;
-    const HardFactorList* objects;
-    const vector<string> specifications;
-};
-
-/**
- * An exception to be thrown when a hard factor specification fails to be
- * parsed for some reason. The reason is indicated by the message.
- */
-class InvalidHardFactorSpecException : public exception {
-private:
-    string _message;
-public:
-    string hfspec;
-    /**
-     * Constructs an instance of the exception.
-     *
-     * @param hfspec the hard factor specification or part of a specification
-     *  that caused the error
-     * @param message a descriptive human-readable message indicating why hfspec
-     *  could not be parsed
-     */
-    InvalidHardFactorSpecException(const string& hfspec, const string& message) throw() : hfspec(hfspec) {
-        ostringstream s;
-        s << message << " in hard factor " << hfspec;
-        _message = s.str();
-    }
-    InvalidHardFactorSpecException(const InvalidHardFactorSpecException& other) throw() : _message(other._message) {}
-    ~InvalidHardFactorSpecException() throw() {}
-    void operator=(const InvalidHardFactorSpecException& other) {
-        _message = other._message;
-    }
-    const char* what() const throw() {
-        return _message.c_str();
-    }
-};
-
 ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false), trace_gdist(false), minmax(false), separate(false), xg_min(0), xg_max(1) {
     string gdist_type;
     bool current_arg_is_config_line = false;
@@ -384,7 +334,7 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
                     for (vector<string>::iterator it = w.begin(); it != w.end(); it++) {
                         bool handled = false;
 #define process(v) if (*it == #v) { trace_vars.set((size_t)trace_variable::v); handled = true; }
-#include "ictx_var_list.inc"
+#include "../integration/ictx_var_list.inc"
 #undef process
                         if (!handled) {
                             cerr << "unknown trace variable " << *it << endl;
@@ -427,24 +377,16 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
             }
         }
         else {
-            // try parsing as a hard factor, just to check if it's a valid one
-            try {
-                const ParsedHardFactorGroup* phfg = ParsedHardFactorGroup::parse(a, false);
-                delete phfg;
-                hfspecs.push_back(a);
+            // try opening as a file
+            ifstream config;
+            config.open(a.c_str());
+            if (config.good()) {
+                logger << "Reading config file " << a << endl;
+                config >> cc;
+                config.close();
             }
-            catch (InvalidHardFactorSpecException e) {
-                // try opening as a file
-                ifstream config;
-                config.open(a.c_str());
-                if (config.good()) {
-                    logger << "Reading config file " << a << endl;
-                    config >> cc;
-                    config.close();
-                }
-                else {
-                    logger << "Unrecognized argument " << a << endl;
-                }
+            else {
+                hfspecs.push_back(a);
             }
         }
     }
@@ -466,19 +408,21 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
 }
 
 void ProgramConfiguration::parse_hf_specs() {
+    if (cc[0].hardfactor_definitions.empty()) {
+        throw MissingPropertyException("no hard factors defined");
+    }
+
+    HardFactorParser parser;
+    for (vector<string>::const_iterator it = cc[0].hardfactor_definitions.begin(); it != cc[0].hardfactor_definitions.end(); it++) {
+        parser.parse_file(*it);
+    }
+
     assert(hfgroups.empty());
     for (vector<string>::const_iterator it = hfspecs.begin(); it!= hfspecs.end(); it++) {
-        try {
-            const ParsedHardFactorGroup* hfg = ParsedHardFactorGroup::parse(*it, cc[0].exact_kinematics);
-            hfgroups.push_back(hfg->objects);
-            hfgnames.push_back(hfg->label);
-            hfnames.insert(hfnames.end(), hfg->specifications.begin(), hfg->specifications.end());
-        }
-        catch (InvalidHardFactorSpecException e) {
-            // should have already checked that the HF parses, so this shouldn't happen
-            logger << e.what() << endl;
-            assert(false);
-        }
+        const ParsedHardFactorGroup* hfg = ParsedHardFactorGroup::parse(*it, cc[0].exact_kinematics);
+        hfgroups.push_back(hfg->objects);
+        hfgnames.push_back(hfg->label);
+        hfnames.insert(hfnames.end(), hfg->specifications.begin(), hfg->specifications.end());
     }
     assert(!hfgroups.empty());
     assert(hfgroups.size() == hfgnames.size());
@@ -488,138 +432,6 @@ void ProgramConfiguration::parse_hf_specs() {
 ProgramConfiguration::~ProgramConfiguration() {
     for (vector<const HardFactorList*>::iterator it = hfgroups.begin(); it != hfgroups.end(); it++) {
         delete *it;
-    }
-}
-
-/**
- * This defines the hard factor group that is used when "lo" is given
- * on the command line
- */
-static const char* default_lo_spec = "m.h02qq,m.h02gg";
-/**
- * This defines the hard factor group that is used when "nlo" is given
- * on the command line and exact_kinematics is not set, or when "nlo.std"
- * is given on the command line
- */
-static const char* standard_nlo_spec = "r.h12qq,m.h14qq,r.h12gg,m.h12qqbar,m.h16gg,r.h112gq,r.h122gq,m.h14gq,r.h112qg,r.h122qg,m.h14qg";
-/**
- * This defines the hard factor group that is used when "nlo" is given
- * on the command line and exact_kinematics is set, or when "nlo.hipt"
- * is given on the command line
- */
-static const char* highpt_nlo_spec = "m.h1qqexact,m.h1ggexact,r.h112gq,r.h122gq,m.h14gq,r.h112qg,r.h122qg,m.h14qg";
-
-const ParsedHardFactorGroup* ParsedHardFactorGroup::parse(const string& spec, bool exact_kinematics) {
-    vector<string> splitspec;
-    string specname(spec);
-    // Split the specification string on commas to get individual hard factor names
-    if (spec == "lo") {
-        splitspec = split(default_lo_spec, ", ");
-    }
-    else if (spec == "nlo") {
-        splitspec = split(exact_kinematics ? highpt_nlo_spec : standard_nlo_spec, ", ");
-    }
-    else if (spec == "nlo.hipt") {
-        splitspec = split(highpt_nlo_spec, ", ");
-    }
-    else if (spec == "nlo.std") {
-        splitspec = split(standard_nlo_spec, ", ");
-    }
-    else {
-        string specbody(spec);
-        vector<string> namesplitspec = split(spec, ":", 2);
-        assert(namesplitspec.size() == 1 || namesplitspec.size() == 2);
-        if (namesplitspec.size() > 1) {
-            if (namesplitspec[0].size() == 0) {
-                // this means there was simply a leading colon; ignore it
-                specname = namesplitspec[1];
-                specbody = namesplitspec[1];
-            }
-            else {
-                /* At this point we have established that the hf spec takes the form
-                 * <string1>:<string2> where <string1> is of nonzero length and contains
-                 * no colons. This next bit of logic attempts to intelligently determine
-                 * whether <string1> is meant to be a hard factor type specification
-                 * (i.e. one of 'm', 'r', or 'p') or a label for the hard factor spec.
-                 */
-                if (!(namesplitspec[0] == "m" || namesplitspec[0] == "r" || namesplitspec[0] == "p")) {
-                    // <string1> is something other than 'm', 'r', or 'p', so is clearly a label
-                    specname = namesplitspec[0];
-                    specbody = namesplitspec[1];
-                }
-                else if (
-                    (namesplitspec[1][1] == ':' || namesplitspec[1][1] == '.')
-                    && (namesplitspec[1][0] == 'm' || namesplitspec[1][0] == 'r' || namesplitspec[1][0] == 'p')
-                ) {
-                    // <string2> starts with [mrp][:.] (in regex syntax) so
-                    // includes a type letter, thus <string1> must be a label
-                    specname = namesplitspec[0];
-                    specbody = namesplitspec[1];
-                }
-                // else specname and specbody should both just be spec, but
-                // they already are, so do nothing
-            }
-        }
-        splitspec = split(specbody, ", ");
-    }
-    HardFactorList hfobjs;
-    // Iterate over the individual hard factor names
-    for (vector<string>::iterator it = splitspec.begin(); it != splitspec.end(); it++) {
-        string orig_s = *it;
-        string s = orig_s;
-
-        const HardFactor* hf;
-        char hf_type = 'x'; // dummy value, as a default
-        
-        // If the hard factor specification takes the form [letter]:[stuff],
-        // consider the first letter to indicate the type, and remove it and
-        // the colon
-        if (s[1] == '.' || s[1] == ':') {
-            hf_type = s[0];
-            if (hf_type == 'm' || hf_type == 'r' || hf_type == 'p') {
-                s = s.substr(2);
-            }
-        }
-        // Pass the remaining name (e.g. "h02qq") to the hard factor registry
-        // to get the actual hard factor object
-        switch (hf_type) {
-            case 'm':
-                hf = momentum::registry::get_instance()->get_hard_factor(s);
-                break;
-            case 'r':
-                hf = radial::registry::get_instance()->get_hard_factor(s);
-                break;
-            case 'p':
-                hf = position::registry::get_instance()->get_hard_factor(s);
-                break;
-            default:
-                // by default try momentum first, then radial, then position
-                hf = momentum::registry::get_instance()->get_hard_factor(s);
-                if (hf != NULL) {
-                    break;
-                }
-                hf = radial::registry::get_instance()->get_hard_factor(s);
-                if (hf != NULL) {
-                    break;
-                }
-                hf = position::registry::get_instance()->get_hard_factor(s);
-                break;
-        }
-        if (hf == NULL) {
-            // the string failed to parse
-            throw InvalidHardFactorSpecException(orig_s, "No such hard factor");
-        }
-        else {
-            hfobjs.push_back(hf);
-        }
-    }
-    if (hfobjs.size() == 0) {
-        throw InvalidHardFactorSpecException(spec, "No valid hard factors in specification");
-    }
-    else {
-        HardFactorList* p_hfobjs = new HardFactorList(hfobjs);
-        // parsing seems to have succeeded, so go ahead and create the object
-        return new ParsedHardFactorGroup(specname, p_hfobjs, splitspec);
     }
 }
 
@@ -729,64 +541,74 @@ void ResultsCalculator::integrate_hard_factor(const Context& ctx, const ThreadLo
  */
 ostream& operator<<(ostream& out, ResultsCalculator& rc) {
     using std::setw;
-    bool all_valid = true, row_valid = true;
+    const string OFS = " ";   // output field separator - make sure fields are space-separated
+    const string BLANK = " "; // a blank field
     size_t lw = 6;
-    size_t rw = 26; // "label width" and "result width"
+    size_t rw = 14; // "label width" and "result width"
+
     // write headers
     if (rc.separate) {
-        out << setw(lw) << left << "pT" << setw(lw) << "Y";
+        out << setw(lw) << left << "pT" << OFS << setw(lw) << "Y" << OFS;
         for (size_t hfgindex = 0; hfgindex < rc._hfglen; hfgindex++) {
-            out << setw(rw) << rc.hfgnames[hfgindex];
+            out << setw(rw) << rc.hfgnames[hfgindex] << OFS;
             size_t hflen = rc.hfgroups[hfgindex]->size();
-            for (size_t hfindex = 1; hfindex < hflen; hfindex++) {
-                out << setw(rw) << " ";
+            for (size_t hfindex = 1; hfindex < 2 * hflen; hfindex++) {
+                out << setw(rw) << BLANK << OFS;
             }
         }
-        out << setw(rw) << "total" << std::endl;
-        out << setw(lw) << " " << setw(lw) << " ";
+        out << setw(rw) << "total" << endl;
+
+        out << setw(lw) << BLANK << OFS << setw(lw) << BLANK << OFS;
         for (vector<string>::iterator termname_iterator = rc.hfnames.begin(); termname_iterator != rc.hfnames.end(); termname_iterator++) {
-            out << setw(rw) << *termname_iterator;
+            ostringstream valstream;
+            valstream << *termname_iterator << "-val";
+            out << setw(rw) << valstream.str() << OFS;
+            ostringstream errstream;
+            errstream << *termname_iterator << "-err";
+            out << setw(rw) << errstream.str() << OFS;
         }
         out << endl;
     }
     else {
-        out << lw << left << "pT" << lw << "Y";
+        out << setw(lw) << left << "pT" << OFS << setw(lw) << "Y" << OFS;
         for (vector<string>::iterator it = rc.hfgnames.begin(); it != rc.hfgnames.end(); it++) {
-            out << rw << *it;
+            ostringstream valstream;
+            valstream << *it << "-val";
+            out << setw(rw) << valstream.str() << OFS;
+            ostringstream errstream;
+            errstream << *it << "-err";
+            out << setw(rw) << errstream.str() << OFS;
         }
-        out << rw << "total" << endl;
+        out << setw(rw) << "total" << endl;
     }
-    
+
     // write data
     double l_real, l_imag, l_error;
+    bool all_valid = true;
     for (size_t ccindex = 0; ccindex < rc.cc.size(); ccindex++) {
-        out << lw << sqrt(rc.cc[ccindex].pT2);
-        out << lw << rc.cc[ccindex].Y;
+        out << setw(lw) << sqrt(rc.cc[ccindex].pT2) << OFS;
+        out << setw(lw) << rc.cc[ccindex].Y << OFS;
 
         double total = 0;
         size_t hfglen = rc.separate ? rc._hflen : rc._hfglen;
+        bool row_valid = true;
         for (size_t hfgindex = 0; hfgindex < hfglen; hfgindex++) {
             if (rc.valid(ccindex, hfgindex)) {
                 rc.result(ccindex, hfgindex, &l_real, &l_imag, &l_error);
-                ostringstream s;
-                s << l_real << "±" << l_error;
-                /* needs an extra space because the "±" counts as two chars for computing the
-                 * field width, but only displays as one character */
-                out << rw << s.str() << " ";
+                out << setw(rw) << l_real << OFS << setw(rw) << l_error << OFS;
                 total += l_real;
             }
             else {
-                out << rw << "---";
+                out << setw(rw) << "---" << OFS << setw(rw) << "---" << OFS;
                 all_valid = row_valid = false;
             }
         }
         if (row_valid) {
-            out << rw << total << endl;
+            out << setw(rw) << total << endl;
         }
         else {
-            out << rw << "---" << endl;
+            out << setw(rw) << "---" << endl;
         }
-        row_valid = true;
     }
     if (!all_valid) {
         out << "WARNING: some results were not computed" << endl;
@@ -794,9 +616,10 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
 
     if (rc.minmax) {
 #define process(v) out << #v << "\t" << min_ictx.v << "\t" << max_ictx.v << "\t" << endl;
-#include "ictx_var_list.inc"
+#include "../integration/ictx_var_list.inc"
 #undef process
     }
+    return out;
 }
 
 /* The output stream to write logging messages to. Declared in log.h. */
@@ -807,7 +630,7 @@ static ResultsCalculator* p_rc = NULL;
 
 /**
  * Takes care of finishing the program if it gets interrupted by a signal.
- * 
+ *
  * This happens when a PBS job is cut off before it finishes, for example. This
  * function will write out all results computed so far by writing the
  * ResultsCalculator object to standard output, and then exit the program.
@@ -817,7 +640,7 @@ void termination_handler(int signal) {
     if (!terminated) {
         terminated = true;
         cout << *p_rc;
-        
+
         time_t rawtime;
         time(&rawtime);
         logger << "Terminating at " << ctime(&rawtime) << endl;
@@ -842,6 +665,11 @@ string sha1_file(string filename) {
     SHA_CTX c;
     SHA1_Init(&c);
     ifstream i(filename.c_str());
+    if (!i) {
+        ostringstream oss;
+        oss << "Error opening file for SHA checksum: " << filename;
+        throw ios_base::failure(oss.str());
+    }
     while (i) {
         i.read(buffer, sizeof(buffer));
         SHA1_Update(&c, buffer, i.gcount());
@@ -860,7 +688,7 @@ void gsl_error_throw(const char* reason, const char* file, int line, int gsl_err
 
 /**
  * Runs the program.
- * 
+ *
  * This is like main() except that it can throw exceptions, which will
  * be caught in the real main().
  */
@@ -871,14 +699,14 @@ int run(int argc, char** argv) {
     logger << "Starting at " << ctime(&rawtime) << endl;
 
     gsl_set_error_handler(&gsl_error_throw);
-    
+
     ProgramConfiguration pc(argc, argv);
     ContextCollection cc = pc.context_collection();
     if (cc.empty()) {
         logger << "No momenta or no rapidities specified!" << endl;
         return 1;
     }
-    
+
     /* First write out all the configuration variables. Having the configuration written
      * out as part of the output file makes it easy to tell what parameters were used in
      * and given run, and is also useful in case we want to reproduce a run.
@@ -898,6 +726,20 @@ int run(int argc, char** argv) {
             cout << "# momentum gdist file hash: " << sha1_file(cc.get("gdist_momentum_filename")) << endl;
             cout << "# position gdist file hash: " << sha1_file(cc.get("gdist_position_filename")) << endl;
         }
+
+        vector<string> hfdefs = cc[0].hardfactor_definitions;
+        for (vector<string>::const_iterator it = hfdefs.begin(); it != hfdefs.end(); it++) {
+            string hf_definition_filename = *it;
+            ifstream hfdefs(hf_definition_filename.c_str());
+            if (!hfdefs) {
+                ostringstream oss;
+                oss << "Error opening hard factor definition file: " << hf_definition_filename;
+                throw ios_base::failure(oss.str());
+            }
+            cerr << "BEGIN hf definition file " << hf_definition_filename << endl << hfdefs.rdbuf() << "END hf definition file " << hf_definition_filename << endl;
+            hfdefs.close();
+            cout << "# hard factor definition file hash: " << hf_definition_filename << ": " << sha1_file(hf_definition_filename) << endl;
+        }
     }
 
 #ifdef EXACT_LIMIT_SCHEME
@@ -907,7 +749,7 @@ int run(int argc, char** argv) {
 #endif
 
     cout << cc << "------------" << endl;
-    
+
     cc.create_contexts();
     if (cc.empty()) {
         logger << "No valid momentum/rapidity combinations specified!" << endl;
@@ -942,10 +784,10 @@ int run(int argc, char** argv) {
     sigaction(SIGINT, &oldsiga, NULL);
     // And print out results
     cout << rc;
-    
+
     time(&rawtime);
     logger << "Ending at " << ctime(&rawtime) << endl;
-    
+
     return 0;
 }
 
@@ -956,16 +798,24 @@ int main(int argc, char** argv) {
     try {
         return run(argc, argv);
     }
+    catch (const mu::ParserError& e) {
+        string spaces(e.GetPos(), ' ');
+        cerr << "Parser error: " << e.GetMsg() << endl;
+        cerr << "in expression:" << endl;
+        cerr << e.GetExpr() << endl;
+        cerr << spaces << "^" << endl;
+        return 1;
+    }
     catch (const exception& e) {
-        cerr << e.what() << endl;
+        cerr << "Caught exception:" << endl << e.what() << endl;
         return 1;
     }
     catch (const char* c) {
-        cerr << c << endl;
+        cerr << "Caught error message:" << endl << c << endl;
         return 1;
     }
     catch (...) {
-        cerr << "unknown error" << endl;
+        cerr << "Unknown error" << endl;
         return 1;
     }
 }

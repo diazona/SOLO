@@ -1,8 +1,8 @@
 /*
  * Part of oneloopcalc
- * 
+ *
  * Copyright 2012 David Zaslavsky
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -28,11 +28,11 @@
 #include <vector>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_qrng.h>
-#include "mstwpdf.h"
-#include "dss_pinlo.h"
-#include "coupling.h"
-#include "factorizationscale.h"
-#include "gluondist.h"
+#include "../mstwpdf.h"
+#include "../dss_pinlo/dss_pinlo.h"
+#include "../coupling.h"
+#include "../factorizationscale.h"
+#include "../gluondist/gluondist.h"
 
 /**
  * Enumerates the types of Monte Carlo integration available
@@ -130,12 +130,25 @@ public:
 
 /**
  * Storage for all the assorted parameters that get used in the integration.
- * 
+ * `Context` is an aggregator so you can initialize it like this:
+ *
+ *     Context c = { x0, mass_number, ...,
+ *       Context::compute_Q02x0lambda(...),
+ *       Context::compute_tau(...),
+ *       Context::compute_tauhat(...),
+ *     };
+ *
+ * After creating a `Context`, call check_kinematics() on it to make sure the
+ * calculated values are consistent! check_kinematics() will throw an exception
+ * if anything is wrong, otherwise it will return silently.
+ *
  * There is a different Context object for each distinct set of parameters
  * that a result is computed for.
- * 
- * Other code should treat the contents of a Context as constant, and not
- * modify it.
+ *
+ * Instances of `Context` are meant to be immutable. The member variables
+ * aren't declared `const` because who wants to type out `const` 35 times,
+ * but the instance will generally be declared `const`, and other code may
+ * rely on the content of a `Context` not changing.
  */
 class Context {
 public:
@@ -163,11 +176,18 @@ public:
     double sqs;
     /** The rapidity */
     double Y;
+
+    /**
+     * Path to the file, if any, containing the expressions
+     * for hard factor terms to be integrated
+     */
+    std::vector<std::string> hardfactor_definitions;
+
     /** Name of the file PDF data was read from */
     std::string pdf_filename;
     /** Name of the file FF data was read from */
     std::string ff_filename;
-    
+
     /** GSL quasirandom number generator algorithm */
     const gsl_qrng_type* quasirandom_generator_type;
     /** GSL pseudorandom number generator algorithm */
@@ -190,10 +210,10 @@ public:
     bool css_r_regularization;
     /** The cutoff value for the CSS r regularization */
     double css_r2_max;
-    
+
     /** The factor in front of the resummation term, see H1qqCorrection */
     double resummation_constant;
-    
+
     /** Whether to use exact (or approximate) kinematic expressions */
     bool exact_kinematics;
 
@@ -203,12 +223,12 @@ public:
     DSSpiNLO::hadron hadron;
     /** The type of integration to be used */
     integration_strategy strategy;
-    
+
     /** Maximum allowed absolute error, for integration strategies that use it */
     double abserr;
     /** Maximum allowed relative error, for integration strategies that use it */
     double relerr;
-    
+
     /** Number of iterations for cubature */
     size_t cubature_iterations;
     /** Number of MISER iterations
@@ -226,6 +246,8 @@ public:
 
     /** The limit of integration over infinite regions */
     double inf;
+    /** A cutoff close to zero */
+    double cutoff;
 
     /** The precomputed value of c A^(1/3) Q_0^2 x_0^(lambda) */
     double Q02x0lambda;
@@ -233,83 +255,27 @@ public:
     double tau;
     /** The precomputed value of tauhat = pT / sqs * (exp(Y) + exp(-Y)) */
     double tauhat;
-    
-    Context(
-        double x0,
-        double mass_number,
-        double centrality,
-        double lambda,
-        double Nc,
-        double Nf,
-        double CF,
-        double TR,
-        double Sperp,
-        double pT2,
-        double sqs,
-        double Y,
-        std::string pdf_filename,
-        std::string ff_filename,
-        projectile_type projectile,
-        DSSpiNLO::hadron hadron,
-        integration_strategy strategy,
-        size_t cubature_iterations,
-        size_t miser_iterations,
-        size_t vegas_initial_iterations,
-        size_t vegas_incremental_iterations,
-        size_t quasi_iterations,
-        double abserr,
-        double relerr,
-        const gsl_qrng_type* quasirandom_generator_type,
-        const gsl_rng_type* pseudorandom_generator_type,
-        unsigned long int pseudorandom_generator_seed,
-        GluonDistribution* gdist,
-        Coupling* cpl,
-        FactorizationScale* fs,
-        bool c0r_optimization,
-        bool css_r_regularization,
-        double css_r2_max,
-        double resummation_constant,
-        bool exact_kinematics,
-        double inf) :
-     x0(x0),
-     mass_number(mass_number),
-     centrality(centrality),
-     lambda(lambda),
-     Nc(Nc),
-     Nf(Nf),
-     CF(CF),
-     TR(TR),
-     Sperp(Sperp),
-     pT2(pT2),
-     sqs(sqs),
-     Y(Y),
-     pdf_filename(pdf_filename),
-     ff_filename(ff_filename),
-     projectile(projectile),
-     hadron(hadron),
-     strategy(strategy),
-     cubature_iterations(cubature_iterations),
-     miser_iterations(miser_iterations),
-     vegas_initial_iterations(vegas_initial_iterations),
-     vegas_incremental_iterations(vegas_incremental_iterations),
-     quasi_iterations(quasi_iterations),
-     abserr(abserr),
-     relerr(relerr),
-     quasirandom_generator_type(quasirandom_generator_type),
-     pseudorandom_generator_type(pseudorandom_generator_type),
-     pseudorandom_generator_seed(pseudorandom_generator_seed),
-     gdist(gdist),
-     cpl(cpl),
-     fs(fs),
-     c0r_optimization(c0r_optimization),
-     css_r_regularization(css_r_regularization),
-     css_r2_max(css_r2_max),
-     resummation_constant(resummation_constant),
-     exact_kinematics(exact_kinematics),
-     inf(inf),
-     Q02x0lambda(centrality * pow(mass_number, 1.0/3.0) * pow(x0, lambda)),
-     tau(sqrt(pT2)/sqs*exp(Y)),
-     tauhat(sqrt(pT2)/sqs*(exp(Y)+exp(-Y))) {
+
+    static inline double compute_Q02x0lambda(double centrality, double mass_number, double x0, double lambda) {
+        return centrality * pow(mass_number, 1.0/3.0) * pow(x0, lambda);
+    }
+    static inline double compute_tau(double pT, double sqs, double Y) {
+        return pT / sqs * exp(Y);
+    }
+    static inline double compute_tauhat(double pT, double sqs, double Y) {
+        return pT / sqs * (exp(Y) + exp(-Y));
+    }
+
+    void check_kinematics() const {
+        if (compute_Q02x0lambda(centrality, mass_number, x0, lambda) != Q02x0lambda) {
+            throw InvalidPropertyValueException<double>("Q02x0lambda", Q02x0lambda, "value provided in initializer does not match the one calculated from other context parameters");
+        }
+        if (compute_tau(sqrt(pT2), sqs, Y) != tau) {
+            throw InvalidPropertyValueException<double>("tau", tau, "value provided in initializer does not match the one calculated from other context parameters");
+        }
+        if (compute_tauhat(sqrt(pT2), sqs, Y) != tauhat) {
+            throw InvalidPropertyValueException<double>("tauhat", tauhat, "value provided in initializer does not match the one calculated from other context parameters");
+        }
         if (tau > 1) {
             throw InvalidKinematicsException("τ > 1: empty phase space");
         }
@@ -320,63 +286,23 @@ public:
             assert(css_r2_max > 0);
         }
     }
-    Context(const Context& other) :
-     x0(other.x0),
-     mass_number(other.mass_number),
-     centrality(other.centrality),
-     lambda(other.lambda),
-     Nc(other.Nc),
-     Nf(other.Nf),
-     CF(other.CF),
-     TR(other.TR),
-     Sperp(other.Sperp),
-     pT2(other.pT2),
-     sqs(other.sqs),
-     Y(other.Y),
-     pdf_filename(other.pdf_filename),
-     ff_filename(other.ff_filename),
-     projectile(other.projectile),
-     hadron(other.hadron),
-     strategy(other.strategy),
-     cubature_iterations(other.cubature_iterations),
-     miser_iterations(other.miser_iterations),
-     vegas_initial_iterations(other.vegas_initial_iterations),
-     vegas_incremental_iterations(other.vegas_incremental_iterations),
-     quasi_iterations(other.quasi_iterations),
-     abserr(other.abserr),
-     relerr(other.relerr),
-     quasirandom_generator_type(other.quasirandom_generator_type),
-     pseudorandom_generator_type(other.pseudorandom_generator_type),
-     pseudorandom_generator_seed(other.pseudorandom_generator_seed),
-     gdist(other.gdist),
-     cpl(other.cpl),
-     fs(other.fs),
-     c0r_optimization(other.c0r_optimization),
-     css_r_regularization(other.css_r_regularization),
-     css_r2_max(other.css_r2_max),
-     resummation_constant(other.resummation_constant),
-     exact_kinematics(other.exact_kinematics),
-     inf(other.inf),
-     Q02x0lambda(other.Q02x0lambda),
-     tau(other.tau),
-     tauhat(other.tauhat) {}
 };
 
 /**
  * The "context factory" and a repository for all settings.
- * 
+ *
  * A ContextCollection is able to read a configuration file in
  *  key = value
  * format, and store all the settings read. It allows multiple values
  * of pT and/or Y, but only one value of any other setting.
- * 
+ *
  * After all configuration files have been read, the ContextCollection
  * can be used to create a list of Context objects, one for each
  * combination of pT and Y. Calling any of the accessor methods
  * (get_context(), operator[](), begin(), end()) causes the set of
  * Contexts to be created, and also freezes the ContextCollection so
  * that the settings it holds can no longer be modified.
- * 
+ *
  * Several methods are named similar to, and behave similar to, their
  * counterparts in std::vector, allowing a ContextCollection to be
  * indexed or iterated over much like a vector. (It should be considered
@@ -427,33 +353,33 @@ public:
      * - Context N-1 has pT[0] and Y[N-1]
      * - Context N has pT[1] and Y[0]
      * and so on.
-     * 
+     *
      * When this method is called, if the Context objects have not already
      * been created, this creates the Contexts and freezes the ContextCollection.
      */
     Context& get_context(size_t n);
     /**
      * Allows access to contexts by subscript notation.
-     * 
+     *
      * This is exactly equivalent to get_context().
-     * 
+     *
      * When this method is called, if the Context objects have not already
      * been created, this creates the Contexts and freezes the ContextCollection.
      */
     Context& operator[](size_t n);
     /**
      * Tests whether the ContextCollection is empty.
-     * 
+     *
      * This will return true if the number of pT values or the number
      * of Y values held by the ContextCollection is zero.
-     * 
+     *
      * If this returns true, calling get_context() with any argument
      * will cause an error.
      */
     bool empty();
     /**
      * Returns the size of this ContextCollection.
-     * 
+     *
      * This returns the product of the number of pT values specified so far
      * and the number of Y values specified so far. Before Contexts are created,
      * the return value can change as more settings are added. After Contexts
@@ -462,19 +388,19 @@ public:
     size_t size();
     /**
      * Returns an iterator to the first Context.
-     * 
+     *
      * When this method is called, if the Context objects have not already
      * been created, this creates the Contexts and freezes the ContextCollection.
      */
     iterator begin();
     /**
      * Returns an iterator to one past the last Context.
-     * 
+     *
      * When this method is called, if the Context objects have not already
      * been created, this creates the Contexts and freezes the ContextCollection.
      */
     iterator end();
-    
+
     /**
      * Removes all settings with the given key.
      */
@@ -488,12 +414,11 @@ public:
      */
     void set(std::string key, std::string value);
     /**
-     * Add a setting. If the key is "pT" or "Y" (case insensitive), any existing
-     * settings with the same key are left alone. For other keys, this behaves
-     * identically to set().
+     * Add a setting. Any existing settings with the same key are left alone;
+     * in this case there will be multiple values with that key.
      */
     void add(std::string key, std::string value);
-    
+
     /**
      * Create the Context objects.
      */
@@ -508,7 +433,7 @@ public:
      * Process a string representing one line of a config file (i.e. one setting)
      */
     void read_config_line(std::string& line);
-    
+
     /**
      * Whether to use the tracing gluon distribution wrapper. (See gluondist.h/cpp)
      * Changes made to this variable after contexts are created have no effect.
@@ -519,7 +444,7 @@ public:
     friend std::istream& operator>>(std::istream& in, ContextCollection& cc);
     friend std::ostream& operator<<(std::ostream& out, ContextCollection& cc);
     friend class ThreadLocalContext;
-    
+
 private:
     /**
      * The gluon distribution. NULL until contexts are created.
@@ -549,7 +474,7 @@ private:
      * Called from the constructor to set default values.
      */
     void setup_defaults();
-    
+
     /* Auxiliary methods and variables used to create gluon distributions */
     double Q02, x0, lambda, sqs, inf;
     vector<double> pT, Y;
@@ -571,7 +496,7 @@ ContextCollection& operator>>(std::string& line, ContextCollection& cc);
 std::istream& operator>>(std::istream& in, ContextCollection& cc);
 /**
  * Allows writing a ContextCollection out to a stream using << notation.
- * 
+ *
  * What is written out is just the list of key-value pairs. The output
  * could be read in to reconstruct the ContextCollection.
  */
@@ -579,7 +504,7 @@ std::ostream& operator<<(std::ostream& out, ContextCollection& cc);
 
 /**
  * Allows writing a Context out to a stream using << notation.
- * 
+ *
  * This is a human-readable representation and cannot necessarily
  * be used to reconstruct the Context programmatically.
  */
@@ -588,7 +513,7 @@ std::ostream& operator<<(std::ostream& out, Context& ctx);
 /**
  * Another Context-like class that holds objects which should not be shared
  * among threads or processes.
- * 
+ *
  * In the current state of the program, there isn't any particular reason
  * to have this, because there is no multithreading or multiprocessing being
  * used.
@@ -606,30 +531,9 @@ private:
     DSSpiNLO* ff_object;
 
 public:
-    ThreadLocalContext(const char* pdf_filename, const char* ff_filename) :
-      pdf_object(new c_mstwpdf(pdf_filename)),
-      ff_object(new DSSpiNLO(ff_filename)) {};
-    ThreadLocalContext(const Context& ctx) :
-      pdf_object(new c_mstwpdf(ctx.pdf_filename.c_str())),
-      ff_object(new DSSpiNLO(ctx.ff_filename.c_str())) {};
-    ThreadLocalContext(const ContextCollection& cc) :
-      pdf_object(NULL), ff_object(NULL) {
-        multimap<string,string>::const_iterator it = cc.options.find("pdf_filename");
-        if (it == cc.options.end()) {
-            throw "no PDF filename";
-        }
-        pdf_object = new c_mstwpdf(it->second.c_str());
-        it = cc.options.find("ff_filename");
-        if (it == cc.options.end()) {
-            throw "no FF filename";
-        }
-        ff_object = new DSSpiNLO(it->second.c_str());
-    };
-    
-    ~ThreadLocalContext() {
-        delete pdf_object;
-        delete ff_object;
-    }
+    ThreadLocalContext(const Context& ctx);
+    ThreadLocalContext(const ContextCollection& cc);
+    ~ThreadLocalContext();
 };
 
 

@@ -26,6 +26,8 @@
 
 class Coupling {
 public:
+    Coupling() {}
+    virtual ~Coupling() {}
     virtual double alphas(double kT2) = 0;
     virtual const char* name() = 0;
 };

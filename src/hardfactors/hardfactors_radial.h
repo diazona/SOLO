@@ -23,12 +23,14 @@
 // Hard factors in position space with radial integration
 
 #include "hardfactor.h"
-#include "integrationtype.h"
+#include "../integration/integrationtype.h"
 
 namespace radial {
 
-static const AngleIndependentPositionIntegrationType dipole(1);
-static const AngleIndependentPositionIntegrationType quadrupole(2);
+extern const AngleIndependentPositionIntegrationType dipole;
+extern const AngleIndependentPositionIntegrationType quadrupole;
+extern const RescaledAngleIndependentPositionIntegrationType rescaled_dipole;
+extern const RescaledAngleIndependentPositionIntegrationType rescaled_quadrupole;
 
 class H02qq : public HardFactorTerm {
 public:
@@ -369,32 +371,12 @@ public:
 
 class registry : public HardFactorRegistry {
 public:
-    static const registry* get_instance() {
+    static registry* get_instance() {
         static registry instance;
         return &instance;
     }
 private:
-    registry() {
-        add_hard_factor(new H02qq(), true);
-        add_hard_factor(new H12qq(), true);
-        add_hard_factor(new H12qq1(), true);
-        add_hard_factor(new H12qq1A(), true);
-        add_hard_factor(new H12qq1B(), true);
-        add_hard_factor(new H12qq2(), true);
-        add_hard_factor(new H12qq3(), true);
-        add_hard_factor(new H012qqExp(), true);
-//         add_hard_factor(new H14qq(), true);
-//         add_hard_factor(new H02gg(), true);
-        add_hard_factor(new H12gg(), true);
-//         add_hard_factor(new H12qqbar(), true);
-//         add_hard_factor(new H16gg(), true);
-        add_hard_factor(new H112gq(), true);
-        add_hard_factor(new H122gq(), true);
-//         add_hard_factor(new H14gq(), true);
-        add_hard_factor(new H112qg(), true);
-        add_hard_factor(new H122qg(), true);
-//         add_hard_factor(new H14qg(), true);
-    }
+    registry() {}
 };
 
 }

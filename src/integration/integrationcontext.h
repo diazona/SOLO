@@ -20,7 +20,7 @@
 #ifndef _INTEGRATIONCONTEXT_H_
 #define _INTEGRATIONCONTEXT_H_
 
-#include "context.h"
+#include "../configuration/context.h"
 
 class IntegrationContext {
 public:

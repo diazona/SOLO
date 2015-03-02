@@ -23,12 +23,12 @@
 // Hard factors in position space
 
 #include "hardfactor.h"
-#include "integrationtype.h"
+#include "../integration/integrationtype.h"
 
 namespace position {
 
-static const PositionIntegrationType dipole(2);
-static const PositionIntegrationType quadrupole(4);
+extern const PositionIntegrationType dipole;
+extern const PositionIntegrationType quadrupole;
 
 class H02qq : public HardFactorTerm {
 public:
@@ -288,26 +288,12 @@ public:
 
 class registry : public HardFactorRegistry {
 public:
-    static const registry* get_instance() {
+    static registry* get_instance() {
         static registry instance;
         return &instance;
     }
 private:
-    registry() {
-        add_hard_factor(new H02qq(), true);
-        add_hard_factor(new H12qq(), true);
-        add_hard_factor(new H14qq(), true);
-        add_hard_factor(new H02gg(), true);
-        add_hard_factor(new H12gg(), true);
-        add_hard_factor(new H12qqbar(), true);
-        add_hard_factor(new H16gg(), true);
-        add_hard_factor(new H112gq(), true);
-        add_hard_factor(new H122gq(), true);
-        add_hard_factor(new H14gq(), true);
-        add_hard_factor(new H112qg(), true);
-        add_hard_factor(new H122qg(), true);
-        add_hard_factor(new H14qg(), true);
-    }
+    registry() {}
 };
 
 }

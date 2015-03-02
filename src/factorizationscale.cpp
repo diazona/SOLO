@@ -21,7 +21,7 @@
 #include <sstream>
 #include <gsl/gsl_math.h>
 #include "factorizationscale.h"
-#include "integrationcontext.h"
+#include "integration/integrationcontext.h"
 
 using namespace std;
 

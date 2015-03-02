@@ -1,8 +1,8 @@
 /*
  * Part of oneloopcalc
- * 
+ *
  * Copyright 2012 David Zaslavsky
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -28,10 +28,10 @@
 #include <gsl/gsl_qrng.h>
 #include <gsl/gsl_rng.h>
 #include "context.h"
-#include "gluondist.h"
-#include "integrator.h"
-#include "log.h"
-#include "utils.h"
+#include "../gluondist/gluondist.h"
+#include "../integration/integrator.h"
+#include "../log.h"
+#include "../utils/utils.h"
 
 using namespace std;
 
@@ -60,7 +60,7 @@ const string trim_lower(const string& i_str) {
     transform(str.begin(), str.end(), str.begin(), ::tolower);
     return str;
 }
-    
+
 const string canonicalize(const string& i_key) {
     const string key = trim_lower(i_key);
     if (key == "lambda_qcd") {
@@ -80,6 +80,9 @@ const string canonicalize(const string& i_key) {
     }
     else if (key == "colorfactor") {
         return "cf";
+    }
+    else if (key == "hf_definitions") {
+        return "hardfactor_definitions";
     }
     else if (key == "alpha_s") {
         return "alphas";
@@ -256,10 +259,18 @@ const gsl_qrng_type* parse_qrng_type(pair<multimap<string, string>::iterator, mu
     }
 }
 
-vector<double> parse_vector(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
+vector<double> parse_double_vector(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
     vector<double> v;
     for (multimap<string, string>::iterator it = range.first; it != range.second; it++) {
         v.push_back(strtod(it->second.c_str(), NULL));
+    }
+    return v;
+}
+
+vector<string> parse_string_vector(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
+    vector<string> v;
+    for (multimap<string, string>::iterator it = range.first; it != range.second; it++) {
+        v.push_back(it->second);
     }
     return v;
 }
@@ -309,7 +320,7 @@ FixedSaturationMVGluonDistribution* ContextCollection::create_fmv_gluon_distribu
     check_property(YMV, double, parse_double)
     logger << "Creating fMV gluon distribution with " << q2minMV << " < k2 < " << q2maxMV << ", Y = " << YMV << endl;
     check_property_default(gdist_subinterval_limit, size_t, parse_size, 10000)
-    gdist = new FixedSaturationMVGluonDistribution(lambdaMV, gammaMV, q2minMV, q2maxMV, YMV, Q02, x0, lambda, gdist_subinterval_limit);
+    return new FixedSaturationMVGluonDistribution(lambdaMV, gammaMV, q2minMV, q2maxMV, YMV, Q02, x0, lambda, gdist_subinterval_limit);
 }
 
 PlateauPowerGluonDistribution* ContextCollection::create_pp_gluon_distribution() {
@@ -324,7 +335,7 @@ PlateauPowerGluonDistribution* ContextCollection::create_pp_gluon_distribution()
     check_property_default(YmaxPP,  double, parse_double, Ymax - log(pTmin) + log(sqs))
     check_property_default(gdist_subinterval_limit, size_t, parse_size, 10000)
     logger << "Creating plateau-power gluon distribution with " << r2minPP << " < r2 < " << r2maxPP << ", " << YminPP << " < Y < " << YmaxPP << endl;
-    gdist = new PlateauPowerGluonDistribution(gammaPP, r2minPP, r2maxPP, YminPP, YmaxPP, Q02, x0, lambda, gdist_subinterval_limit);
+    return new PlateauPowerGluonDistribution(gammaPP, r2minPP, r2maxPP, YminPP, YmaxPP, Q02, x0, lambda, gdist_subinterval_limit);
 }
 
 FileDataGluonDistribution* ContextCollection::create_file_gluon_distribution(GluonDistribution* lower_dist = NULL, GluonDistribution* upper_dist = NULL, const bool extended = false) {
@@ -333,13 +344,13 @@ FileDataGluonDistribution* ContextCollection::create_file_gluon_distribution(Glu
     // anything for lower_dist or upper_dist, just to make sure there are
     // no programmer misconceptions about what the method is doing
     assert(extended || (lower_dist == NULL && upper_dist == NULL));
-    
+
     check_property(gdist_position_filename, string, parse_string)
     check_property(gdist_momentum_filename, string, parse_string)
     check_property_default(satscale_source, string, parse_string, "analytic")
     check_property_default(xinit, double, parse_double, 0.01)
     logger << "Reading gluon distribution from " << gdist_position_filename << " (pos) and " << gdist_momentum_filename << " (mom)" << endl;
-    
+
     if (satscale_source == "analytic") {
         if (extended) {
             return new ExtendedFileDataGluonDistribution(
@@ -461,10 +472,11 @@ void ContextCollection::create_contexts() {
     check_property_default( TR,           double, parse_double, 0.5)
     check_property(         Sperp,        double, parse_double)
     check_property(         sqs,          double, parse_double)
-    check_property(         pT,           vector<double>, parse_vector)
-    check_property(         Y,            vector<double>, parse_vector)
+    check_property(         pT,           vector<double>, parse_double_vector)
+    check_property(         Y,            vector<double>, parse_double_vector)
     check_property(         projectile,   projectile_type, parse_projectile_type)
     check_property(         hadron,       DSSpiNLO::hadron, parse_hadron)
+    check_property(         hardfactor_definitions, vector<string>, parse_string_vector)
     check_property_default( pdf_filename, string, parse_string, "mstw2008nlo.00.dat")
     check_property_default( ff_filename,  string, parse_string, "PINLO.DAT")
     check_property_default( integration_strategy, integration_strategy, parse_strategy, MC_VEGAS)
@@ -489,7 +501,10 @@ void ContextCollection::create_contexts() {
      * peak in the integrand entirely and just output zero all the time.
      */
     check_property_default( inf, double, parse_double, 40)
-    
+
+    /* The default cutoff is zero, since most integrands are well-behaved at 0. */
+    check_property_default( cutoff, double, parse_double, 0)
+
     this->Q02 = centrality * pow(mass_number, 1./3.);
     this->x0 = x0;
     this->lambda = lambda;
@@ -497,11 +512,11 @@ void ContextCollection::create_contexts() {
     this->Y = Y;
     this->sqs = sqs;
     this->inf = inf;
-    
+
     if (css_r_regularization && css_r2_max <= 0) {
         GSL_ERROR_VOID("invalid r_max", GSL_EINVAL);
     }
-    
+
     // create gluon distribution
     assert (gdist == NULL);
     check_property(gdist_type, string, parse_string)
@@ -531,7 +546,7 @@ void ContextCollection::create_contexts() {
         throw InvalidPropertyValueException<string>("coupling_type", coupling_type);
     }
     assert(cpl != NULL);
-    
+
     // create factorization scale strategy
     assert(fs == NULL);
     check_property_default(factorization_scale, string, parse_string, "fixed")
@@ -565,53 +580,36 @@ void ContextCollection::create_contexts() {
         fs = new RPerpFactorizationScale(4 * exp(-2*M_EULER)); // this value is c_0^2, with c_0 defined in the long paper
     }
     assert(fs != NULL);
-    
+
     contexts_created = true;
     // create contexts
     for (vector<double>::iterator pTit = pT.begin(); pTit != pT.end(); pTit++) {
         for (vector<double>::iterator Yit = Y.begin(); Yit != Y.end(); Yit++) {
+            double pT = *pTit;
+            double Y = *Yit;
             try {
-                contexts.push_back(
-                    Context(
-                        x0,
-                        mass_number,
-                        centrality,
-                        lambda,
-                        Nc,
-                        Nf,
-                        CF,
-                        TR,
-                        Sperp,
-                        gsl_pow_2(*pTit),
-                        sqs,
-                        *Yit,
-                        pdf_filename,
-                        ff_filename,
-                        projectile,
-                        hadron,
-                        integration_strategy,
-                        cubature_iterations,
-                        miser_iterations,
-                        vegas_initial_iterations,
-                        vegas_incremental_iterations,
-                        quasi_iterations,
-                        abserr,
-                        relerr,
-                        quasirandom_generator_type,
-                        pseudorandom_generator_type,
-                        pseudorandom_generator_seed,
-                        gdist,
-                        cpl,
-                        fs,
-                        _c0r_optimization,
-                        css_r_regularization,
-                        css_r2_max,
-                        resummation_constant,
-                        exact_kinematics,
-                        inf));
+                const Context c = {
+                  x0, mass_number, centrality, lambda, Nc, Nf, CF, TR, Sperp,
+                  gsl_pow_2(pT), sqs, Y,
+                  hardfactor_definitions, pdf_filename, ff_filename,
+                  quasirandom_generator_type, pseudorandom_generator_type, pseudorandom_generator_seed,
+                  gdist, cpl, fs, _c0r_optimization, css_r_regularization, css_r2_max, resummation_constant,
+                  exact_kinematics,
+                  projectile, hadron,
+                  integration_strategy,
+                  abserr, relerr,
+                  cubature_iterations, miser_iterations,
+                  vegas_initial_iterations, vegas_incremental_iterations, quasi_iterations,
+                  inf, cutoff,
+                  Context::compute_Q02x0lambda(centrality, mass_number, x0, lambda),
+                  Context::compute_tau(pT, sqs, Y),
+                  Context::compute_tauhat(pT, sqs, Y)
+                };
+                c.check_kinematics();
+                contexts.push_back(c);
             }
             catch (const InvalidKinematicsException& e) {
-                logger << "Failed to create context at pT = " << *pTit << ", Y = " << *Yit << ": " << e.what() << endl;
+                logger << "Failed to create context at pT = " << pT << ", Y = " << Y << ": " << e.what() << endl;
             }
         }
     }
@@ -658,10 +656,8 @@ string ContextCollection::get(string key, size_t index) {
 
 
 void ContextCollection::set(string key, string value) {
-    assert(!contexts_created); // TODO throw a proper exception here
-    key = canonicalize(key);
-    options.erase(key);
-    options.insert(pair<string, string>(key, value));
+    erase(key);
+    add(key, value);
 }
 
 void ContextCollection::erase(string key) {
@@ -673,10 +669,6 @@ void ContextCollection::erase(string key) {
 void ContextCollection::add(string key, string value) {
     assert(!contexts_created);
     key = canonicalize(key);
-    // these are the keys that allow multiple values
-    if (!(key == "pt" || key == "y")) {
-        options.erase(key);
-    }
     options.insert(pair<string, string>(key, value));
 }
 
@@ -743,6 +735,7 @@ std::ostream& operator<<(std::ostream& out, const integration_strategy& strategy
             out << "quasi";
             break;
     }
+    return out;
 }
 
 std::ostream& operator<<(std::ostream& out, const projectile_type& proj) {
@@ -754,6 +747,7 @@ std::ostream& operator<<(std::ostream& out, const projectile_type& proj) {
             out << "deuteron";
             break;
     }
+    return out;
 }
 
 std::ostream& operator<<(std::ostream& out, const DSSpiNLO::hadron& hadron) {
@@ -768,6 +762,18 @@ std::ostream& operator<<(std::ostream& out, const DSSpiNLO::hadron& hadron) {
             out << "pi+";
             break;
     }
+    return out;
+}
+
+template<typename T>
+ostream& operator<<(ostream& out, vector<T>& vec) {
+    for (typename vector<T>::iterator it = vec.begin(); it != vec.end(); it++) {
+        if (it != vec.begin()) {
+            out << ", ";
+        }
+        out << *it;
+    }
+    return out;
 }
 
 std::ostream& operator<<(std::ostream& out, Context& ctx) {
@@ -783,6 +789,7 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "pT2\t= "        << ctx.pT2          << endl;
     out << "sqs\t= "        << ctx.sqs          << endl;
     out << "Y\t= "          << ctx.Y            << endl;
+    out << "hf_definitions\t= " << ctx.hardfactor_definitions << endl;
     out << "pdf_filename\t= " << ctx.pdf_filename << endl;
     out << "ff_filename\t= " << ctx.ff_filename  << endl;
     out << "projectile\t= " << ctx.projectile << endl;
@@ -795,6 +802,8 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "quasi_iterations\t= " << ctx.quasi_iterations << endl;
     out << "abserr\t= " << ctx.abserr << endl;
     out << "relerr\t= " << ctx.relerr << endl;
+    out << "inf\t= " << ctx.inf << endl;
+    out << "cutoff\t= " << ctx.cutoff << endl;
     out << "gluon distribution\t = " << ctx.gdist << endl;
     out << "coupling\t = " << ctx.cpl << endl;
     out << "factorization scale\t = " << ctx.fs << endl;
@@ -806,17 +815,6 @@ std::ostream& operator<<(std::ostream& out, Context& ctx) {
     out << "quasirandom generator type: " <<  ctx.quasirandom_generator_type->name << endl;
     out << "pseudorandom generator type: " <<  ctx.pseudorandom_generator_type->name << endl;
     out << "pseudorandom generator seed: " << ctx.pseudorandom_generator_seed << endl;
-    return out;
-}
-
-template<typename T>
-ostream& operator<<(ostream& out, vector<T>& vec) {
-    for (typename vector<T>::iterator it = vec.begin(); it != vec.end(); it++) {
-        if (it != vec.begin()) {
-            out << ", ";
-        }
-        out << *it;
-    }
     return out;
 }
 
@@ -859,6 +857,30 @@ ContextCollection::iterator ContextCollection::end() {
         create_contexts();
     }
     return contexts.end();
+}
+
+ThreadLocalContext::ThreadLocalContext(const Context& ctx) :
+  pdf_object(new c_mstwpdf(ctx.pdf_filename.c_str())),
+  ff_object(new DSSpiNLO(ctx.ff_filename.c_str())) {
+}
+
+ThreadLocalContext::ThreadLocalContext(const ContextCollection& cc) :
+  pdf_object(NULL), ff_object(NULL) {
+    multimap<string,string>::const_iterator it = cc.options.find("pdf_filename");
+    if (it == cc.options.end()) {
+        throw "no PDF filename";
+    }
+    pdf_object = new c_mstwpdf(it->second.c_str());
+    it = cc.options.find("ff_filename");
+    if (it == cc.options.end()) {
+        throw "no FF filename";
+    }
+    ff_object = new DSSpiNLO(it->second.c_str());
+}
+
+ThreadLocalContext::~ThreadLocalContext() {
+    delete pdf_object;
+    delete ff_object;
 }
 
 
