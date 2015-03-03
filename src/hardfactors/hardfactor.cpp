@@ -1,8 +1,8 @@
 /*
  * Part of oneloopcalc
- * 
+ *
  * Copyright 2012 David Zaslavsky
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -109,12 +109,47 @@ const HardFactor* HardFactorRegistry::get_hard_factor(const string& key) const {
     }
 }
 
+void HardFactorRegistry::add_hard_factor_group(const HardFactorGroup* hfg, bool manage) {
+    add_hard_factor_group(hfg->label.c_str(), hfg, manage);
+}
+
+void HardFactorRegistry::add_hard_factor_group(const char* key, const HardFactorGroup* hfg, bool manage) {
+    using namespace std;
+    string keystring(key);
+    assert(!keystring.empty());
+    transform(keystring.begin(), keystring.end(), keystring.begin(), ::tolower);
+    // note that even if another HardFactorGroup is later added with the
+    // same name, it doesn't cause a memory leak
+    hardfactor_groups[keystring] = hfg;
+    if (manage) {
+        hardfactor_groups_to_delete.push_back(hfg);
+    }
+}
+
+const HardFactorGroup* HardFactorRegistry::get_hard_factor_group(const string& key) const {
+    using namespace std;
+    string keystring(key);
+    transform(keystring.begin(), keystring.end(), keystring.begin(), ::tolower);
+    map<const string, const HardFactorGroup*>::const_iterator it = hardfactor_groups.find(key);
+    if (it == hardfactor_groups.end()) {
+        return NULL;
+    }
+    else {
+        return it->second;
+    }
+}
+
 HardFactorRegistry::~HardFactorRegistry() {
     hardfactors.clear();
+    hardfactor_groups.clear();
     for (std::list<const HardFactor*>::iterator it = hardfactors_to_delete.begin(); it != hardfactors_to_delete.end(); it++) {
         delete (*it);
     }
     hardfactors_to_delete.clear();
+    for (std::list<const HardFactorGroup*>::iterator it = hardfactor_groups_to_delete.begin(); it != hardfactor_groups_to_delete.end(); it++) {
+        delete (*it);
+    }
+    hardfactor_groups_to_delete.clear();
 }
 
 KinematicSchemeMismatchException::KinematicSchemeMismatchException(const HardFactor& hf) throw() {

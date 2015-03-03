@@ -1,8 +1,8 @@
 /*
  * Part of SOLO
- * 
+ *
  * Copyright 2014 David Zaslavsky
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -26,7 +26,7 @@ public:
     ParsedCompositeHardFactor(const string& name, const HardFactor::HardFactorOrder order, const size_t term_count, const HardFactorTerm** terms);
     ParsedCompositeHardFactor(const string& name, const HardFactor::HardFactorOrder order, const HardFactorTermList terms);
     ~ParsedCompositeHardFactor();
-    
+
     const char* get_name() const { return m_name.c_str(); }
     const HardFactorOrder get_order() const { return m_order; }
     const size_t get_term_count() const { return m_term_count; }
@@ -65,14 +65,14 @@ private:
     /**
      * A memory of which IntegrationContext currently provides the variables
      * for Fs_parser.
-     * 
+     *
      * In order to use a muParser-parsed expression as the hard factor,
      * as this class does, we need to give the Parser a pointer corresponding
      * to each variable that appears in the parsed expression, using
      * Parser::DefineVar. But configuring a Parser with these name-pointer
      * mappings is fairly computationally expensive, and it will slow down the
      * computation a lot if we do it every time Fs() is called.
-     * 
+     *
      * Fortunately, we don't have to do that. The name-pointer mappings that
      * we need to provide to the Parser are properties of the IntegrationContext
      * begin used. So if we provide the Parser with the pointers from a given
@@ -82,13 +82,13 @@ private:
      * Parser's variable table and set it up again. Typically, Fs() will be
      * called many times in a row with the same IntegrationContext, so it makes
      * sense to optimize for this case.
-     * 
+     *
      * Accordingly, at each call to Fs() we save the IntegrationContext provided
      * in this variable. Then at the next call, we can check whether the
      * IntegrationContext passed to Fs() is the same as the one saved. If so,
      * we clear and recreate the name-pointer mappings using the new
      * IntegrationContext, otherwise we do nothing.
-     * 
+     *
      * This behavior is not really thread-safe, but it will work as long as
      * all calls to Fs() using a given instance of IntegrationContext complete
      * before any calls to Fs() using a different IntegrationContext begin.
@@ -97,26 +97,26 @@ private:
     /**
      * A memory of which IntegrationContext currently provides the variables
      * for Fn_parser.
-     * 
+     *
      * This is necessary for the same reason as m_ictx_Fs.
      */
     mutable const IntegrationContext* m_ictx_Fn;
     /**
      * A memory of which IntegrationContext currently provides the variables
      * for Fd_parser.
-     * 
+     *
      * This is necessary for the same reason as m_ictx_Fs.
      */
     mutable const IntegrationContext* m_ictx_Fd;
-    
+
     mutable mu::Parser Fs_parser;
     mutable mu::Parser Fn_parser;
     mutable mu::Parser Fd_parser;
-    
+
     const std::string m_name;
     const HardFactorOrder m_order;
     const IntegrationType* mp_type;
-    
+
     void init_parser(mu::Parser& parser, mu::varmap_type& all_variables, const string& real_expr, const string& imag_expr, const char* debug_message);
 #ifndef NDEBUG
     void print_parser_info(const char* message, mu::Parser& parser, const double* real, const double* imag) const;
@@ -131,7 +131,7 @@ public:
     void parse_file(const string& filename, bool (*error_handler)(const std::exception& e, const std::string& filename, const size_t line_number) = NULL);
     void parse_line(const string& line);
     HardFactorList get_hard_factors();
-    const HardFactorGroup* get_hard_factor_group(const string& label);
+    const HardFactorGroup* get_hard_factor_group(const std::string& label);
     void reset_current_term();
 
 private:
@@ -151,15 +151,15 @@ private:
 /**
  * An exception to be thrown when only some of the hard factor properties
  * are defined at the time a ::ParsedHardFactorTerm is created.
- * 
+ *
  * This exception gets thrown when you have something like this
  * in a hard factor definition file:
- * 
+ *
  *     name = foo
  *     type = none
  *     Fs real = x
  *     type = momentum1
- * 
+ *
  * The parser reads a name, a type, and a real Fs, then it reads another name
  * and tries to start a new hard factor specification with that line. But there
  * are no definitions for Fs imag, Fn real, Fn imag, Fd real, Fd imag, or

@@ -1,8 +1,8 @@
 /*
  * Part of oneloopcalc
- * 
+ *
  * Copyright 2012 David Zaslavsky
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -34,14 +34,14 @@ class HardFactorTerm;
 
 /**
  * Something that can be integrated using the program.
- * 
+ *
  * A `HardFactor` is a named collection of one or more ::HardFactorTerm
  * instances. When a `HardFactor` is integrated, the program
  * queries it for its `HardFactorTerm`s and sorts those terms out by
  * their `IntegrationType`. It then iterates through the `IntegrationType`s
  * and for each type, integrates the terms. The integrand for a given
  * type is just the sum of values of all the terms of that type.
- * 
+ *
  * In practice, what is usually integrated is a hard factor group,
  * which is a list of multiple `HardFactor` objects. The procedure is
  * the same; the program queries all the `HardFactor`s for their terms
@@ -71,12 +71,12 @@ public:
 
 /**
  * The base of the classes that actually implement the formulas.
- * 
+ *
  * A HardFactorTerm can be queried for three functions: `Fs`, `Fn`, `Fd`.
  * Each returns a real and an imaginary component. These three functions
  * are used in particular combinations to compute the "1D" and "2D" integrands.
  * (The mathematical details are explained elsewhere.)
- * 
+ *
  * A `HardFactorTerm` is also a `HardFactor` which contains just one term: itself.
  */
 class HardFactorTerm : public HardFactor {
@@ -117,15 +117,15 @@ public:
 
 
 /**
- * A class that holds a map of strings to HardFactor objects,
- * and can return the HardFactor object corresponding to a given string key.
+ * A class that holds a map of strings to ::HardFactor and ::HardFactorGroup
+ * objects, and can return the object corresponding to a given string key.
  */
 class HardFactorRegistry {
 public:
     /**
      * Adds a HardFactor pointer to the registry. It can later be
      * retrieved by its name.
-     * 
+     *
      * @param manage true if the HardFactor object should be deleted
      * by the registry
      */
@@ -133,7 +133,7 @@ public:
     /**
      * Adds a HardFactor pointer to the registry under a custom key.
      * It can later be retrieved by the provided key.
-     * 
+     *
      * @param manage true if the HardFactor object should be deleted
      * by the registry
      */
@@ -142,10 +142,32 @@ public:
      * Returns the hard factor corresponding to the given key, or NULL if none
      */
     const HardFactor* get_hard_factor(const std::string& key) const;
+    /**
+     * Adds a HardFactorGroup pointer to the registry. It can later be
+     * retrieved by its name.
+     *
+     * @param manage true if the HardFactorGroup object should be deleted
+     * by the registry
+     */
+    void add_hard_factor_group(const HardFactorGroup* hfg, bool manage=false);
+    /**
+     * Adds a HardFactorGroup pointer to the registry under a custom key.
+     * It can later be retrieved by the provided key.
+     *
+     * @param manage true if the HardFactorGroup object should be deleted
+     * by the registry
+     */
+    void add_hard_factor_group(const char* key, const HardFactorGroup* hfg, bool manage=false);
+    /**
+     * Returns the hard factor group corresponding to the given key, or NULL if none
+     */
+    const HardFactorGroup* get_hard_factor_group(const std::string& key) const;
 protected:
     ~HardFactorRegistry();
 private:
+    std::map<const std::string, const HardFactorGroup*> hardfactor_groups;
     std::map<const std::string, const HardFactor*> hardfactors;
+    std::list<const HardFactorGroup*> hardfactor_groups_to_delete;
     std::list<const HardFactor*> hardfactors_to_delete;
 };
 
