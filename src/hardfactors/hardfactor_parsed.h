@@ -131,6 +131,7 @@ public:
     void parse_file(const string& filename, bool (*error_handler)(const std::exception& e, const std::string& filename, const size_t line_number) = NULL);
     void parse_line(const string& line);
     HardFactorList get_hard_factors();
+    const HardFactorGroup* get_hard_factor_group(const string& label);
     void reset_current_term();
 
 private:
@@ -139,8 +140,9 @@ private:
     const ParsedHardFactorTerm* create_hard_factor_term();
 
     HardFactorList hard_factors;
+    std::map<const string, const HardFactorGroup*> hard_factor_groups;
     string Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag;
-    string name;
+    string name, implementation;
     HardFactor::HardFactorOrder order;
     const IntegrationType* type;
     HardFactorRegistry* registry;

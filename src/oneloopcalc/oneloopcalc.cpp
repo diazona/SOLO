@@ -44,6 +44,7 @@
 #include "../utils/utils.h"
 #include "../log.h"
 #include "../hardfactors/hardfactor_parsed.h"
+#include "../hardfactors/parsing.h"
 
 using namespace std;
 
@@ -408,14 +409,29 @@ void ProgramConfiguration::parse_hf_specs() {
         throw MissingPropertyException("no hard factors defined");
     }
 
+    // parse the hard factor definition files
     HardFactorParser parser;
     for (vector<string>::const_iterator it = cc[0].hardfactor_definitions.begin(); it != cc[0].hardfactor_definitions.end(); it++) {
         parser.parse_file(*it);
     }
 
+    // parse hard factor specifications given on the command line
     assert(hfgroups.empty());
     for (vector<string>::const_iterator it = hfspecs.begin(); it!= hfspecs.end(); it++) {
-        const HardFactorGroup* hfg = HardFactorGroup::parse(*it, cc[0].exact_kinematics);
+        const HardFactorGroup* hfg;
+        const string& spec = *it;
+        if (spec.find(":") != string::npos) {
+            // includes a colon, so it is a complete hard factor group specification
+            // parse it but don't add it to the parser
+            hfg = parse_hardfactor_group(spec);
+        }
+        else {
+            // no colon, so it references a group specification defined in the file
+            hfg = parser.get_hard_factor_group(spec);
+            if (hfg == NULL) {
+                throw InvalidHardFactorSpecException(spec, "hard factor group not found");
+            }
+        }
         hfgroups.push_back(hfg->objects);
         hfgnames.push_back(hfg->label);
         hfnames.insert(hfnames.end(), hfg->specifications.begin(), hfg->specifications.end());

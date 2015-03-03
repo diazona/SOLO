@@ -18,61 +18,96 @@
  */
 #include "hardfactor.h"
 #include "parsing.h"
+#include "../utils/utils.h"
 
-HardFactorRegistry* parse_one_hardfactor_spec(const string& spec, string& name, const bool check_for_existing) {
-    char hf_type = '\000'; // dummy value, as a default
-    
-    // If the hard factor specification takes the form [letter]:[stuff],
-    // consider the first letter to indicate the type, and remove it and
-    // the colon
-    if (spec[1] == '.' || spec[1] == ':') {
-        hf_type = spec[0];
-        if (is_registry(hf_type)) {
-            name = spec.substr(2);
-        }
-        else {
-            hf_type = '\000';
-        }
+void split_hardfactor(const string& spec, string& name, string& implementation) {
+    vector<string> splitspec;
+    splitspec = split(spec, ".", 2);
+    assert(splitspec.size() == 1 || splitspec.size() == 2);
+    name = splitspec[0];
+    if (splitspec.size() == 2) {
+        implementation = splitspec[1];
     }
-    // Pass the remaining name (e.g. "h02qq") to the hard factor registry
-    // to get the actual hard factor object
-    switch (hf_type) {
-        case 'm':
-            return momentum::registry::get_instance();
-        case 'r':
-            return radial::registry::get_instance();
-        case 'p':
-            return position::registry::get_instance();
-        default:
-            assert(!is_registry(hf_type));
-            if (check_for_existing) {
-                // by default try momentum first, then radial, then position
-                const HardFactor* hf = momentum::registry::get_instance()->get_hard_factor(spec);
-                if (hf != NULL) {
-                    name = spec;
-                    return momentum::registry::get_instance();
-                }
-                hf = radial::registry::get_instance()->get_hard_factor(spec);
-                if (hf != NULL) {
-                    name = spec;
-                    return radial::registry::get_instance();
-                }
-                hf = position::registry::get_instance()->get_hard_factor(spec);
-                if (hf != NULL) {
-                    name = spec;
-                    return position::registry::get_instance();
-                }
-            }
+    else {
+        implementation = "";
     }
-    return NULL;
 }
 
-
 const HardFactor* parse_hardfactor(const string& spec) {
+    // the hard factor takes the form <name>.<implementation>
     string name;
+    string implementation;
+    split_hardfactor(spec, name, implementation);
+    const HardFactor* hardfactor;
+    if (!implementation.empty()) {
+        if (implementation == "momentum" || implementation == "m") {
+            return momentum::registry::get_instance()->get_hard_factor(name);
+        }
+        else if (implementation == "radial" || implementation == "r") {
+            return radial::registry::get_instance()->get_hard_factor(name);
+        }
+        else if (implementation == "position" || implementation == "p") {
+            return position::registry::get_instance()->get_hard_factor(name);
+        }
+        else {
+            return NULL;
+        }
+    }
+    else {
+        // by default try momentum first, then radial, then position
+        hardfactor = momentum::registry::get_instance()->get_hard_factor(name);
+        if (hardfactor != NULL) {
+            return hardfactor;
+        }
+        hardfactor = radial::registry::get_instance()->get_hard_factor(name);
+        if (hardfactor != NULL) {
+            return hardfactor;
+        }
+        hardfactor = position::registry::get_instance()->get_hard_factor(name);
+        return hardfactor; // whether NULL or not
+    }
+}
 
-    const HardFactorRegistry* registry = parse_one_hardfactor_spec(spec, name, true);
-    return registry == NULL ? NULL : registry->get_hard_factor(name);
+const HardFactorGroup* parse_hardfactor_group(const string& spec) {
+    string specname(spec);
+    string specbody(spec);
+
+    vector<string> namesplitspec = split(spec, ":", 2);
+    assert(namesplitspec.size() == 1 || namesplitspec.size() == 2);
+    if (namesplitspec.size() > 1) {
+        if (namesplitspec[0].size() == 0) {
+            // this means there was simply a leading colon; ignore it
+            specname = namesplitspec[1];
+        }
+        else {
+            specname = namesplitspec[0];
+        }
+        specbody = namesplitspec[1];
+    }
+
+    vector<string> splitspec;
+    splitspec = split(specbody, ", ");
+
+    HardFactorList hfobjs;
+    // Iterate over the individual hard factor names
+    for (vector<string>::iterator it = splitspec.begin(); it != splitspec.end(); it++) {
+        const HardFactor* hf = parse_hardfactor(*it);
+        if (hf == NULL) {
+            // the string failed to parse
+            throw InvalidHardFactorSpecException(spec, "No such hard factor");
+        }
+        else {
+            hfobjs.push_back(hf);
+        }
+    }
+    if (hfobjs.size() == 0) {
+        throw InvalidHardFactorSpecException(spec, "No valid hard factors in specification");
+    }
+    else {
+        HardFactorList* p_hfobjs = new HardFactorList(hfobjs);
+        // parsing seems to have succeeded, so go ahead and create the object
+        return new HardFactorGroup(specname, p_hfobjs, splitspec);
+    }
 }
 
 InvalidHardFactorSpecException::InvalidHardFactorSpecException(const string& hfspec, const string& message) throw() : hfspec(hfspec) {
