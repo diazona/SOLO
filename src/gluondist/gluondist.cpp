@@ -1,8 +1,8 @@
 /*
  * Part of oneloopcalc
- * 
+ *
  * Copyright 2012 David Zaslavsky
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -81,7 +81,7 @@ public:
     double Qs2;
     size_t n; // for integrating a term of the series: this is the order of the term being integrated
     AbstractTransformGluonDistribution* gdist;
-    
+
     GDistIntegrationParameters(AbstractTransformGluonDistribution* gdist) : gdist(gdist), u(0), Qs2(0), n(0) {}
 };
 
@@ -100,14 +100,14 @@ AbstractTransformGluonDistribution::AbstractTransformGluonDistribution(
  u2_dimension(1), Y_dimension(1),
  subinterval_limit(subinterval_limit) {
 }
- 
+
 void AbstractTransformGluonDistribution::setup() {
     double step = 1.05;
     GDistIntegrationParameters params(this);
     gsl_function func;
     func.params = &params;
     gsl_integration_workspace* workspace = gsl_integration_workspace_alloc(subinterval_limit);
-    
+
     if (u2min > u2max || Ymin > Ymax) {
         throw InvalidGridRegionException(u2min, u2max, Ymin, Ymax);
     }
@@ -116,7 +116,7 @@ void AbstractTransformGluonDistribution::setup() {
     double log_u2min = log(u2min);
     double log_u2max = log(u2max);
     assert(log_step > 0);
-    
+
     u2_dimension = (size_t)((log_u2max - log_u2min) / log_step) + 2; // subtracting logs rather than dividing may help accuracy
     while (u2_dimension < 4) { // 4 points needed for bicubic interpolation
         u2min /= step;
@@ -131,12 +131,12 @@ void AbstractTransformGluonDistribution::setup() {
             Y_dimension++;
         }
     }
-    
+
     log_u2_values = new double[u2_dimension];
     Y_values = new double[Y_dimension];
-    
+
     double error; // throwaway
-    
+
     // calculate the coefficients for the series approximation
     func.function = gdist_series_term_integrand;
     G_dist_leading_u2 = new double[Y_dimension]; // zeroth order term in series around u2 = 0
@@ -144,14 +144,14 @@ void AbstractTransformGluonDistribution::setup() {
     for (size_t i_Y = 0; i_Y < Y_dimension; i_Y++) {
         Y_values[i_Y] = Ymin + i_Y * log_step;
         params.Qs2 = Qs2(Y_values[i_Y]); // TODO: verify whether sat scale is available at this point
-        
+
         params.n = 0;
         gsl_integration_qagiu(&func, 0, 0, 0.0001, subinterval_limit, workspace, G_dist_leading_u2 + i_Y, &error);
-        
+
         params.n = 2;
         gsl_integration_qagiu(&func, 0, 0, 0.0001, subinterval_limit, workspace, G_dist_subleading_u2 + i_Y, &error);
     }
-    
+
     // calculate the values for the 2D interpolation
     func.function = gdist_integrand;
     G_dist = new double[u2_dimension * Y_dimension];
@@ -164,12 +164,12 @@ void AbstractTransformGluonDistribution::setup() {
             gsl_integration_qagiu(&func, 0, 0, 0.0001, subinterval_limit, workspace, G_dist + index, &error);
         }
     }
-    
+
     assert(log_u2_values[0] <= log_u2min);
     assert(log_u2_values[u2_dimension - 1] >= log_u2max);
     assert(Y_values[0] <= Ymin);
     assert(Y_values[Y_dimension - 1] >= Ymax);
-    
+
     u2_accel = gsl_interp_accel_alloc();
 
     if (Y_dimension == 1) {
@@ -178,13 +178,13 @@ void AbstractTransformGluonDistribution::setup() {
     }
     else {
         Y_accel = gsl_interp_accel_alloc();
-        
+
         interp_dist_leading_u2 = gsl_interp_alloc(gsl_interp_cspline, Y_dimension);
         gsl_interp_init(interp_dist_leading_u2, Y_values, G_dist_leading_u2, Y_dimension);
-        
+
         interp_dist_subleading_u2 = gsl_interp_alloc(gsl_interp_cspline, Y_dimension);
         gsl_interp_init(interp_dist_subleading_u2, Y_values, G_dist_subleading_u2, Y_dimension);
-        
+
         interp_dist_2D = interp2d_alloc(interp2d_bilinear, u2_dimension, Y_dimension);
         interp2d_init(interp_dist_2D, log_u2_values, Y_values, G_dist, u2_dimension, Y_dimension);
     }
@@ -260,7 +260,7 @@ static double position_gdist_integrand(double r, void* closure) {
 
 static double position_gdist_series_term_integrand(double r, void* closure) {
     GDistIntegrationParameters* params = (GDistIntegrationParameters*)closure;
-    // Implements the first two terms of a series expansion in q of 
+    // Implements the first two terms of a series expansion in q of
     //  1/(2pi) int_0^inf dr r S2(r) J_0(qr)
     switch (params->n) {
         case 0:
@@ -295,7 +295,7 @@ static double momentum_gdist_integrand(double q, void* closure) {
 
 static double momentum_gdist_series_term_integrand(double q, void* closure) {
     GDistIntegrationParameters* params = (GDistIntegrationParameters*)closure;
-    // Implements the first two terms of a series expansion in r of 
+    // Implements the first two terms of a series expansion in r of
     //  2pi int_0^inf dq q F(q) J_0(qr)
     switch (params->n) {
         case 0:
@@ -425,7 +425,7 @@ void read_from_file(const string filename, size_t& x_dimension, size_t& y_dimens
         yvals.insert(point.y);
     }
     in.close();
-    
+
     x_dimension = xvals.size();
     y_dimension = yvals.size();
     if (x_dimension * y_dimension != file_data.size()) {
@@ -434,9 +434,9 @@ void read_from_file(const string filename, size_t& x_dimension, size_t& y_dimens
     x_values = new double[x_dimension];
     y_values = new double[y_dimension];
     z_values = new double[x_dimension * y_dimension];
-    
+
     sort(file_data.begin(), file_data.end(), index_comparator);
-    
+
     copy(xvals.begin(), xvals.end(), x_values);
     copy(yvals.begin(), yvals.end(), y_values);
     for (size_t ix = 0; ix < x_dimension; ix++) {
@@ -487,7 +487,13 @@ FileDataGluonDistribution::FileDataGluonDistribution(string pos_filename, string
 }
 
 FileDataGluonDistribution::~FileDataGluonDistribution() {
-    delete[] r2_values, q2_values, Y_values_rspace, Y_values_pspace, S_dist, F_dist, Qs2_values;
+    delete[] r2_values;
+    delete[] q2_values;
+    delete[] Y_values_rspace;
+    delete[] Y_values_pspace;
+    delete[] S_dist;
+    delete[] F_dist;
+    delete[] Qs2_values;
     gsl_interp_accel_free(r2_accel);
     gsl_interp_accel_free(q2_accel);
     gsl_interp_accel_free(Y_accel_r);
@@ -508,7 +514,7 @@ void FileDataGluonDistribution::setup(string pos_filename, string mom_filename, 
     // relative to some initial rapidity, Yinit.
     read_from_file(pos_filename, r2_dimension, Y_dimension_r, r2_values, Y_values_rspace, S_dist);
     read_from_file(mom_filename, q2_dimension, Y_dimension_p, q2_values, Y_values_pspace, F_dist);
-    
+
     // apply the offset
     if (xinit != 1) {
         double Yinit = -log(xinit);
@@ -519,7 +525,7 @@ void FileDataGluonDistribution::setup(string pos_filename, string mom_filename, 
             Y_values_pspace[i] += Yinit;
         }
     }
-    
+
     r2min = r2_values[0];
     r2max = r2_values[r2_dimension-1];
     Yminr = Y_values_rspace[0];
@@ -528,7 +534,7 @@ void FileDataGluonDistribution::setup(string pos_filename, string mom_filename, 
     q2max = q2_values[q2_dimension-1];
     Yminp = Y_values_pspace[0];
     Ymaxp = Y_values_pspace[Y_dimension_p-1];
-    
+
     r2_accel = gsl_interp_accel_alloc();
     q2_accel = gsl_interp_accel_alloc();
 
@@ -548,7 +554,7 @@ void FileDataGluonDistribution::setup(string pos_filename, string mom_filename, 
 
         interp_dist_position_2D = interp2d_alloc(interp2d_bilinear, r2_dimension, Y_dimension_r);
         interp2d_init(interp_dist_position_2D, r2_values, Y_values_rspace, S_dist, r2_dimension, Y_dimension_r);
-        
+
         interp_dist_momentum_2D = interp2d_alloc(interp2d_bilinear, q2_dimension, Y_dimension_p);
         interp2d_init(interp_dist_momentum_2D, q2_values, Y_values_pspace, F_dist, q2_dimension, Y_dimension_p);
     }
@@ -565,7 +571,7 @@ double bracket_root(double (*f)(double, void*), EvaluationParameters* params, do
     size_t iter = 0;
     int status;
     double current_root;
-    
+
     { // check that the function has opposite signs at the endpoints
         double minv = f(min, params);
         double maxv = f(max, params);
@@ -579,14 +585,14 @@ double bracket_root(double (*f)(double, void*), EvaluationParameters* params, do
             GSL_ERROR_VAL("Zero crossing not found", GSL_EINVAL, 0.0);
         }
     }
-    
+
     gsl_function func;
     func.function = f;
     func.params = params;
-    
+
     gsl_root_fsolver* solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
     gsl_root_fsolver_set(solver, &func, min, max);
-    
+
     do {
         status = gsl_root_fsolver_iterate(solver);
         current_root = gsl_root_fsolver_root(solver);
@@ -595,7 +601,7 @@ double bracket_root(double (*f)(double, void*), EvaluationParameters* params, do
         status = gsl_root_test_interval(min, max, 0, 1e-3);
     } while (status == GSL_CONTINUE && ++iter < max_iter);
     gsl_root_fsolver_free(solver);
-    
+
     return current_root;
 }
 
@@ -607,12 +613,12 @@ double evaluate_rspace_threshold_criterion(double r2, void* params) {
 void FileDataGluonDistribution::initialize_saturation_scale_from_position_space(double satscale_threshold) {
     // strategy: search for the point where S(r,Y) = T
     assert(Y_dimension_r >= 1);
-    
+
     double last_Rs2;
     EvaluationParameters p;
     p.gdist = this;
     p.threshold = satscale_threshold;
-    
+
     Qs2_values = new double[Y_dimension_r];
     for (size_t i = 0; i < Y_dimension_r; i++) {
         p.Y = Y_values_rspace[i];
@@ -631,13 +637,13 @@ double evaluate_pspace_threshold_criterion(double k2, void* params) {
 }
 
 void FileDataGluonDistribution::initialize_saturation_scale_from_momentum_space(double satscale_threshold) {
-    // strategy: search for the point where F(k,Y) = T F(k0, Y) 
+    // strategy: search for the point where F(k,Y) = T F(k0, Y)
     assert(Y_dimension_p >= 1);
-    
+
     double last_Qs2;
     EvaluationParameters p;
     p.gdist = this;
-    
+
     Qs2_values = new double[Y_dimension_p];
     for (size_t i = 0; i < Y_dimension_p; i++) {
         p.Y = Y_values_pspace[i];
@@ -791,6 +797,9 @@ void FileDataGluonDistribution::write_satscale_grid(ostream& out) {
         case POSITION_THRESHOLD:
             Y_dimension = Y_dimension_r;
             Y_values = Y_values_rspace;
+            break;
+        case NONE:
+            assert(false);
             break;
     }
     out << "Y\tx\tQs2" << endl;
