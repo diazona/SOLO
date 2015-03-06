@@ -141,7 +141,7 @@ const string format(const T& v) {
 size_t parse_size(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
     multimap<string, string>::iterator el = range.first;
     assert(++el == range.second);
-    return (size_t)strtoul(range.first->second.c_str(), NULL, 0);
+    return static_cast<size_t>(strtoul(range.first->second.c_str(), NULL, 0));
 }
 
 unsigned long int parse_ulong(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
@@ -885,7 +885,6 @@ ThreadLocalContext::~ThreadLocalContext() {
 
 
 #ifdef CONTEXT_TEST
-const double inf = 10;
 ostream& logger = cerr;
 
 int main(int argc, char** argv) {
@@ -894,7 +893,7 @@ int main(int argc, char** argv) {
         return 1;
     }
     ContextCollection cc;
-    for (size_t i = 1; i < argc; i++) {
+    for (size_t i = 1; i < static_cast<size_t>(argc); i++) {
         ifstream config;
         config.open(argv[i]);
         if (config.good()) {

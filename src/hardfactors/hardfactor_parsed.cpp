@@ -635,7 +635,7 @@ void HardFactorParser::set_hard_factor_group_callback(void (*callback)(const Har
 }
 
 
-const bool HardFactorParser::hard_factor_definition_empty() const {
+bool HardFactorParser::hard_factor_definition_empty() const {
     return
       type == NULL &&
       order == sentinel &&
@@ -646,7 +646,7 @@ const bool HardFactorParser::hard_factor_definition_empty() const {
         && Fd_real.empty() && Fd_imag.empty());
 }
 
-const bool HardFactorParser::hard_factor_definition_complete() const {
+bool HardFactorParser::hard_factor_definition_complete() const {
     return
       type != NULL &&
       order != sentinel &&

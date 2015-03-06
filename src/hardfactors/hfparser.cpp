@@ -61,7 +61,7 @@ int main(const int argc, char** argv) {
     parser.set_error_handler(print_err);
     parser.set_hard_factor_callback(handle_hard_factor);
     parser.set_hard_factor_group_callback(handle_hard_factor_group);
-    for (size_t i = 1; i < argc; i++) {
+    for (size_t i = 1; i < static_cast<size_t>(argc); i++) {
         try {
             parser.parse_file(argv[i]);
         }

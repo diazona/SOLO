@@ -54,7 +54,7 @@ using std::vector;
 // for weird technical reasons, this needs to be in a .cpp file, not a header
 HardFactor::~HardFactor() {}
 
-const HardFactor::HardFactorOrder HardFactor::get_order() const {
+HardFactor::HardFactorOrder HardFactor::get_order() const {
     /* This default implementation relies on a particular convention
      * for get_name(), but can be overridden for hard factors where
      * that convention doesn't apply.
@@ -74,7 +74,7 @@ const HardFactor::HardFactorOrder HardFactor::get_order() const {
     }
 };
 
-const size_t HardFactorTerm::get_term_count() const {
+size_t HardFactorTerm::get_term_count() const {
     return 1;
 }
 

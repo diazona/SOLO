@@ -1,8 +1,8 @@
 /*
  * A C++ interface to the DSS pion fragmentation functions.
- * 
+ *
  * Copyright 2012 David Zaslavsky
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -45,10 +45,10 @@ public:
     }
     virtual ~FragmentationFunctionRangeException() throw() {
     }
-    const double z() const {
+    double z() const {
         return _z;
     }
-    const double mu2() const {
+    double mu2() const {
         return _mu2;
     }
     const char* what() const throw() {
@@ -59,7 +59,7 @@ public:
 
 /**
  * A fairly simple C++ interface to the DSS fragmentation functions.
- * 
+ *
  * To use the class, construct an instance passing the name of the
  * file to read data from. It should have 11 columns of numeric data
  * (two plus the number of parton flavors). Then call update() to
@@ -81,8 +81,8 @@ private:
     double** ff_arrays;
 
     /** The name of the file data was read from */
-    const char* filename;
-    
+    const char* m_filename;
+
     // Also for the interpolation. There's one interpolator for each FF.
     interp2d* interpolators[number_of_flavors];
     gsl_interp_accel* lnz_accel[number_of_flavors];
@@ -98,7 +98,7 @@ private:
     double pi_minus_ff[number_of_flavors];
     /** The value of the pi0 fragmentation functions at the current z and Q_s^2. */
     double pi_zero_ff[number_of_flavors];
-    
+
 public:
     /** Constants representing the parton flavors. */
     enum flavor {gluon, up, up_bar, down, down_bar, strange, strange_bar, charm, charm_bar};
@@ -108,6 +108,8 @@ public:
     /** Construct an object, reading data from the given file. */
     DSSpiNLO(const char* filename);
     ~DSSpiNLO();
+    /** Give the filename the object was constructed with. */
+    const char* filename();
     /** Set the current values of z and Q_s^2. */
     void update(double z, double qs2);
     /** Get the value of a fragmentation function at the current z and Q_s^2. */

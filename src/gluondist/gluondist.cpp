@@ -117,7 +117,7 @@ void AbstractTransformGluonDistribution::setup() {
     double log_u2max = log(u2max);
     assert(log_step > 0);
 
-    u2_dimension = (size_t)((log_u2max - log_u2min) / log_step) + 2; // subtracting logs rather than dividing may help accuracy
+    u2_dimension = static_cast<size_t>(((log_u2max - log_u2min) / log_step) + 2); // subtracting logs rather than dividing may help accuracy
     while (u2_dimension < 4) { // 4 points needed for bicubic interpolation
         u2min /= step;
         log_u2min -= log_step;
@@ -125,7 +125,7 @@ void AbstractTransformGluonDistribution::setup() {
     }
     if (Ymin != Ymax) {
         assert(Ymax > Ymin);
-        Y_dimension = (size_t)((Ymax - Ymin) / log_step) + 2;
+        Y_dimension = static_cast<size_t>(((Ymax - Ymin) / log_step) + 2);
         while (Y_dimension < 4) { // 4 points needed for bicubic interpolation
             Ymin -= log_step;
             Y_dimension++;
@@ -252,14 +252,16 @@ void AbstractTransformGluonDistribution::write_grid(ostream& out) {
 }
 
 static double position_gdist_integrand(double r, void* closure) {
-    GDistIntegrationParameters* params = (GDistIntegrationParameters*)closure;
+    assert(closure != NULL);
+    GDistIntegrationParameters* params = static_cast<GDistIntegrationParameters*>(closure);
     double q = params->u;
     // Implements 1/(2pi) int_0^inf dr r S2(r) J_0(qr)
     return 0.5 * M_1_PI * r * params->gdist->S2(r*r, params->Qs2) * gsl_sf_bessel_J0(q * r);
 }
 
 static double position_gdist_series_term_integrand(double r, void* closure) {
-    GDistIntegrationParameters* params = (GDistIntegrationParameters*)closure;
+    assert(closure != NULL);
+    GDistIntegrationParameters* params = static_cast<GDistIntegrationParameters*>(closure);
     // Implements the first two terms of a series expansion in q of
     //  1/(2pi) int_0^inf dr r S2(r) J_0(qr)
     switch (params->n) {
@@ -287,14 +289,16 @@ void AbstractPositionGluonDistribution::write_pspace_grid(ostream& out) {
 
 
 static double momentum_gdist_integrand(double q, void* closure) {
-    GDistIntegrationParameters* params = (GDistIntegrationParameters*)closure;
+    assert(closure != NULL);
+    GDistIntegrationParameters* params = static_cast<GDistIntegrationParameters*>(closure);
     double r = params->u;
     // Implements 2pi int_0^inf dq q F(q) J_0(qr)
     return 2 * M_PI * q * params->gdist->F(q*q, params->Qs2) * gsl_sf_bessel_J0(r * q);
 }
 
 static double momentum_gdist_series_term_integrand(double q, void* closure) {
-    GDistIntegrationParameters* params = (GDistIntegrationParameters*)closure;
+    assert(closure != NULL);
+    GDistIntegrationParameters* params = static_cast<GDistIntegrationParameters*>(closure);
     // Implements the first two terms of a series expansion in r of
     //  2pi int_0^inf dq q F(q) J_0(qr)
     switch (params->n) {
@@ -606,7 +610,8 @@ double bracket_root(double (*f)(double, void*), EvaluationParameters* params, do
 }
 
 double evaluate_rspace_threshold_criterion(double r2, void* params) {
-    EvaluationParameters* p = (EvaluationParameters*)params;
+    assert(params != NULL);
+    EvaluationParameters* p = static_cast<EvaluationParameters*>(params);
     return p->gdist->S2(r2, p->Y) - p->threshold;
 }
 
@@ -632,7 +637,8 @@ void FileDataGluonDistribution::initialize_saturation_scale_from_position_space(
 }
 
 double evaluate_pspace_threshold_criterion(double k2, void* params) {
-    EvaluationParameters* p = (EvaluationParameters*)params;
+    assert(params != NULL);
+    EvaluationParameters* p = static_cast<EvaluationParameters*>(params);
     return p->gdist->F(k2, p->Y) - p->threshold;
 }
 

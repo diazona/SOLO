@@ -1,8 +1,8 @@
 /*
  * A C++ interface to the DSS pion fragmentation functions.
- * 
+ *
  * Copyright 2012 David Zaslavsky
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -30,22 +30,22 @@
 DSSpiNLO::DSSpiNLO(const char* filename) :
  number_of_lnz_values(0), number_of_lnqs2_values(0),
  lnz_array(NULL), lnqs2_array(NULL), ff_arrays(NULL),
- filename(filename) {
+ m_filename(filename) {
     std::cerr << "Reading FF data from file " << filename << std::endl;
     double lnz;
     double lnqs2;
     size_t index;
     std::ifstream input;
-    
+
     size_t lines = 0;
     std::set<double> lnz_values;
     std::set<double> lnqs2_values;
-    
+
     input.open(filename);
     if (!input.good()) {
         throw std::ios_base::failure("Unable to read file");
     }
-    
+
     // Read through once to identify unique lnz and lnQs2 values
     input >> lnz >> lnqs2;
     while (!input.eof()) {
@@ -65,17 +65,17 @@ DSSpiNLO::DSSpiNLO(const char* filename) :
         std::cerr << "      " << lines << " lines read from file" << std::endl;
         exit(1);
     }
-    
+
     lnz_array = new double[number_of_lnz_values];
     lnqs2_array = new double[number_of_lnqs2_values];
     ff_arrays = new double*[number_of_flavors];
     for (size_t i = 0; i < number_of_flavors; i++) {
         ff_arrays[i] = new double[number_of_lnz_values * number_of_lnqs2_values];
     }
-    
+
     input.clear(); // have to clear the EOF bit before seeking
     input.seekg(0, std::ios::beg);
-    
+
     // Read through again to actually get the data
     for (size_t iz = 0; iz < number_of_lnz_values; iz++) {
         for (size_t iq = 0; iq < number_of_lnqs2_values; iq++) {
@@ -97,9 +97,9 @@ DSSpiNLO::DSSpiNLO(const char* filename) :
         lnz_array[iz] = lnz;
     }
     input.close();
-    
+
     std::cerr << "Constructing interpolation" << std::endl;
-    
+
     // construct interpolation objects
     for (size_t i = 0; i < number_of_flavors; i++) {
         lnz_accel[i] = gsl_interp_accel_alloc();
@@ -108,7 +108,7 @@ DSSpiNLO::DSSpiNLO(const char* filename) :
         interpolators[i] = interp2d_alloc(interp2d_bilinear, number_of_lnz_values, number_of_lnqs2_values);
         interp2d_init(interpolators[i], lnz_array, lnqs2_array, ff_arrays[i], number_of_lnz_values, number_of_lnqs2_values);
     }
-    
+
     std::cerr << "Done initializing DSSpiNLO" << std::endl;
 }
 
@@ -130,6 +130,11 @@ DSSpiNLO::~DSSpiNLO() {
     delete[] lnqs2_array;
     lnqs2_array = NULL;
 }
+
+const char* DSSpiNLO::filename() {
+    return m_filename;
+}
+
 
 void DSSpiNLO::update(double z, double qs2) {
     lnz = log(z);

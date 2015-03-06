@@ -1,8 +1,8 @@
 /*
  * Part of oneloopcalc
- * 
+ *
  * Copyright 2012 David Zaslavsky
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -54,10 +54,10 @@ public:
     const std::string& file() const {
         return _file;
     }
-    const int line() const {
+    int line() const {
         return _line;
     }
-    const int gsl_errno() const {
+    int gsl_errno() const {
         return _gsl_errno;
     }
     const char* what() const throw() {

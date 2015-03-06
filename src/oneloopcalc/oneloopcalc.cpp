@@ -73,7 +73,7 @@ void write_data_point(const IntegrationContext* ictx, const double real, const d
         trace_stream << endl;
         return;
     }
-#define process(v) if (trace_vars[(size_t)trace_variable::v]) { trace_stream << ictx->v << "\t"; }
+#define process(v) if (trace_vars[static_cast<size_t>(trace_variable::v)]) { trace_stream << ictx->v << "\t"; }
 #include "../integration/ictx_var_list.inc"
 #undef process
     trace_stream << real << "\t" << imag << "\t";
@@ -330,7 +330,7 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
                     vector<string> w = split(v[1], ",");
                     for (vector<string>::iterator it = w.begin(); it != w.end(); it++) {
                         bool handled = false;
-#define process(v) if (*it == #v) { trace_vars.set((size_t)trace_variable::v); handled = true; }
+#define process(v) if (*it == #v) { trace_vars.set(static_cast<size_t>(trace_variable::v)); handled = true; }
 #include "../integration/ictx_var_list.inc"
 #undef process
                         if (!handled) {
@@ -555,8 +555,8 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
     using std::setw;
     const string OFS = " ";   // output field separator - make sure fields are space-separated
     const string BLANK = " "; // a blank field
-    size_t lw = 6;
-    size_t rw = 14; // "label width" and "result width"
+    int lw = 6;
+    int rw = 14; // "label width" and "result width"
 
     // write headers
     if (rc.separate) {
@@ -666,7 +666,7 @@ string get_hex_representation(const unsigned char* bytes, size_t length) {
     os.fill('0');
     os << hex;
     for(const unsigned char * ptr=bytes; ptr < bytes+length; ptr++) {
-        os << setw(2) << (unsigned int)*ptr;
+        os << setw(2) << static_cast<unsigned int>(*ptr);
     }
     return os.str();
 }
@@ -684,7 +684,7 @@ string sha1_file(string filename) {
     }
     while (i) {
         i.read(buffer, sizeof(buffer));
-        SHA1_Update(&c, buffer, i.gcount());
+        SHA1_Update(&c, buffer, static_cast<size_t>(i.gcount()));
     }
     i.close();
     SHA1_Final(hash, &c);

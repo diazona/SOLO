@@ -190,7 +190,7 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
 void cubature_wrapper(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nresults, double* results) {
     double real;
     double imag;
-    Integrator* integrator = (Integrator*)closure;
+    Integrator* integrator = static_cast<Integrator*>(closure);
     integrator->current_type->update(integrator->ictx, integrator->core_dimensions, coordinates);
     integrator->evaluate_integrand(&real, &imag);
     assert(nresults == 1 || nresults == 2);
@@ -210,7 +210,7 @@ void cubature_wrapper(unsigned int ncoords, const double* coordinates, void* clo
 double gsl_monte_wrapper(double* coordinates, size_t ncoords, void* closure) {
     double real;
     // this does basically the same thing as cubature_wrapper but with a different signature
-    cubature_wrapper(ncoords,  coordinates,  closure, 1, &real);
+    cubature_wrapper(static_cast<unsigned int>(ncoords),  coordinates,  closure, 1, &real);
     return real;
 }
 
@@ -325,7 +325,7 @@ void quasi_integrate(double (*func)(double*, size_t, void*), size_t dim, void* c
 
 void cubature_integrate(integrand func, size_t dim, void* closure, double* min, double* max, double* p_result, double* p_abserr,
                         size_t iterations, double relerr, double abserr, void (*callback)(double*, double*)) {
-    adapt_integrate(1, func, closure, dim, min, max, iterations, abserr, relerr, p_result, p_abserr);
+    adapt_integrate(1, func, closure, static_cast<unsigned int>(dim), min, max, static_cast<unsigned int>(iterations), abserr, relerr, p_result, p_abserr);
     checkfinite(*p_result);
     checkfinite(*p_abserr);
     if (callback) {
@@ -350,7 +350,7 @@ void Integrator::integrate_impl(size_t core_dimensions, double* result, double* 
             break;
         default:
             if (ictx.ctx->strategy == MC_QUASI) {
-                gsl_qrng* qrng = gsl_qrng_alloc(ictx.ctx->quasirandom_generator_type, dimensions);
+                gsl_qrng* qrng = gsl_qrng_alloc(ictx.ctx->quasirandom_generator_type, static_cast<unsigned int>(dimensions));
                 quasi_integrate(gsl_monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->quasi_iterations, ictx.ctx->relerr, ictx.ctx->abserr, qrng, quasi_callback);
                 gsl_qrng_free(qrng);
                 qrng = NULL;

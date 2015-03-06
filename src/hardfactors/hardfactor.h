@@ -60,7 +60,7 @@ public:
     /** The implementation code of the hard factor. */
     virtual const char* get_implementation() const = 0;
     /** The number of HardFactorTerm objects this hard factor has. */
-    virtual const size_t get_term_count() const = 0;
+    virtual size_t get_term_count() const = 0;
     /** A pointer to the list of HardFactorTerm objects. */
     virtual const HardFactorTerm* const* get_terms() const = 0;
     /**
@@ -68,7 +68,7 @@ public:
      * of kinematic variables (IntegrationContext::xp, IntegrationContext::xg)
      * are used when evaluating the `HardFactor`.
      */
-    virtual const HardFactorOrder get_order() const;
+    virtual HardFactorOrder get_order() const;
 };
 
 /**
@@ -95,7 +95,7 @@ public:
     /**
      * @return 1
      */
-    const size_t get_term_count() const;
+    size_t get_term_count() const;
     /**
      * @return `this`
      */

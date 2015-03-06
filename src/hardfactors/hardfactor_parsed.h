@@ -39,7 +39,7 @@ public:
     const char* get_name() const { return m_name.c_str(); }
     const char* get_implementation() const { return m_implementation.c_str(); }
     const IntegrationType* get_type() const { return mp_type; }
-    const HardFactorOrder get_order() const { return m_order; }
+    HardFactorOrder get_order() const { return m_order; }
     void Fs(const IntegrationContext* ictx, double* real, double* imag) const;
     void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
@@ -124,8 +124,8 @@ public:
 
     const char* get_name() const { return m_name.c_str(); }
     const char* get_implementation() const { return m_implementation.c_str(); }
-    const HardFactorOrder get_order() const { return m_order; }
-    const size_t get_term_count() const { return m_term_count; }
+    HardFactorOrder get_order() const { return m_order; }
+    size_t get_term_count() const { return m_term_count; }
     const HardFactorTerm* const* get_terms() const { return m_terms; }
 private:
     const bool need_to_free_m_terms;
@@ -284,8 +284,8 @@ public:
 
     HardFactorRegistry registry;
 private:
-    const bool hard_factor_definition_complete() const;
-    const bool hard_factor_definition_empty() const;
+    bool hard_factor_definition_complete() const;
+    bool hard_factor_definition_empty() const;
     const ParsedHardFactorTerm* create_hard_factor_term();
     void reset_current_term();
 
