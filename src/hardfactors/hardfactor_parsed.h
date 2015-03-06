@@ -21,28 +21,14 @@
 #include "hardfactor.h"
 #include "../typedefs.h"
 
-class ParsedCompositeHardFactor : public HardFactor {
-public:
-    ParsedCompositeHardFactor(const string& name, const HardFactor::HardFactorOrder order, const size_t term_count, const HardFactorTerm** terms);
-    ParsedCompositeHardFactor(const string& name, const HardFactor::HardFactorOrder order, const HardFactorTermList terms);
-    ~ParsedCompositeHardFactor();
-
-    const char* get_name() const { return m_name.c_str(); }
-    const HardFactorOrder get_order() const { return m_order; }
-    const size_t get_term_count() const { return m_term_count; }
-    const HardFactorTerm* const* get_terms() const { return m_terms; }
-private:
-    const bool need_to_free_m_terms;
-    const std::string m_name;
-    const HardFactorOrder m_order;
-    const size_t m_term_count;
-    const HardFactorTerm** m_terms;
-};
-
+/**
+ * A ::HardFactorTerm subclass which represents formulas parsed from text.
+ */
 class ParsedHardFactorTerm : public HardFactorTerm {
 public:
     ParsedHardFactorTerm(
-        const string& name,
+        const std::string& name,
+        const std::string& implementation,
         const HardFactorOrder order,
         const IntegrationType* type,
         const string& Fs_real, const string& Fs_imag,
@@ -51,6 +37,7 @@ public:
     );
 
     const char* get_name() const { return m_name.c_str(); }
+    const char* get_implementation() const { return m_implementation.c_str(); }
     const IntegrationType* get_type() const { return mp_type; }
     const HardFactorOrder get_order() const { return m_order; }
     void Fs(const IntegrationContext* ictx, double* real, double* imag) const;
@@ -114,6 +101,7 @@ private:
     mutable mu::Parser Fd_parser;
 
     const std::string m_name;
+    const std::string m_implementation;
     const HardFactorOrder m_order;
     const IntegrationType* mp_type;
 
@@ -124,20 +112,182 @@ private:
 # endif
 };
 
-// This class is NOT thread-safe
+/**
+ * A ::HardFactor representing a sum of multiple terms, where the specification
+ * of which terms has been parsed from text.
+ */
+class ParsedCompositeHardFactor : public HardFactor {
+public:
+    ParsedCompositeHardFactor(const string& name, const HardFactor::HardFactorOrder order, const size_t term_count, const HardFactorTerm** terms);
+    ParsedCompositeHardFactor(const string& name, const HardFactor::HardFactorOrder order, const HardFactorTermList terms);
+    ~ParsedCompositeHardFactor();
+
+    const char* get_name() const { return m_name.c_str(); }
+    const char* get_implementation() const { return m_implementation.c_str(); }
+    const HardFactorOrder get_order() const { return m_order; }
+    const size_t get_term_count() const { return m_term_count; }
+    const HardFactorTerm* const* get_terms() const { return m_terms; }
+private:
+    const bool need_to_free_m_terms;
+    const std::string m_name;
+    const std::string m_implementation;
+    const HardFactorOrder m_order;
+    const size_t m_term_count;
+    const HardFactorTerm** m_terms;
+};
+
+/**
+ * The object that parses hard factors from text specifications.
+ */
 class HardFactorParser {
 public:
     HardFactorParser();
-    void parse_file(const string& filename, bool (*error_handler)(const std::exception& e, const std::string& filename, const size_t line_number) = NULL);
-    void parse_line(const string& line);
-    HardFactorList get_hard_factors();
-    const HardFactorGroup* get_hard_factor_group(const std::string& label);
-    void reset_current_term();
 
+    /**
+     * Parses a file containing hard factor specifications. The parser recognizes
+     * three kinds of content:
+     *
+     * - Elementary hard factor specifications, which contain a name, an integration
+     *   type, an order (`LO` or `NLO`), and formulas to be used to evaluate the
+     *   parts of the hard factor. Each of these is given on a line in `key = value`
+     *   format. For example:
+     *
+     *     name = testhf1
+     *     type = none
+     *     order = LO
+     *     Fs real = 1 + xi2
+     *     Fs imag = 1 - xi2
+     *     Fn real = 1/z
+     *     Fn imag = 1/z
+     *     Fd real = r2/(s2*t2)
+     *     Fd imag = r2/(s2*t2)
+     *
+     *   The variables that can be used in the expressions are those stored in
+     *   ::IntegrationContext and ::Context.
+     *
+     *   Technically speaking, these correspond to instances of ::HardFactorTerm,
+     *   but in most cases they are only used as instances of ::HardFactor.
+     * - Composite hard factor specifications, which contain a name, an optional
+     *   implementaion code, and a list of elementary hard factor specifications
+     *   which constitute the composite hard factor. The composite hard factor
+     *   represents the sum of the elementary hard factors that it contains. This
+     *   specification is given in the format
+     *
+     *     hfname.hfimpl = hfname.hfimpl,hfname.hfimpl
+     *
+     *   with the name and implementation of the composite hard factor occuring
+     *   as the key (before the equal sign), and the names and implementations of
+     *   the elementary hard factors that make it up as the value, separated by
+     *   commas. Implementation codes are optional in all cases (though bear in mind
+     *   that things can get weird if multiple hard factors are defined with the same
+     *   name but one of them doesn't have an implementation code). Examples:
+     *
+     *     testchf.foo = testhf1.m,testhf2.m,testhf3
+     *     testchf.bar = testhf1.r,testhf2.r,testhf3
+     *
+     *   Once a composite hard factor is defined in this way, it can be used just like
+     *   an elementary hard factor (i.e. as an instance of ::HardFactor).
+     * - Hard factor group specifications, which contain a label and a list of
+     *   (elementary or composite) hard factor specifications. These are given as
+     *
+     *     label.hfgimpl:hfname.hfimpl,hfname.hfimpl,hfname.hfimpl
+     *
+     *   Groups differ from composite hard factors in that their constitutent hard factors
+     *   can be separated by the program and calculated individually.
+     *
+     * Each time a hard factor definition (elementary or composite) is read from
+     * the file, this calls the callback registered with ::set_hard_factor_callback,
+     * and each time a hard factor group definition is read from the file, it
+     * calls the callback registered with ::set_hard_factor_group_callback.
+     *
+     * This method basically just executes ::parse_line for each line of the file
+     * in order, with a bit of dressing which calls the error handler registered
+     * using ::set_error_handler in case `parse_line` ever throws an error.
+     *
+     * @param[in] filename the name of the file to parse
+     */
+    void parse_file(const std::string& filename);
+
+    /**
+     * Parses a single line of a file. This is the method that actually does the
+     * parsing, but most client code never calls it directly. To parse a file you
+     * should usually use ::parse_file instead. This method is only exposed as
+     * part of the public interface in case some client code wants to do something
+     * weird that `parse_file` can't handle (for example, parsing a stream).
+     *
+     * @param[in] line the line
+     */
+    void parse_line(const std::string& line);
+
+    /**
+     * Attempts to parse a string as a hard factor group specification.
+     * The specification passed should take the form
+     *
+     *     name:hfname.hfimpl,hfname.hfimpl,hfname.hfimpl,...
+     *
+     * where
+     *
+     * - `name` is the descriptive name of the hard factor group,  which can
+     *   be used to refer to it on the command line of `oneloopcalc`. The name
+     *   is optional; if one is not provided, the hard factor group's name will
+     *   simply be the full text of the specification.
+     * - `hfname.hfimpl` is a hard factor specification, as described in the
+     *   documentation for ::parse_hardfactor.
+     *
+     * This method is used internally by ::parse_line if a hard factor group
+     * specification is encountered while parsing, or it can also be called
+     * by external code. It always returns a newly constructed ::HardFactorGroup
+     * object. The new object is _not_ added to the ::HardFactorRegistry by this
+     * method, though when this is called from `parse_line`, the returned pointer
+     * will be added to the registry.
+     *
+     * @return the group object, or `NULL` if the parsing failed to produce
+     * a valid group
+     */
+    const HardFactorGroup* parse_hard_factor_group(const std::string& spec);
+
+    /**
+     * Splits a string representing a hard factor specification into a name
+     * and implementation. The specification passed should take the form
+     *
+     *     name.implementation
+     *
+     * or just
+     *
+     *     name
+     *
+     * where
+     *
+     * - `name` is the descriptive name of the hard factor.
+     * - `implementation` identifies which implementation of the hard factor
+     *   is desired. Sometimes there are multiple expressions that can be
+     *   used to calculate the same thing; the implementation code is a way
+     *   to distinguish between them. For example, `m` or `momentum` means
+     *   to use a momentum-space expression, `r` or `radial` for a radial
+     *   position space expression, and `p` or `position` for a Cartesian
+     *   position space expression. The implementation code is optional.
+     *
+     * This function makes no attempt to verify that either `name` or
+     * `implementation` actually refers to a real hard factor. To do that,
+     * use ::parse_hardfactor.
+     *
+     * @param[in] spec the hard factor specification
+     * @param[out] name the name part of the specification
+     * @param[out] implementation the implementation part of the specification,
+     * or the empty string if no implementation part is provided
+     */
+    static void split_hardfactor(const std::string& spec, std::string& name, std::string& implementation);
+
+    void set_hard_factor_callback(void (*callback)(const HardFactor& hf));
+    void set_hard_factor_group_callback(void (*callback)(const HardFactorGroup& hfg));
+    void set_error_handler(bool (*error_handler)(const std::exception& e, const std::string& filename, const size_t line_number));
+
+    HardFactorRegistry registry;
 private:
     const bool hard_factor_definition_complete() const;
     const bool hard_factor_definition_empty() const;
     const ParsedHardFactorTerm* create_hard_factor_term();
+    void reset_current_term();
 
     HardFactorList hard_factors;
     std::map<const string, const HardFactorGroup*> hard_factor_groups;
@@ -145,7 +295,11 @@ private:
     string name, implementation;
     HardFactor::HardFactorOrder order;
     const IntegrationType* type;
-    HardFactorRegistry* registry;
+
+    // callbacks
+    void (*hard_factor_callback)(const HardFactor& hf);
+    void (*hard_factor_group_callback)(const HardFactorGroup& hfg);
+    bool (*error_handler)(const std::exception& e, const std::string& filename, const size_t line_number);
 };
 
 /**
@@ -199,3 +353,26 @@ public:
     const char* what() const throw();
 };
 
+/**
+ * An exception to be thrown when a hard factor specification fails to be
+ * parsed for some reason. The reason is indicated by the message.
+ */
+class InvalidHardFactorSpecException : public std::exception {
+private:
+    std::string _message;
+public:
+    std::string hfspec;
+    /**
+     * Constructs an instance of the exception.
+     *
+     * @param hfspec the hard factor specification or part of a specification
+     *  that caused the error
+     * @param message a descriptive human-readable message indicating why hfspec
+     *  could not be parsed
+     */
+    InvalidHardFactorSpecException(const std::string& hfspec, const std::string& message) throw();
+    InvalidHardFactorSpecException(const InvalidHardFactorSpecException& other) throw() : _message(other._message) {}
+    ~InvalidHardFactorSpecException() throw() {}
+    void operator=(const InvalidHardFactorSpecException& other);
+    const char* what() const throw();
+};

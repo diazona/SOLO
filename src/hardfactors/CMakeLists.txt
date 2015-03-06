@@ -16,7 +16,6 @@ add_executable(hfparser
     hfparser.cpp
     hardfactor.cpp
     hardfactor_parsed.cpp
-    parsing.cpp
     ${SOLO_SOURCE_DIR}/integration/integrationtype.cpp
     ${SOLO_SOURCE_DIR}/integration/integrationcontext.cpp
     ${SOLO_SOURCE_DIR}/mstwpdf.cc

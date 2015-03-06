@@ -17,6 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <string>
 #include "hardfactor.h"
 #include "../utils/utils.h"
 
@@ -45,6 +46,8 @@ namespace momentum {
     const QLimitedMomentumIntegrationType qlim(2);
 }
 
+using std::list;
+using std::pair;
 using std::string;
 using std::vector;
 
@@ -79,63 +82,57 @@ const HardFactorTerm* const* HardFactorTerm::get_terms() const {
     return &p_this;
 }
 
+
 void HardFactorRegistry::add_hard_factor(const HardFactor* hf, bool manage) {
-    add_hard_factor(hf->get_name(), hf, manage);
+    add_hard_factor(hf->get_name(), hf->get_implementation(), hf, manage);
 }
 
-void HardFactorRegistry::add_hard_factor(const char* key, const HardFactor* hf, bool manage) {
-    using namespace std;
-    string keystring(key);
-    assert(!keystring.empty());
-    transform(keystring.begin(), keystring.end(), keystring.begin(), ::tolower);
+void HardFactorRegistry::add_hard_factor(const string& name, const string& implementation, const HardFactor* hf, bool manage) {
     // note that even if another HardFactor is later added with the
     // same name, it doesn't cause a memory leak
-    hardfactors[keystring] = hf;
+    hardfactors.add(name, implementation, hf);
     if (manage) {
         hardfactors_to_delete.push_back(hf);
     }
 }
 
-const HardFactor* HardFactorRegistry::get_hard_factor(const string& key) const {
-    using namespace std;
-    string keystring(key);
-    transform(keystring.begin(), keystring.end(), keystring.begin(), ::tolower);
-    map<const string, const HardFactor*>::const_iterator it = hardfactors.find(key);
-    if (it == hardfactors.end()) {
+const HardFactor* HardFactorRegistry::get_hard_factor(const string& name) const {
+    try {
+        return hardfactors.get(name);
+    }
+    catch (const out_of_range& e) {
         return NULL;
     }
-    else {
-        return it->second;
+}
+
+const HardFactor* HardFactorRegistry::get_hard_factor(const string& name, const string& implementation) const {
+    try {
+        return hardfactors.get(name, implementation);
+    }
+    catch (const out_of_range& e) {
+        return NULL;
     }
 }
 
 void HardFactorRegistry::add_hard_factor_group(const HardFactorGroup* hfg, bool manage) {
-    add_hard_factor_group(hfg->label.c_str(), hfg, manage);
+    add_hard_factor_group(hfg->label, hfg, manage);
 }
 
-void HardFactorRegistry::add_hard_factor_group(const char* key, const HardFactorGroup* hfg, bool manage) {
-    using namespace std;
-    string keystring(key);
-    assert(!keystring.empty());
-    transform(keystring.begin(), keystring.end(), keystring.begin(), ::tolower);
+void HardFactorRegistry::add_hard_factor_group(const string& name, const HardFactorGroup* hfg, bool manage) {
     // note that even if another HardFactorGroup is later added with the
     // same name, it doesn't cause a memory leak
-    hardfactor_groups[keystring] = hfg;
+    hardfactor_groups.add(name, "", hfg);
     if (manage) {
         hardfactor_groups_to_delete.push_back(hfg);
     }
 }
 
-const HardFactorGroup* HardFactorRegistry::get_hard_factor_group(const string& key) const {
-    using namespace std;
-    string keystring(key);
-    transform(keystring.begin(), keystring.end(), keystring.begin(), ::tolower);
-    map<const string, const HardFactorGroup*>::const_iterator it = hardfactor_groups.find(key);
-    if (it == hardfactor_groups.end()) {
-        return NULL;
+const HardFactorGroup* HardFactorRegistry::get_hard_factor_group(const string& name) const {
+    try {
+        return hardfactor_groups.get(name);
     }
-    else {
-        return it->second;
+    catch (const out_of_range& e) {
+        return NULL;
     }
 }
 

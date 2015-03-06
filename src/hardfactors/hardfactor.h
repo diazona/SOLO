@@ -22,13 +22,13 @@
 
 #include <algorithm>
 #include <list>
-#include <map>
 #include <sstream>
 #include <string>
 #include <vector>
 #include "../typedefs.h"
 #include "../integration/integrationcontext.h"
 #include "../integration/integrationtype.h"
+#include "categorymap.h"
 
 class HardFactorTerm;
 
@@ -57,6 +57,8 @@ public:
     virtual ~HardFactor();
     /** The human-readable name of the hard factor. */
     virtual const char* get_name() const = 0;
+    /** The implementation code of the hard factor. */
+    virtual const char* get_implementation() const = 0;
     /** The number of HardFactorTerm objects this hard factor has. */
     virtual const size_t get_term_count() const = 0;
     /** A pointer to the list of HardFactorTerm objects. */
@@ -115,7 +117,6 @@ public:
     const std::vector<std::string> specifications;
 };
 
-
 /**
  * A class that holds a map of strings to ::HardFactor and ::HardFactorGroup
  * objects, and can return the object corresponding to a given string key.
@@ -137,11 +138,38 @@ public:
      * @param manage true if the HardFactor object should be deleted
      * by the registry
      */
-    void add_hard_factor(const char* key, const HardFactor* hf, bool manage=false);
+    void add_hard_factor(const std::string& name, const std::string& implementation, const HardFactor* hf, bool manage=false);
     /**
-     * Returns the hard factor corresponding to the given key, or NULL if none
+     * Returns the hard factor corresponding to the given specification.
+     * The specification consists of a name and an implementation, where
+     *
+     * - `name` is the descriptive name of the hard factor.
+     * - `implementation` identifies which implementation of the hard factor
+     *   is desired. Sometimes there are multiple expressions that can be
+     *   used to calculate the same thing; the implementation code is a way
+     *   to distinguish between them.
+     *
+     * This implementation of the function does not have backwards
+     * compatibility with previous versions of SOLO.
+     *
+     * @param[in] name the hard factor name
+     * @param[in] implementation the implementation code
+     * @return the `HardFactor`, or `NULL` if no hard factor with the given
+     * name and implementation could be found.
      */
-    const HardFactor* get_hard_factor(const std::string& key) const;
+    const HardFactor* get_hard_factor(const std::string& name, const std::string& implementation) const;
+    /**
+     * Returns the hard factor corresponding to the given specification.
+     * The specification in this case is just the descriptive name of the
+     * hard factor. The method will choose the first hard factor that was
+     * added to the registry with the given name, regardless of its
+     * implementation code.
+     *
+     * @param[in] spec the hard factor specification
+     * @return the `HardFactor`, or `NULL` if no hard factor with the given
+     * name and implementation could be found.
+     */
+    const HardFactor* get_hard_factor(const std::string& name) const;
     /**
      * Adds a HardFactorGroup pointer to the registry. It can later be
      * retrieved by its name.
@@ -157,16 +185,16 @@ public:
      * @param manage true if the HardFactorGroup object should be deleted
      * by the registry
      */
-    void add_hard_factor_group(const char* key, const HardFactorGroup* hfg, bool manage=false);
+    void add_hard_factor_group(const string& name, const HardFactorGroup* hfg, bool manage = false);
     /**
      * Returns the hard factor group corresponding to the given key, or NULL if none
      */
     const HardFactorGroup* get_hard_factor_group(const std::string& key) const;
-protected:
+
     ~HardFactorRegistry();
 private:
-    std::map<const std::string, const HardFactorGroup*> hardfactor_groups;
-    std::map<const std::string, const HardFactor*> hardfactors;
+    category_map<const HardFactorGroup*> hardfactor_groups;
+    category_map<const HardFactor*> hardfactors;
     std::list<const HardFactorGroup*> hardfactor_groups_to_delete;
     std::list<const HardFactor*> hardfactors_to_delete;
 };
@@ -178,7 +206,7 @@ private:
  */
 class KinematicSchemeMismatchException : public std::exception {
 private:
-    string _message;
+    std::string _message;
 public:
     KinematicSchemeMismatchException(const HardFactor& hf) throw();
     KinematicSchemeMismatchException(const KinematicSchemeMismatchException& other) throw() : _message(other._message) {}

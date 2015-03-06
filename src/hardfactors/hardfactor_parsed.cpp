@@ -1,8 +1,8 @@
 /*
  * Part of oneloopcalc
- * 
+ *
  * Copyright 2014 David Zaslavsky
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -20,13 +20,13 @@
 #include <cassert>
 #include <fstream>
 #include <istream>
+#include <iostream>
 #include <sstream>
 #include <muParser.h>
 #include <gsl/gsl_math.h>
 #include "gsl_mu.h"
 #include "hardfactor.h"
 #include "hardfactor_parsed.h"
-#include "parsing.h"
 #include "../typedefs.h"
 #include "../utils/utils.h"
 
@@ -34,14 +34,15 @@ using mu::Parser;
 using mu::value_type;
 using mu::valmap_type;
 using mu::varmap_type;
+using std::cerr;
 
 ParsedCompositeHardFactor::ParsedCompositeHardFactor(const string& name, const HardFactor::HardFactorOrder order, const size_t term_count, const HardFactorTerm** terms) :
-  HardFactor(), 
+  HardFactor(),
   m_name(name), m_order(order), m_term_count(term_count), m_terms(terms), need_to_free_m_terms(false) {
 }
 
 ParsedCompositeHardFactor::ParsedCompositeHardFactor(const string& name, const HardFactor::HardFactorOrder order, const HardFactorTermList terms) :
-  HardFactor(), 
+  HardFactor(),
   m_name(name), m_order(order), m_term_count(terms.size()), m_terms(new const HardFactorTerm*[m_term_count]), need_to_free_m_terms(true) {
     const HardFactorTerm** m_terms_end = copy(terms.begin(), terms.end(), m_terms);
     assert(m_terms_end - m_terms == m_term_count);
@@ -140,12 +141,14 @@ void ParsedHardFactorTerm::init_parser(Parser& parser, varmap_type& all_variable
 
 ParsedHardFactorTerm::ParsedHardFactorTerm(
     const string& name,
+    const string& implementation,
     const HardFactor::HardFactorOrder order,
     const IntegrationType* type,
     const string& Fs_real, const string& Fs_imag,
     const string& Fn_real, const string& Fn_imag,
     const string& Fd_real, const string& Fd_imag) :
   m_name(name),
+  m_implementation(implementation),
   m_order(order),
   mp_type(type) {
     varmap_type all_variables;
@@ -187,7 +190,7 @@ void define_variables(Parser& parser, const IntegrationContext* ictx) {
     // and now some aliases
     parser.DefineVar("A", const_cast<value_type*>(&(ictx->ctx->mass_number)));
     parser.DefineVar("c", const_cast<value_type*>(&(ictx->ctx->centrality)));
-    
+
     /* The last "variables" we need on a per-IntegrationContext basis are
      * the gluon distribution functions. These functions need access to
      * ictx->gdist so they can call ictx->gdist->F(k2, Y) or the like.
@@ -212,7 +215,7 @@ void define_variables(Parser& parser, const IntegrationContext* ictx) {
          */
         assert(gdist == ictx->ctx->gdist);
     }
-    
+
     // just in case ictx->ctx->gdist is NULL or something,  I dunno
     assert(gdist != NULL);
 }
@@ -279,13 +282,10 @@ using std::vector;
 
 static HardFactor::HardFactorOrder sentinel = static_cast<HardFactor::HardFactorOrder>(-1);
 
-HardFactorParser::HardFactorParser() : order(sentinel), type(NULL), registry(NULL) {
+HardFactorParser::HardFactorParser() : order(sentinel), type(NULL), registry() {
 }
 
-HardFactorList HardFactorParser::get_hard_factors() {
-    return hard_factors;
-}
-
+// TODO make it call the callbacks
 void HardFactorParser::parse_line(const string& line) {
     if (line.length() == 0) {
         return;
@@ -301,12 +301,15 @@ void HardFactorParser::parse_line(const string& line) {
         if (!hard_factor_definition_empty()) {
             create_hard_factor_term();
         }
-        const HardFactorGroup* hfg = parse_hardfactor_group(parts[0]);
+        const HardFactorGroup* hfg = parse_hard_factor_group(parts[0]);
         if (hfg != NULL) {
             if (hard_factor_groups.find(hfg->label) != hard_factor_groups.end()) {
                 throw InvalidHardFactorDefinitionException(line, hfg->label, line, "Duplicate hard factor group label");
             }
             hard_factor_groups[hfg->label] = hfg;
+            if (hard_factor_group_callback) {
+                hard_factor_group_callback(*hfg);
+            }
         }
         return;
     }
@@ -347,67 +350,67 @@ void HardFactorParser::parse_line(const string& line) {
         }
         if (value == "none") {
             type = &momentum::none;
-            registry = momentum::registry::get_instance();
+            implementation = "m";
         }
         else if (value == "momentum1") {
             type = &momentum::momentum1;
-            registry = momentum::registry::get_instance();
+            implementation = "m";
         }
         else if (value == "momentum2") {
             type = &momentum::momentum2;
-            registry = momentum::registry::get_instance();
+            implementation = "m";
         }
         else if (value == "momentum3") {
             type = &momentum::momentum3;
-            registry = momentum::registry::get_instance();
+            implementation = "m";
         }
         else if (value == "radial momentum1") {
             type = &momentum::radialmomentum1;
-            registry = momentum::registry::get_instance();
+            implementation = "m";
         }
         else if (value == "radial momentum2") {
             type = &momentum::radialmomentum2;
-            registry = momentum::registry::get_instance();
+            implementation = "m";
         }
         else if (value == "radial momentum3") {
             type = &momentum::radialmomentum3;
-            registry = momentum::registry::get_instance();
+            implementation = "m";
         }
         else if (value == "momentumxip1") {
             type = &momentum::momentumxip1;
-            registry = momentum::registry::get_instance();
+            implementation = "m";
         }
         else if (value == "momentumxip2") {
             type = &momentum::momentumxip2;
-            registry = momentum::registry::get_instance();
+            implementation = "m";
         }
         else if (value == "qlim") {
             type = &momentum::qlim;
-            registry = momentum::registry::get_instance();
+            implementation = "m";
         }
         else if (value == "cartesian dipole") {
             type = &position::dipole;
-            registry = position::registry::get_instance();
+            implementation = "p";
         }
         else if (value == "cartesian quadrupole") {
             type = &position::quadrupole;
-            registry = position::registry::get_instance();
+            implementation = "p";
         }
         else if (value == "radial dipole") {
             type = &radial::dipole;
-            registry = radial::registry::get_instance();
+            implementation = "r";
         }
         else if (value == "radial quadrupole") {
             type = &radial::quadrupole;
-            registry = radial::registry::get_instance();
+            implementation = "r";
         }
         else if (value == "radial rescaled dipole") {
             type = &radial::rescaled_dipole;
-            registry = radial::registry::get_instance();
+            implementation = "r";
         }
         else if (value == "radial rescaled quadrupole") {
             type = &radial::rescaled_quadrupole;
-            registry = radial::registry::get_instance();
+            implementation = "r";
         }
         else {
             throw InvalidHardFactorDefinitionException(line, key, value, "Unknown integration type:");
@@ -469,7 +472,15 @@ void HardFactorParser::parse_line(const string& line) {
             // possible future enhancement: handle the case where s names
             // a composite hard factor by extracting the terms and adding them
             // individually
-            const HardFactor* hf = parse_hardfactor(s);
+            string name, implementation;
+            split_hardfactor(s, name, implementation);
+            const HardFactor* hf;
+            if (implementation.empty()) {
+                hf = registry.get_hard_factor(name);
+            }
+            else {
+                hf = registry.get_hard_factor(name, implementation);
+            }
             if (hf == NULL) {
                 throw InvalidHardFactorSpecException(s, "no hard factor with that name");
             }
@@ -495,24 +506,26 @@ void HardFactorParser::parse_line(const string& line) {
         // temporary hack: take the type of the composite hard factor
         // to be the type of its first term
         const IntegrationType* itype = hftlist[0]->get_type();
-        HardFactorRegistry* registry;
         if (itype == &position::dipole || itype == &position::quadrupole) {
-            registry = position::registry::get_instance();
+            implementation = "p";
         }
         else if (itype == &radial::dipole || itype == &radial::quadrupole || itype == &radial::rescaled_dipole || itype == &radial::rescaled_quadrupole) {
-            registry = radial::registry::get_instance();
+            implementation = "r";
         }
         else if (itype == &momentum::momentum1 || itype == &momentum::momentum2 || itype == &momentum::momentum3 || itype == &momentum::momentumxip1 ||
                  itype == &momentum::momentumxip2 || itype == &momentum::none || itype == &momentum::qlim || itype == &momentum::radialmomentum1 ||
                  itype == &momentum::radialmomentum2 || itype == &momentum::radialmomentum3) {
-            registry = momentum::registry::get_instance();
+            implementation = "m";
         }
         else {
             assert(false); // unknown integration type
         }
 
-        registry->add_hard_factor(hf, true);
+        registry.add_hard_factor(name, implementation, hf, true);
         hard_factors.push_back(hf);
+        if (hard_factor_callback) {
+            hard_factor_callback(*hf);
+        }
         reset_current_term();
     }
     else {
@@ -521,7 +534,7 @@ void HardFactorParser::parse_line(const string& line) {
 }
 
 
-void HardFactorParser::parse_file(const string& filename, bool (*error_handler)(const exception&, const string&, const size_t line_number)) {
+void HardFactorParser::parse_file(const string& filename) {
     ifstream hfinput(filename.c_str());
     string line;
     size_t i;
@@ -546,16 +559,88 @@ void HardFactorParser::parse_file(const string& filename, bool (*error_handler)(
     }
 }
 
-const HardFactorGroup* HardFactorParser::get_hard_factor_group(const string& label) {
-    return hard_factor_groups[label];
+const HardFactorGroup* HardFactorParser::parse_hard_factor_group(const string& spec) {
+    string specname(spec);
+    string specbody(spec);
+
+    vector<string> namesplitspec = split(spec, ":", 2);
+    assert(namesplitspec.size() == 1 || namesplitspec.size() == 2);
+    if (namesplitspec.size() > 1) {
+        if (namesplitspec[0].size() == 0) {
+            // this means there was simply a leading colon; ignore it
+            specname = namesplitspec[1];
+        }
+        else {
+            specname = namesplitspec[0];
+        }
+        specbody = namesplitspec[1];
+    }
+
+    vector<string> splitspec;
+    splitspec = split(specbody, ", ");
+
+    HardFactorList hfobjs;
+    // Iterate over the individual hard factor names
+    for (vector<string>::iterator it = splitspec.begin(); it != splitspec.end(); it++) {
+        string name, implementation;
+        split_hardfactor(*it, name, implementation);
+        const HardFactor* hf;
+        if (implementation.empty()) {
+            hf = registry.get_hard_factor(name);
+        }
+        else {
+            hf = registry.get_hard_factor(name, implementation);
+        }
+        if (hf == NULL) {
+            // the string failed to parse
+            throw InvalidHardFactorSpecException(spec, "No such hard factor");
+        }
+        else {
+            hfobjs.push_back(hf);
+        }
+    }
+    if (hfobjs.size() == 0) {
+        throw InvalidHardFactorSpecException(spec, "No valid hard factors in specification");
+    }
+    else {
+        HardFactorList* p_hfobjs = new HardFactorList(hfobjs);
+        // parsing seems to have succeeded, so go ahead and create the object
+        return new HardFactorGroup(specname, p_hfobjs, splitspec);
+    }
 }
+
+void HardFactorParser::split_hardfactor(const string& spec, string& name, string& implementation) {
+    vector<string> splitspec;
+    splitspec = split(spec, ".", 2);
+    assert(splitspec.size() == 1 || splitspec.size() == 2);
+    name = splitspec[0];
+    if (splitspec.size() == 2) {
+        implementation = splitspec[1];
+    }
+    else {
+        implementation = "";
+    }
+}
+
+void HardFactorParser::set_error_handler(bool (*error_handler)(const exception&, const string&, const size_t)) {
+    this->error_handler = error_handler;
+}
+
+void HardFactorParser::set_hard_factor_callback(void (*callback)(const HardFactor&)) {
+    this->hard_factor_callback = callback;
+}
+
+void HardFactorParser::set_hard_factor_group_callback(void (*callback)(const HardFactorGroup&)) {
+    this->hard_factor_group_callback = callback;
+}
+
 
 const bool HardFactorParser::hard_factor_definition_empty() const {
     return
       type == NULL &&
-      registry == NULL &&
       order == sentinel &&
       name.empty() &&
+      implementation.empty() &&
        (   Fs_real.empty() && Fs_imag.empty()
         && Fn_real.empty() && Fn_imag.empty()
         && Fd_real.empty() && Fd_imag.empty());
@@ -564,9 +649,9 @@ const bool HardFactorParser::hard_factor_definition_empty() const {
 const bool HardFactorParser::hard_factor_definition_complete() const {
     return
       type != NULL &&
-      registry != NULL &&
       order != sentinel &&
       !name.empty() &&
+      !implementation.empty() &&
       !(   Fs_real.empty() && Fs_imag.empty()
         && Fn_real.empty() && Fn_imag.empty()
         && Fd_real.empty() && Fd_imag.empty());
@@ -576,18 +661,21 @@ const ParsedHardFactorTerm* HardFactorParser::create_hard_factor_term() {
     if (!hard_factor_definition_complete()) {
         throw IncompleteHardFactorDefinitionException();
     }
-    ParsedHardFactorTerm* hf = new ParsedHardFactorTerm(name, order, type, Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag);
-    registry->add_hard_factor(hf, true);
+    ParsedHardFactorTerm* hf = new ParsedHardFactorTerm(name, implementation, order, type, Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag);
+    registry.add_hard_factor(hf, true);
     hard_factors.push_back(hf);
+    if (hard_factor_callback) {
+        hard_factor_callback(*hf);
+    }
     reset_current_term();
     return hf;
 }
 
 void HardFactorParser::reset_current_term() {
     name.erase();
+    implementation.erase();
     order = sentinel;
     type = NULL;
-    registry = NULL;
     Fs_real.erase();
     Fs_imag.erase();
     Fn_real.erase();
@@ -623,5 +711,19 @@ InvalidHardFactorDefinitionException::InvalidHardFactorDefinitionException(const
 }
 
 const char* InvalidHardFactorDefinitionException::what() const throw() {
+    return _message.c_str();
+}
+
+InvalidHardFactorSpecException::InvalidHardFactorSpecException(const string& hfspec, const string& message) throw() : hfspec(hfspec) {
+    std::ostringstream s;
+    s << message << "; spec " << hfspec;
+    _message = s.str();
+}
+
+void InvalidHardFactorSpecException::operator=(const InvalidHardFactorSpecException& other) {
+    _message = other._message;
+}
+
+const char* InvalidHardFactorSpecException::what() const throw() {
     return _message.c_str();
 }

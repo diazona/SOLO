@@ -29,6 +29,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <vector>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_rng.h>
 #include <openssl/sha.h>
@@ -44,7 +45,6 @@
 #include "../utils/utils.h"
 #include "../log.h"
 #include "../hardfactors/hardfactor_parsed.h"
-#include "../hardfactors/parsing.h"
 
 using namespace std;
 
@@ -423,11 +423,11 @@ void ProgramConfiguration::parse_hf_specs() {
         if (spec.find(":") != string::npos) {
             // includes a colon, so it is a complete hard factor group specification
             // parse it but don't add it to the parser
-            hfg = parse_hardfactor_group(spec);
+            hfg = parser.parse_hard_factor_group(spec);
         }
         else {
             // no colon, so it references a group specification defined in the file
-            hfg = parser.get_hard_factor_group(spec);
+            hfg = parser.registry.get_hard_factor_group(spec);
             if (hfg == NULL) {
                 throw InvalidHardFactorSpecException(spec, "hard factor group not found");
             }

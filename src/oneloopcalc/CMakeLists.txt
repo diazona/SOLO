@@ -18,7 +18,7 @@ set(LIBS ${LIBS} m)
 find_package(Git)
 if(GIT_FOUND)
     add_custom_target(git_revision.h
-        ${GIT_EXECUTABLE} log -1 "--format=format:#define GIT_REVISION \"%H\"%n" HEAD > git_revision.h 
+        ${GIT_EXECUTABLE} log -1 "--format=format:#define GIT_REVISION \"%H\"%n" HEAD > git_revision.h
         COMMAND git diff-index --quiet HEAD || echo "#define GIT_DIRTY" >> git_revision.h
         WORKING_DIRECTORY ${SOLO_oneloopcalc_BINARY_DIR} VERBATIM)
 else()
@@ -35,7 +35,6 @@ add_executable(oneloopcalc
     ${SOLO_SOURCE_DIR}/configuration/context.cpp
     ${SOLO_SOURCE_DIR}/hardfactors/hardfactor.cpp
     ${SOLO_SOURCE_DIR}/hardfactors/hardfactor_parsed.cpp
-    ${SOLO_SOURCE_DIR}/hardfactors/parsing.cpp
     ${SOLO_SOURCE_DIR}/integration/cubature.c
     ${SOLO_SOURCE_DIR}/integration/integrationcontext.cpp
     ${SOLO_SOURCE_DIR}/integration/integrationtype.cpp
