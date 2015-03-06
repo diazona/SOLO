@@ -29,6 +29,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <string>
 #include <vector>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_rng.h>

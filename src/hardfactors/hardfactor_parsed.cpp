@@ -282,10 +282,15 @@ using std::vector;
 
 static HardFactor::HardFactorOrder sentinel = static_cast<HardFactor::HardFactorOrder>(-1);
 
-HardFactorParser::HardFactorParser() : order(sentinel), type(NULL), registry() {
+HardFactorParser::HardFactorParser() :
+    order(sentinel),
+    type(NULL),
+    registry(),
+    hard_factor_callback(NULL),
+    hard_factor_group_callback(NULL),
+    error_handler(NULL) {
 }
 
-// TODO make it call the callbacks
 void HardFactorParser::parse_line(const string& line) {
     if (line.length() == 0) {
         return;
@@ -306,6 +311,7 @@ void HardFactorParser::parse_line(const string& line) {
             if (hard_factor_groups.find(hfg->label) != hard_factor_groups.end()) {
                 throw InvalidHardFactorDefinitionException(line, hfg->label, line, "Duplicate hard factor group label");
             }
+            registry.add_hard_factor_group(hfg);
             hard_factor_groups[hfg->label] = hfg;
             if (hard_factor_group_callback) {
                 hard_factor_group_callback(*hfg);
@@ -533,7 +539,6 @@ void HardFactorParser::parse_line(const string& line) {
     }
 }
 
-
 void HardFactorParser::parse_file(const string& filename) {
     ifstream hfinput(filename.c_str());
     string line;
@@ -664,7 +669,7 @@ const ParsedHardFactorTerm* HardFactorParser::create_hard_factor_term() {
     ParsedHardFactorTerm* hf = new ParsedHardFactorTerm(name, implementation, order, type, Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag);
     registry.add_hard_factor(hf, true);
     hard_factors.push_back(hf);
-    if (hard_factor_callback) {
+    if (hard_factor_callback != NULL) {
         hard_factor_callback(*hf);
     }
     reset_current_term();
