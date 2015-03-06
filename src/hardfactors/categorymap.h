@@ -36,6 +36,14 @@ public:
     typedef std::pair<const std::string, T> pair_type;
     typedef std::list<pair_type> list_type;
 
+    category_map() : super() {}
+    category_map(const category_map<T>& other) : super(other) {}
+    category_map<T>& operator=(const category_map<T>& other) {
+        super::operator=(other);
+        return *this;
+    }
+    ~category_map() {}
+
     static void normalize(std::string& s) {
         std::transform(s.begin(), s.end(), s.begin(), ::tolower);
     }

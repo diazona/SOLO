@@ -282,10 +282,10 @@ using std::vector;
 
 static HardFactor::HardFactorOrder sentinel = static_cast<HardFactor::HardFactorOrder>(-1);
 
-HardFactorParser::HardFactorParser() :
+HardFactorParser::HardFactorParser(HardFactorRegistry& registry) :
     order(sentinel),
     type(NULL),
-    registry(),
+    registry(registry),
     hard_factor_callback(NULL),
     hard_factor_group_callback(NULL),
     error_handler(NULL) {

@@ -291,6 +291,8 @@ private:
     vector<string> hfspecs;
 
     double xg_min, xg_max;
+
+    HardFactorRegistry registry;
 };
 
 ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false), trace_gdist(false), minmax(false), separate(false), xg_min(0), xg_max(1) {
@@ -411,7 +413,7 @@ void ProgramConfiguration::parse_hf_specs() {
     }
 
     // parse the hard factor definition files
-    HardFactorParser parser;
+    HardFactorParser parser(registry);
     for (vector<string>::const_iterator it = cc[0].hardfactor_definitions.begin(); it != cc[0].hardfactor_definitions.end(); it++) {
         parser.parse_file(*it);
     }
@@ -428,7 +430,7 @@ void ProgramConfiguration::parse_hf_specs() {
         }
         else {
             // no colon, so it references a group specification defined in the file
-            hfg = parser.registry.get_hard_factor_group(spec);
+            hfg = registry.get_hard_factor_group(spec);
             if (hfg == NULL) {
                 throw InvalidHardFactorSpecException(spec, "hard factor group not found");
             }

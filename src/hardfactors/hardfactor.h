@@ -191,7 +191,11 @@ public:
      */
     const HardFactorGroup* get_hard_factor_group(const std::string& key) const;
 
+    HardFactorRegistry();
     ~HardFactorRegistry();
+    HardFactorRegistry(const HardFactorRegistry& other);
+    HardFactorRegistry& operator=(const HardFactorRegistry& other);
+
 private:
     category_map<const HardFactorGroup*> hardfactor_groups;
     category_map<const HardFactor*> hardfactors;

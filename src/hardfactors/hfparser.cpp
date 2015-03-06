@@ -57,7 +57,8 @@ int main(const int argc, char** argv) {
         cerr << "Usage: " << argv[0] << " filename [filename...]" << endl;
         return 2;
     }
-    HardFactorParser parser;
+    HardFactorRegistry registry;
+    HardFactorParser parser(registry);
     parser.set_error_handler(print_err);
     parser.set_hard_factor_callback(handle_hard_factor);
     parser.set_hard_factor_group_callback(handle_hard_factor_group);

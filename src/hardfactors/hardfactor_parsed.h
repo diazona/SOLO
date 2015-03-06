@@ -141,7 +141,7 @@ private:
  */
 class HardFactorParser {
 public:
-    HardFactorParser();
+    HardFactorParser(HardFactorRegistry& registry);
 
     /**
      * Parses a file containing hard factor specifications. The parser recognizes
@@ -282,7 +282,7 @@ public:
     void set_hard_factor_group_callback(void (*callback)(const HardFactorGroup& hfg));
     void set_error_handler(bool (*error_handler)(const std::exception& e, const std::string& filename, const size_t line_number));
 
-    HardFactorRegistry registry;
+    HardFactorRegistry& registry;
 private:
     bool hard_factor_definition_complete() const;
     bool hard_factor_definition_empty() const;

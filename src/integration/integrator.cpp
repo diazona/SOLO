@@ -67,8 +67,9 @@ Integrator::Integrator(const Context* ctx, const ThreadLocalContext* tlctx, cons
 #endif
     // separate the hard factors provided into dipole and quadrupole etc. terms
     for (HardFactorList::const_iterator it = hflist.begin(); it != hflist.end(); it++) {
-        const HardFactorTerm* const* l_terms = (*it)->get_terms();
-        for (size_t i = 0; i < (*it)->get_term_count(); i++) {
+        const HardFactor* p_hf = *it;
+        const HardFactorTerm* const* l_terms = p_hf->get_terms();
+        for (size_t i = 0; i < p_hf->get_term_count(); i++) {
             const HardFactorTerm* term = l_terms[i];
             if (ictx.ctx->exact_kinematics && term->get_order() == HardFactor::MIXED) {
                 throw KinematicSchemeMismatchException(*term);

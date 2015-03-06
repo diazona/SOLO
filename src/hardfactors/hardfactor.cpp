@@ -136,6 +136,22 @@ const HardFactorGroup* HardFactorRegistry::get_hard_factor_group(const string& n
     }
 }
 
+HardFactorRegistry::HardFactorRegistry() {}
+
+HardFactorRegistry::HardFactorRegistry(const HardFactorRegistry& other) :
+  hardfactor_groups(other.hardfactor_groups),
+  hardfactors(other.hardfactors),
+  hardfactor_groups_to_delete(),
+  hardfactors_to_delete()
+{}
+
+HardFactorRegistry& HardFactorRegistry::operator=(const HardFactorRegistry& other) {
+    HardFactorRegistry tmp(other);
+    swap(hardfactor_groups, tmp.hardfactor_groups);
+    swap(hardfactors, tmp.hardfactors);
+    return *this;
+}
+
 HardFactorRegistry::~HardFactorRegistry() {
     hardfactors.clear();
     hardfactor_groups.clear();
