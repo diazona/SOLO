@@ -429,10 +429,14 @@ void ProgramConfiguration::parse_hf_specs() {
             hfg = parser.parse_hard_factor_group(spec);
         }
         else {
-            // no colon, so it references a group specification defined in the file
+            // no colon, so it references either a group specification defined in the file
             hfg = registry.get_hard_factor_group(spec);
             if (hfg == NULL) {
-                throw InvalidHardFactorSpecException(spec, "hard factor group not found");
+                // or an isolated hard factor
+                hfg = parser.parse_hard_factor_group(spec);
+                if (hfg == NULL) {
+                    throw InvalidHardFactorSpecException(spec, "hard factor group not found");
+                }
             }
         }
         hfgroups.push_back(hfg->objects);
