@@ -549,12 +549,12 @@ void HardFactorParser::parse_file(const string& filename) {
             parse_line(line);
         }
         catch (const InvalidHardFactorDefinitionException& e) {
-            if (error_handler == NULL || error_handler(e, line, i)) {
+            if (error_handler == NULL || error_handler(e, filename, i)) {
                 throw;
             }
         }
         catch (const IncompleteHardFactorDefinitionException& e) {
-            if (error_handler == NULL || error_handler(e, line, i)) {
+            if (error_handler == NULL || error_handler(e, filename, i)) {
                 throw;
             }
         }
@@ -663,6 +663,9 @@ bool HardFactorParser::hard_factor_definition_complete() const {
 }
 
 const ParsedHardFactorTerm* HardFactorParser::create_hard_factor_term() {
+    if (hard_factor_definition_empty()) {
+        return NULL;
+    }
     if (!hard_factor_definition_complete()) {
         throw IncompleteHardFactorDefinitionException();
     }
