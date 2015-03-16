@@ -464,7 +464,7 @@ void HardFactorParser::parse_line(const string& line) {
      */
     else if (key.find_first_of(" \t\r\n") == string::npos) {
         create_hard_factor_term();
-        vector<string> term_labels = split(value, ",");
+        vector<string> term_labels = split(value, ",+");
         if (term_labels.empty()) {
             throw InvalidHardFactorSpecException(key, "no hard factor terms provided in definition");
         }
