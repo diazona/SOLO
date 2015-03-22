@@ -102,7 +102,7 @@ static double xi_zy(const Context* const ctx, size_t core_dimensions, double z, 
  */
 
 // jacobian from y to xi
-double IntegrationType::jacobian(IntegrationContext& ictx, const size_t core_dimensions) const {
+double IntegrationType::jacobian(const unsigned int ncoords, const double* coordinates, const IntegrationContext& ictx, const size_t core_dimensions) const {
     if (core_dimensions == 2) {
         double jacobian = (ximax(ictx.ctx, ictx.z) - ximin(ictx.ctx, ictx.z)) / (ymax(ictx.ctx) - ymin(ictx.ctx));
         checkfinite(jacobian);
@@ -239,9 +239,9 @@ void RadialIntegrationType::fill_max(const Context* const ctx, const size_t core
     }
 }
 
-double RadialPositionIntegrationType::jacobian(IntegrationContext& ictx, const size_t core_dimensions) const {
+double RadialPositionIntegrationType::jacobian(const unsigned int ncoords, const double* coordinates, const IntegrationContext& ictx, const size_t core_dimensions) const {
     assert(extra_dimensions <= 6);
-    double jacobian = IntegrationType::jacobian(ictx, core_dimensions); // y to xi
+    double jacobian = IntegrationType::jacobian(ncoords, coordinates, ictx, core_dimensions); // y to xi
     // now (r,theta) to (x,y)
     if (extra_dimensions > 0) {
         assert(extra_dimensions > 1);
@@ -272,9 +272,9 @@ void RadialPositionIntegrationType::update(IntegrationContext& ictx, const size_
     ictx.update_parton_functions();
 }
 
-double RadialMomentumIntegrationType::jacobian(IntegrationContext& ictx, const size_t core_dimensions) const {
+double RadialMomentumIntegrationType::jacobian(const unsigned int ncoords, const double* coordinates, const IntegrationContext& ictx, const size_t core_dimensions) const {
     assert(extra_dimensions <= 6);
-    double jacobian = IntegrationType::jacobian(ictx, core_dimensions); // y to xi
+    double jacobian = IntegrationType::jacobian(ncoords, coordinates, ictx, core_dimensions); // y to xi
     // now (r,theta) to (x,y)
     if (extra_dimensions > 0) {
         assert(extra_dimensions > 1);
@@ -329,9 +329,9 @@ void AngleIndependentPositionIntegrationType::fill_max(const Context* const ctx,
     }
 }
 
-double AngleIndependentPositionIntegrationType::jacobian(IntegrationContext& ictx, const size_t core_dimensions) const {
+double AngleIndependentPositionIntegrationType::jacobian(const unsigned int ncoords, const double* coordinates, const IntegrationContext& ictx, const size_t core_dimensions) const {
     assert(extra_dimensions <= 3);
-    double jacobian = IntegrationType::jacobian(ictx, core_dimensions); // y to xi
+    double jacobian = IntegrationType::jacobian(ncoords, coordinates, ictx, core_dimensions); // y to xi
     // now (r,theta) to (x,y)
     if (extra_dimensions > 0) {
         assert(ictx.xy == 0);
@@ -362,9 +362,9 @@ void AngleIndependentPositionIntegrationType::update(IntegrationContext& ictx, c
     ictx.update_parton_functions();
 }
 
-double RescaledAngleIndependentPositionIntegrationType::jacobian(IntegrationContext& ictx, const size_t core_dimensions) const {
+double RescaledAngleIndependentPositionIntegrationType::jacobian(const unsigned int ncoords, const double* coordinates, const IntegrationContext& ictx, const size_t core_dimensions) const {
     assert(extra_dimensions <= 3);
-    double jacobian = IntegrationType::jacobian(ictx, core_dimensions); // y to xi
+    double jacobian = IntegrationType::jacobian(ncoords, coordinates, ictx, core_dimensions); // y to xi
     // now (r,theta) to (x,y)
     if (extra_dimensions > 0) {
         assert(ictx.xy == 0);
@@ -408,8 +408,8 @@ void QLimitedMomentumIntegrationType::fill_max(const Context*const ctx, const si
     }
 }
 
-double QLimitedMomentumIntegrationType::jacobian(IntegrationContext& ictx, const size_t core_dimensions) const {
-    double jacobian = RadialMomentumIntegrationType::jacobian(ictx, core_dimensions);
+double QLimitedMomentumIntegrationType::jacobian(const unsigned int ncoords, const double* coordinates, const IntegrationContext& ictx, const size_t core_dimensions) const {
+    double jacobian = RadialMomentumIntegrationType::jacobian(ncoords, coordinates, ictx, core_dimensions);
     for (size_t i = 0; i < extra_dimensions; i += 2) {
         jacobian *= ictx.qmax;
     }

@@ -105,7 +105,6 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
     }
     double l_real = 0.0, l_imag = 0.0; // l for "local"
     double t_real, t_imag;             // t for temporary
-    double jacobian = current_type->jacobian(ictx, core_dimensions);
     HardFactorTermList& current_terms = terms[current_type];
     assert(current_terms.size() > 0);
     if (core_dimensions == 1) {
@@ -172,8 +171,8 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
             l_imag -= t_imag * xi_factor;
         }
     }
-    *real = jacobian * l_real;
-    *imag = jacobian * l_imag;
+    *real = l_real;
+    *imag = l_imag;
     if (callback) {
         callback(&ictx, *real, *imag);
     }
@@ -189,15 +188,16 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
  * are interpreted as z, (y if applicable), (xiprime if applicable), rx, ry, etc.
  */
 void cubature_wrapper(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nresults, double* results) {
-    double real;
-    double imag;
+    double real, imag, jacobian;
     Integrator* integrator = static_cast<Integrator*>(closure);
     integrator->current_type->update(integrator->ictx, integrator->core_dimensions, coordinates);
+    // computing the Jacobian here allows the method to access the untransformed coordinates
+    jacobian = integrator->current_type->jacobian(ncoords, coordinates, integrator->ictx, integrator->core_dimensions);
     integrator->evaluate_integrand(&real, &imag);
     assert(nresults == 1 || nresults == 2);
-    results[0] = real;
+    results[0] = real * jacobian;
     if (nresults == 2) {
-        results[1] = imag;
+        results[1] = imag * jacobian;
     }
 }
 

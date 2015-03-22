@@ -55,7 +55,7 @@ public:
      *
      * This gets called after `update()` at each step of the calculation.
      */
-    virtual double jacobian(IntegrationContext& ictx, const size_t core_dimensions) const;
+    virtual double jacobian(const unsigned int ncoords, const double* coordinates, const IntegrationContext& ictx, const size_t core_dimensions) const;
     /**
      * Updates the variables in the `IntegrationContext` based on the `values`,
      * which were passed in from the Monte Carlo integration routine.
@@ -141,14 +141,14 @@ public:
 class RadialPositionIntegrationType : public RadialIntegrationType {
 public:
     RadialPositionIntegrationType(const size_t extra_dimensions) : RadialIntegrationType(extra_dimensions) {}
-    double jacobian(IntegrationContext& ictx, const size_t core_dimensions) const;
+    double jacobian(const unsigned int ncoords, const double* coordinates, const IntegrationContext& ictx, const size_t core_dimensions) const;
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };
 
 class RadialMomentumIntegrationType : public RadialIntegrationType {
 public:
     RadialMomentumIntegrationType(const size_t extra_dimensions) : RadialIntegrationType(extra_dimensions) {}
-    double jacobian(IntegrationContext& ictx, const size_t core_dimensions) const;
+    double jacobian(const unsigned int ncoords, const double* coordinates, const IntegrationContext& ictx, const size_t core_dimensions) const;
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };
 
@@ -157,14 +157,14 @@ public:
     AngleIndependentPositionIntegrationType(const size_t extra_dimensions) : IntegrationType(extra_dimensions) {}
     void fill_min(const Context* const ctx, const size_t core_dimensions, double *min) const;
     void fill_max(const Context* const ctx, const size_t core_dimensions, double *max) const;
-    double jacobian(IntegrationContext& ictx, const size_t core_dimensions) const;
+    double jacobian(const unsigned int ncoords, const double* coordinates, const IntegrationContext& ictx, const size_t core_dimensions) const;
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };
 
 class RescaledAngleIndependentPositionIntegrationType : public AngleIndependentPositionIntegrationType {
 public:
     RescaledAngleIndependentPositionIntegrationType(const size_t extra_dimensions) : AngleIndependentPositionIntegrationType(extra_dimensions) {}
-    double jacobian(IntegrationContext& ictx, const size_t core_dimensions) const;
+    double jacobian(const unsigned int ncoords, const double* coordinates, const IntegrationContext& ictx, const size_t core_dimensions) const;
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };
 
@@ -172,7 +172,7 @@ class QLimitedMomentumIntegrationType : public RadialMomentumIntegrationType {
 public:
     QLimitedMomentumIntegrationType(const size_t extra_dimensions) : RadialMomentumIntegrationType(extra_dimensions) {}
     void fill_max(const Context* const ctx, const size_t core_dimensions, double* max) const;
-    double jacobian(IntegrationContext& ictx, const size_t core_dimensions) const;
+    double jacobian(const unsigned int ncoords, const double* coordinates, const IntegrationContext& ictx, const size_t core_dimensions) const;
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };
 
