@@ -79,6 +79,7 @@ protected:
     PlainIntegrationType(const size_t extra_dimensions) : IntegrationType(extra_dimensions) {}
     void fill_min(const Context* const ctx, const size_t core_dimensions, double* min) const;
     void fill_max(const Context* const ctx, const size_t core_dimensions, double* max) const;
+    double jacobian(const unsigned int ncoords, const double* coordinates, const IntegrationContext& ictx, const size_t core_dimensions) const;
 };
 
 /**
@@ -123,6 +124,7 @@ public:
 protected:
     void fill_min(const Context* const ctx, const size_t core_dimensions, double* min) const;
     void fill_max(const Context* const ctx, const size_t core_dimensions, double* max) const;
+    double jacobian(const unsigned int ncoords, const double* coordinates, const IntegrationContext& ictx, const size_t core_dimensions) const;
     void update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const;
 };
 
@@ -136,6 +138,7 @@ public:
     RadialIntegrationType(const size_t extra_dimensions) : IntegrationType(extra_dimensions) {assert(extra_dimensions % 2 == 0);}
     void fill_min(const Context* const ctx, const size_t core_dimensions, double* min) const;
     void fill_max(const Context* const ctx, const size_t core_dimensions, double* max) const;
+    double jacobian(const unsigned int ncoords, const double* coordinates, const IntegrationContext& ictx, const size_t core_dimensions) const;
 };
 
 class RadialPositionIntegrationType : public RadialIntegrationType {

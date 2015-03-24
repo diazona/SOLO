@@ -19,6 +19,7 @@
 
 #include <cassert>
 #include <gsl/gsl_sys.h>
+#include <gsl/gsl_pow_int.h>
 #include <typeinfo>
 #include "integrationtype.h"
 
@@ -91,6 +92,27 @@ static double xi_zy(const Context* const ctx, size_t core_dimensions, double z, 
     }
 }
 
+/** Implements the transformation x = t/(1-t^2)
+ */
+static inline double xt(double t) {
+    return t / (1 - gsl_pow_2(t));
+}
+
+static inline double xt_jacobian(double t) {
+    double t2 = gsl_pow_2(t);
+    return (1 + t2) / gsl_pow_2(1 - t2);
+}
+
+/** Implements the transformation r = t/(1-t)
+ */
+static inline double rt(double t) {
+    return t / (1 - t);
+}
+
+static inline double rt_jacobian(double t) {
+    return 1 / gsl_pow_2(1 - t);
+}
+
 /*
  * In general, the values passed as the third argument to update() are interpreted as
  *  values[0]: z
@@ -122,7 +144,7 @@ void PlainIntegrationType::fill_min(const Context* const ctx, const size_t core_
     if (core_dimensions == 2) {
         min[i++] = ymin(ctx);
     }
-    while (i < core_dimensions + extra_dimensions) { min[i++] = -ctx->inf; }
+    while (i < core_dimensions + extra_dimensions) { min[i++] = -1; }
 }
 void PlainIntegrationType::fill_max(const Context* const ctx, const size_t core_dimensions, double* max) const {
     assert(core_dimensions == 1 || core_dimensions == 2);
@@ -131,19 +153,27 @@ void PlainIntegrationType::fill_max(const Context* const ctx, const size_t core_
     if (core_dimensions == 2) {
         max[i++] = ymax(ctx);
     }
-    while (i < core_dimensions + extra_dimensions) { max[i++] = ctx->inf; }
+    while (i < core_dimensions + extra_dimensions) { max[i++] = 1; }
 }
 
+double PlainIntegrationType::jacobian(const unsigned int ncoords, const double* coordinates, const IntegrationContext& ictx, const size_t core_dimensions) const {
+    double jacobian = IntegrationType::jacobian(ncoords, coordinates, ictx, core_dimensions);
+    assert(ncoords == core_dimensions + extra_dimensions);
+    for (size_t i = core_dimensions; i < ncoords; i++) {
+        jacobian *= xt_jacobian(coordinates[i]);
+    }
+    return jacobian;
+}
 void PositionIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     assert(core_dimensions == 1 || core_dimensions == 2);
     ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
     ictx.update_positions(
-        extra_dimensions > 0 ? values[core_dimensions + 0] : 0,
-        extra_dimensions > 1 ? values[core_dimensions + 1] : 0,
-        extra_dimensions > 2 ? values[core_dimensions + 2] : 0,
-        extra_dimensions > 3 ? values[core_dimensions + 3] : 0,
-        extra_dimensions > 4 ? values[core_dimensions + 4] : 0,
-        extra_dimensions > 5 ? values[core_dimensions + 5] : 0
+        extra_dimensions > 0 ? xt(values[core_dimensions + 0]) : 0,
+        extra_dimensions > 1 ? xt(values[core_dimensions + 1]) : 0,
+        extra_dimensions > 2 ? xt(values[core_dimensions + 2]) : 0,
+        extra_dimensions > 3 ? xt(values[core_dimensions + 3]) : 0,
+        extra_dimensions > 4 ? xt(values[core_dimensions + 4]) : 0,
+        extra_dimensions > 5 ? xt(values[core_dimensions + 5]) : 0
     );
     ictx.update_parton_functions();
 }
@@ -151,12 +181,12 @@ void MomentumIntegrationType::update(IntegrationContext& ictx, const size_t core
     assert(core_dimensions == 1 || core_dimensions == 2);
     ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
     ictx.update_momenta(
-        extra_dimensions > 0 ? values[core_dimensions + 0] : 0,
-        extra_dimensions > 1 ? values[core_dimensions + 1] : 0,
-        extra_dimensions > 2 ? values[core_dimensions + 2] : 0,
-        extra_dimensions > 3 ? values[core_dimensions + 3] : 0,
-        extra_dimensions > 4 ? values[core_dimensions + 4] : 0,
-        extra_dimensions > 5 ? values[core_dimensions + 5] : 0
+        extra_dimensions > 0 ? xt(values[core_dimensions + 0]) : 0,
+        extra_dimensions > 1 ? xt(values[core_dimensions + 1]) : 0,
+        extra_dimensions > 2 ? xt(values[core_dimensions + 2]) : 0,
+        extra_dimensions > 3 ? xt(values[core_dimensions + 3]) : 0,
+        extra_dimensions > 4 ? xt(values[core_dimensions + 4]) : 0,
+        extra_dimensions > 5 ? xt(values[core_dimensions + 5]) : 0
     );
     ictx.update_parton_functions();
 }
@@ -183,7 +213,7 @@ void XiPIntegrationType::fill_min(const Context* const ctx, const size_t core_di
         min[i++] = ymin(ctx);
     }
     min[i++] = 0; // xiprime
-    while (i < core_dimensions + extra_dimensions) { min[i++] = -ctx->inf; }
+    while (i < core_dimensions + extra_dimensions) { min[i++] = -1; }
 }
 void XiPIntegrationType::fill_max(const Context* const ctx, const size_t core_dimensions, double* max) const {
     assert(core_dimensions == 1 || core_dimensions == 2);
@@ -193,20 +223,27 @@ void XiPIntegrationType::fill_max(const Context* const ctx, const size_t core_di
         max[i++] = ymax(ctx);
     }
     max[i++] = 1; // xiprime
-    while (i < core_dimensions + extra_dimensions) { max[i++] = ctx->inf; }
+    while (i < core_dimensions + extra_dimensions) { max[i++] = 1; }
 }
-
+double XiPIntegrationType::jacobian(const unsigned int ncoords, const double* coordinates, const IntegrationContext& ictx, const size_t core_dimensions) const {
+    double jacobian = IntegrationType::jacobian(ncoords, coordinates, ictx, core_dimensions);
+    assert(ncoords == core_dimensions + extra_dimensions);
+    for (size_t i = core_dimensions + 1; i < ncoords; i++) {
+        jacobian *= xt_jacobian(coordinates[i]);
+    }
+    return jacobian;
+}
 void XiPIntegrationType::update(IntegrationContext& ictx, const size_t core_dimensions, const double* values) const {
     assert(core_dimensions == 1 || core_dimensions == 2);
     ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
     ictx.update_auxiliary(values[core_dimensions]);
     ictx.update_momenta(
-        extra_dimensions > 1 ? values[core_dimensions + 1] : 0,
-        extra_dimensions > 2 ? values[core_dimensions + 2] : 0,
-        extra_dimensions > 3 ? values[core_dimensions + 3] : 0,
-        extra_dimensions > 4 ? values[core_dimensions + 4] : 0,
-        extra_dimensions > 5 ? values[core_dimensions + 5] : 0,
-        extra_dimensions > 6 ? values[core_dimensions + 6] : 0
+        extra_dimensions > 1 ? xt(values[core_dimensions + 1]) : 0,
+        extra_dimensions > 2 ? xt(values[core_dimensions + 2]) : 0,
+        extra_dimensions > 3 ? xt(values[core_dimensions + 3]) : 0,
+        extra_dimensions > 4 ? xt(values[core_dimensions + 4]) : 0,
+        extra_dimensions > 5 ? xt(values[core_dimensions + 5]) : 0,
+        extra_dimensions > 6 ? xt(values[core_dimensions + 6]) : 0
     );
     ictx.update_parton_functions();
 }
@@ -234,14 +271,22 @@ void RadialIntegrationType::fill_max(const Context* const ctx, const size_t core
         max[i++] = ymax(ctx);
     }
     while (i < core_dimensions + extra_dimensions) {
-        max[i++] = ctx->inf;
+        max[i++] = 1;
         max[i++] = 2 * M_PI;
     }
+}
+double RadialIntegrationType::jacobian(const unsigned int ncoords, const double* coordinates, const IntegrationContext& ictx, const size_t core_dimensions) const {
+    double jacobian = IntegrationType::jacobian(ncoords, coordinates, ictx, core_dimensions);
+    assert(ncoords == core_dimensions + extra_dimensions);
+    for (size_t i = core_dimensions; i < ncoords; i += 2) {
+        jacobian *= rt_jacobian(coordinates[i]);
+    }
+    return jacobian;
 }
 
 double RadialPositionIntegrationType::jacobian(const unsigned int ncoords, const double* coordinates, const IntegrationContext& ictx, const size_t core_dimensions) const {
     assert(extra_dimensions <= 6);
-    double jacobian = IntegrationType::jacobian(ncoords, coordinates, ictx, core_dimensions); // y to xi
+    double jacobian = RadialIntegrationType::jacobian(ncoords, coordinates, ictx, core_dimensions); // y to xi
     // now (r,theta) to (x,y)
     if (extra_dimensions > 0) {
         assert(extra_dimensions > 1);
@@ -262,19 +307,19 @@ void RadialPositionIntegrationType::update(IntegrationContext& ictx, const size_
     assert(core_dimensions == 1 || core_dimensions == 2);
     ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
     ictx.update_positions(
-        extra_dimensions > 0 ? values[core_dimensions + 0] * cos(values[core_dimensions + 1]) : 0,
-        extra_dimensions > 0 ? values[core_dimensions + 0] * sin(values[core_dimensions + 1]) : 0,
-        extra_dimensions > 2 ? values[core_dimensions + 2] * cos(values[core_dimensions + 3]) : 0,
-        extra_dimensions > 2 ? values[core_dimensions + 2] * sin(values[core_dimensions + 3]) : 0,
-        extra_dimensions > 4 ? values[core_dimensions + 4] * cos(values[core_dimensions + 5]) : 0,
-        extra_dimensions > 4 ? values[core_dimensions + 4] * sin(values[core_dimensions + 5]) : 0
+        extra_dimensions > 0 ? rt(values[core_dimensions + 0]) * cos(values[core_dimensions + 1]) : 0,
+        extra_dimensions > 0 ? rt(values[core_dimensions + 0]) * sin(values[core_dimensions + 1]) : 0,
+        extra_dimensions > 2 ? rt(values[core_dimensions + 2]) * cos(values[core_dimensions + 3]) : 0,
+        extra_dimensions > 2 ? rt(values[core_dimensions + 2]) * sin(values[core_dimensions + 3]) : 0,
+        extra_dimensions > 4 ? rt(values[core_dimensions + 4]) * cos(values[core_dimensions + 5]) : 0,
+        extra_dimensions > 4 ? rt(values[core_dimensions + 4]) * sin(values[core_dimensions + 5]) : 0
     );
     ictx.update_parton_functions();
 }
 
 double RadialMomentumIntegrationType::jacobian(const unsigned int ncoords, const double* coordinates, const IntegrationContext& ictx, const size_t core_dimensions) const {
     assert(extra_dimensions <= 6);
-    double jacobian = IntegrationType::jacobian(ncoords, coordinates, ictx, core_dimensions); // y to xi
+    double jacobian = RadialIntegrationType::jacobian(ncoords, coordinates, ictx, core_dimensions); // y to xi
     // now (r,theta) to (x,y)
     if (extra_dimensions > 0) {
         assert(extra_dimensions > 1);
@@ -295,12 +340,12 @@ void RadialMomentumIntegrationType::update(IntegrationContext& ictx, const size_
     assert(core_dimensions == 1 || core_dimensions == 2);
     ictx.update_kinematics(values[0], xi_zy(ictx.ctx, core_dimensions, values[0], values[1]), core_dimensions);
     ictx.update_momenta(
-        extra_dimensions > 0 ? values[core_dimensions + 0] * cos(values[core_dimensions + 1]) : 0,
-        extra_dimensions > 0 ? values[core_dimensions + 0] * sin(values[core_dimensions + 1]) : 0,
-        extra_dimensions > 2 ? values[core_dimensions + 2] * cos(values[core_dimensions + 3]) : 0,
-        extra_dimensions > 2 ? values[core_dimensions + 2] * sin(values[core_dimensions + 3]) : 0,
-        extra_dimensions > 4 ? values[core_dimensions + 4] * cos(values[core_dimensions + 5]) : 0,
-        extra_dimensions > 4 ? values[core_dimensions + 4] * sin(values[core_dimensions + 5]) : 0
+        extra_dimensions > 0 ? rt(values[core_dimensions + 0]) * cos(values[core_dimensions + 1]) : 0,
+        extra_dimensions > 0 ? rt(values[core_dimensions + 0]) * sin(values[core_dimensions + 1]) : 0,
+        extra_dimensions > 2 ? rt(values[core_dimensions + 2]) * cos(values[core_dimensions + 3]) : 0,
+        extra_dimensions > 2 ? rt(values[core_dimensions + 2]) * sin(values[core_dimensions + 3]) : 0,
+        extra_dimensions > 4 ? rt(values[core_dimensions + 4]) * cos(values[core_dimensions + 5]) : 0,
+        extra_dimensions > 4 ? rt(values[core_dimensions + 4]) * sin(values[core_dimensions + 5]) : 0
     );
     ictx.update_parton_functions();
 }
@@ -325,7 +370,7 @@ void AngleIndependentPositionIntegrationType::fill_max(const Context* const ctx,
         max[i++] = ymax(ctx);
     }
     while (i < core_dimensions + extra_dimensions) {
-        max[i++] = ctx->inf;
+        max[i++] = 1;
     }
 }
 
@@ -335,15 +380,15 @@ double AngleIndependentPositionIntegrationType::jacobian(const unsigned int ncoo
     // now (r,theta) to (x,y)
     if (extra_dimensions > 0) {
         assert(ictx.xy == 0);
-        jacobian *= 2 * M_PI * ictx.xx;
+        jacobian *= 2 * M_PI * ictx.xx * rt_jacobian(coordinates[core_dimensions + 0]);
     }
     if (extra_dimensions > 1) {
         assert(ictx.yy == 0);
-        jacobian *= 2 * M_PI * ictx.yx;
+        jacobian *= 2 * M_PI * ictx.yx * rt_jacobian(coordinates[core_dimensions + 1]);
     }
     if (extra_dimensions > 2) {
         assert(ictx.by == 0);
-        jacobian *= 2 * M_PI * ictx.bx;
+        jacobian *= 2 * M_PI * ictx.bx * rt_jacobian(coordinates[core_dimensions + 2]);
     }
     checkfinite(jacobian);
     return jacobian;
@@ -364,19 +409,9 @@ void AngleIndependentPositionIntegrationType::update(IntegrationContext& ictx, c
 
 double RescaledAngleIndependentPositionIntegrationType::jacobian(const unsigned int ncoords, const double* coordinates, const IntegrationContext& ictx, const size_t core_dimensions) const {
     assert(extra_dimensions <= 3);
-    double jacobian = IntegrationType::jacobian(ncoords, coordinates, ictx, core_dimensions); // y to xi
-    // now (r,theta) to (x,y)
-    if (extra_dimensions > 0) {
-        assert(ictx.xy == 0);
-        jacobian *= 2 * M_PI * ictx.xx * ictx.xi;
-    }
-    if (extra_dimensions > 1) {
-        assert(ictx.yy == 0);
-        jacobian *= 2 * M_PI * ictx.yx * ictx.xi;
-    }
-    if (extra_dimensions > 2) {
-        assert(ictx.by == 0);
-        jacobian *= 2 * M_PI * ictx.bx * ictx.xi;
+    double jacobian = AngleIndependentPositionIntegrationType::jacobian(ncoords, coordinates, ictx, core_dimensions); // y to xi
+    for (size_t d = 0; d < core_dimensions; d++) {
+        jacobian *= ictx.xi;
     }
     checkfinite(jacobian);
     return jacobian;
