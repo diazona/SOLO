@@ -65,7 +65,7 @@ public:
         the_list.push_back(the_pair);
     }
 
-    T& get(const std::string& name, const std::string& implementation) const {
+    const T& get(const std::string& name, const std::string& implementation) const {
         std::string l_name(name);
         std::string l_impl(implementation);
         normalize(l_name);
@@ -73,8 +73,8 @@ public:
 
         typename super::const_iterator map_iterator = super::find(l_name);
         if (map_iterator != super::end()) {
-            list_type the_list = map_iterator->second;
-            for (typename list_type::iterator it = the_list.begin(); it != the_list.end(); it++) {
+            const list_type& the_list = map_iterator->second;
+            for (typename list_type::const_iterator it = the_list.begin(); it != the_list.end(); it++) {
                 if (it->first == l_impl) {
                     return it->second;
                 }
@@ -83,16 +83,16 @@ public:
         throw std::out_of_range("no element with name " + name + " and implementation " + implementation);
     }
 
-    T& get(const std::string& name) const {
+    const T& get(const std::string& name) const {
         std::string l_name(name);
         normalize(l_name);
 
         typename super::const_iterator map_iterator = super::find(l_name);
         if (map_iterator != super::end()) {
-            list_type the_list = map_iterator->second;
+            const list_type& the_list = map_iterator->second;
             if (!the_list.empty()) {
-                pair_type& pr = the_list.front();
-                T& p = pr.second;
+                const pair_type& pr = the_list.front();
+                const T& p = pr.second;
                 return p;
             }
         }
