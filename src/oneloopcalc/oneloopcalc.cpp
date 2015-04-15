@@ -417,6 +417,7 @@ void ProgramConfiguration::parse_hf_specs() {
     for (vector<string>::const_iterator it = cc[0].hardfactor_definitions.begin(); it != cc[0].hardfactor_definitions.end(); it++) {
         parser.parse_file(*it);
     }
+    parser.flush_groups();
 
     // parse hard factor specifications given on the command line
     assert(hfgroups.empty());
