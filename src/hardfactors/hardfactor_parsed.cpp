@@ -656,11 +656,10 @@ void HardFactorParser::flush_groups() {
         string line = unparsed_hard_factor_group_specs.front();
         const HardFactorGroup* hfg = parse_hard_factor_group(line);
         if (hfg != NULL) {
-            if (hard_factor_groups.find(hfg->label) != hard_factor_groups.end()) {
+            if (registry.get_hard_factor_group(hfg->label) != NULL) {
                 throw InvalidHardFactorDefinitionException(line, hfg->label, line, "Duplicate hard factor group label");
             }
-            registry.add_hard_factor_group(hfg);
-            hard_factor_groups[hfg->label] = hfg;
+            registry.add_hard_factor_group(hfg, true);
             if (hard_factor_group_callback) {
                 hard_factor_group_callback(*hfg);
             }

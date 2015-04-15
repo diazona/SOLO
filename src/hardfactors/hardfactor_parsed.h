@@ -310,7 +310,6 @@ private:
 
     HardFactorList hard_factors;
     std::list<std::string> unparsed_hard_factor_group_specs;
-    std::map<const std::string, const HardFactorGroup*> hard_factor_groups;
     std::string Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag;
     std::string name, implementation;
     HardFactor::HardFactorOrder order;
