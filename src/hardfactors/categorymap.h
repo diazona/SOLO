@@ -83,7 +83,7 @@ public:
         throw std::out_of_range("no element with name " + name + " and implementation " + implementation);
     }
 
-    const T& get(const std::string& name) const {
+    const T& get(const std::string& name, const bool first = true) const {
         std::string l_name(name);
         normalize(l_name);
 
@@ -91,7 +91,7 @@ public:
         if (map_iterator != super::end()) {
             const list_type& the_list = map_iterator->second;
             if (!the_list.empty()) {
-                const pair_type& pr = the_list.front();
+                const pair_type& pr = first ? the_list.front() : the_list.back();
                 const T& p = pr.second;
                 return p;
             }

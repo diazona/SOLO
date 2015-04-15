@@ -161,7 +161,7 @@ public:
     /**
      * Returns the hard factor corresponding to the given specification.
      * The specification in this case is just the descriptive name of the
-     * hard factor. The method will choose the first hard factor that was
+     * hard factor. The method will choose the last hard factor that was
      * added to the registry with the given name, regardless of its
      * implementation code.
      *

@@ -17,6 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <list>
+#include <string>
 #include <muParser.h>
 #include "hardfactor.h"
 #include "../typedefs.h"
@@ -142,6 +144,7 @@ private:
 class HardFactorParser {
 public:
     HardFactorParser(HardFactorRegistry& registry);
+    ~HardFactorParser();
 
     /**
      * Parses a file containing hard factor specifications. The parser recognizes
@@ -193,7 +196,10 @@ public:
      *     label.hfgimpl:hfname.hfimpl,hfname.hfimpl,hfname.hfimpl
      *
      *   Groups differ from composite hard factors in that their constitutent hard factors
-     *   can be separated by the program and calculated individually.
+     *   can be separated by the program and calculated individually. Groups are not
+     *   actually parsed immediately; instead, a line that constitutes a group
+     *   specification is stored until ::flush_groups() is called, and that does
+     *   the actual parsing.
      *
      * Each time a hard factor definition (elementary or composite) is read from
      * the file, this calls the callback registered with ::set_hard_factor_callback,
@@ -234,11 +240,11 @@ public:
      * - `hfname.hfimpl` is a hard factor specification, as described in the
      *   documentation for ::parse_hardfactor.
      *
-     * This method is used internally by ::parse_line if a hard factor group
+     * This method is used internally by ::flush_groups if a hard factor group
      * specification is encountered while parsing, or it can also be called
      * by external code. It always returns a newly constructed ::HardFactorGroup
      * object. The new object is _not_ added to the ::HardFactorRegistry by this
-     * method, though when this is called from `parse_line`, the returned pointer
+     * method, though when this is called from `flush_groups()`, the returned pointer
      * will be added to the registry.
      *
      * @return the group object, or `NULL` if the parsing failed to produce
@@ -278,21 +284,35 @@ public:
      */
     static void split_hardfactor(const std::string& spec, std::string& name, std::string& implementation);
 
+    /**
+     * This method goes over all stored group specifications and parses them
+     * using whatever hard factors are currently entered into the registry.
+     *
+     * If a HardFactorParser is deleted or goes out of scope,
+     * `flush_groups()` will be automatically called from the destructor.
+     */
+    void flush_groups();
+
     void set_hard_factor_callback(void (*callback)(const HardFactor& hf));
     void set_hard_factor_group_callback(void (*callback)(const HardFactorGroup& hfg));
     void set_error_handler(bool (*error_handler)(const std::exception& e, const std::string& filename, const size_t line_number));
 
     HardFactorRegistry& registry;
 private:
+    // these shouldn't be called
+    HardFactorParser(HardFactorParser& other) : registry(other.registry) {}
+    HardFactorParser& operator=(HardFactorParser& other) { registry = other.registry; return *this; }
+
     bool hard_factor_definition_complete() const;
     bool hard_factor_definition_empty() const;
     const ParsedHardFactorTerm* create_hard_factor_term();
     void reset_current_term();
 
     HardFactorList hard_factors;
-    std::map<const string, const HardFactorGroup*> hard_factor_groups;
-    string Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag;
-    string name, implementation;
+    std::list<std::string> unparsed_hard_factor_group_specs;
+    std::map<const std::string, const HardFactorGroup*> hard_factor_groups;
+    std::string Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag;
+    std::string name, implementation;
     HardFactor::HardFactorOrder order;
     const IntegrationType* type;
 

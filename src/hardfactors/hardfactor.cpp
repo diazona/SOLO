@@ -98,7 +98,7 @@ void HardFactorRegistry::add_hard_factor(const string& name, const string& imple
 
 const HardFactor* HardFactorRegistry::get_hard_factor(const string& name) const {
     try {
-        return hardfactors.get(name);
+        return hardfactors.get(name, false);
     }
     catch (const out_of_range& e) {
         return NULL;

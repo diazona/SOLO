@@ -291,6 +291,19 @@ HardFactorParser::HardFactorParser(HardFactorRegistry& registry) :
     error_handler(NULL) {
 }
 
+HardFactorParser::~HardFactorParser() {
+    try {
+        create_hard_factor_term();
+    }
+    catch (const IncompleteHardFactorDefinitionException& e) {
+        // nothing we can do about it
+        cerr << "Incomplete hard factor definition on destruction of parser" << endl;
+    }
+    reset_current_term();
+    flush_groups();
+}
+
+
 void HardFactorParser::parse_line(const string& line) {
     if (line.length() == 0) {
         return;
@@ -306,17 +319,7 @@ void HardFactorParser::parse_line(const string& line) {
         if (!hard_factor_definition_empty()) {
             create_hard_factor_term();
         }
-        const HardFactorGroup* hfg = parse_hard_factor_group(parts[0]);
-        if (hfg != NULL) {
-            if (hard_factor_groups.find(hfg->label) != hard_factor_groups.end()) {
-                throw InvalidHardFactorDefinitionException(line, hfg->label, line, "Duplicate hard factor group label");
-            }
-            registry.add_hard_factor_group(hfg);
-            hard_factor_groups[hfg->label] = hfg;
-            if (hard_factor_group_callback) {
-                hard_factor_group_callback(*hfg);
-            }
-        }
+        unparsed_hard_factor_group_specs.push_back(parts[0]);
         return;
     }
     else if (parts.size() != 2) {
@@ -328,7 +331,7 @@ void HardFactorParser::parse_line(const string& line) {
         if (!name.empty()) {
             create_hard_factor_term();
         }
-        name = value;
+        split_hardfactor(value, name, implementation);
     }
     else if (key == "order") {
         if (order != sentinel) {
@@ -356,67 +359,99 @@ void HardFactorParser::parse_line(const string& line) {
         }
         if (value == "none") {
             type = &momentum::none;
-            implementation = "m";
+            if (implementation.empty()) {
+                implementation = "m";
+            }
         }
         else if (value == "momentum1") {
             type = &momentum::momentum1;
-            implementation = "m";
+            if (implementation.empty()) {
+                implementation = "m";
+            }
         }
         else if (value == "momentum2") {
             type = &momentum::momentum2;
-            implementation = "m";
+            if (implementation.empty()) {
+                implementation = "m";
+            }
         }
         else if (value == "momentum3") {
             type = &momentum::momentum3;
-            implementation = "m";
+            if (implementation.empty()) {
+                implementation = "m";
+            }
         }
         else if (value == "radial momentum1") {
             type = &momentum::radialmomentum1;
-            implementation = "m";
+            if (implementation.empty()) {
+                implementation = "m";
+            }
         }
         else if (value == "radial momentum2") {
             type = &momentum::radialmomentum2;
-            implementation = "m";
+            if (implementation.empty()) {
+                implementation = "m";
+            }
         }
         else if (value == "radial momentum3") {
             type = &momentum::radialmomentum3;
-            implementation = "m";
+            if (implementation.empty()) {
+                implementation = "m";
+            }
         }
         else if (value == "momentumxip1") {
             type = &momentum::momentumxip1;
-            implementation = "m";
+            if (implementation.empty()) {
+                implementation = "m";
+            }
         }
         else if (value == "momentumxip2") {
             type = &momentum::momentumxip2;
-            implementation = "m";
+            if (implementation.empty()) {
+                implementation = "m";
+            }
         }
         else if (value == "qlim") {
             type = &momentum::qlim;
-            implementation = "m";
+            if (implementation.empty()) {
+                implementation = "m";
+            }
         }
         else if (value == "cartesian dipole") {
             type = &position::dipole;
-            implementation = "p";
+            if (implementation.empty()) {
+                implementation = "p";
+            }
         }
         else if (value == "cartesian quadrupole") {
             type = &position::quadrupole;
-            implementation = "p";
+            if (implementation.empty()) {
+                implementation = "p";
+            }
         }
         else if (value == "radial dipole") {
             type = &radial::dipole;
-            implementation = "r";
+            if (implementation.empty()) {
+                implementation = "r";
+            }
         }
         else if (value == "radial quadrupole") {
             type = &radial::quadrupole;
-            implementation = "r";
+            if (implementation.empty()) {
+                implementation = "r";
+            }
         }
         else if (value == "radial rescaled dipole") {
             type = &radial::rescaled_dipole;
-            implementation = "r";
+            if (implementation.empty()) {
+                implementation = "r";
+            }
         }
         else if (value == "radial rescaled quadrupole") {
             type = &radial::rescaled_quadrupole;
-            implementation = "r";
+            if (implementation.empty()) {
+                implementation = "r";
+            }
         }
         else {
             throw InvalidHardFactorDefinitionException(line, key, value, "Unknown integration type:");
@@ -509,22 +544,24 @@ void HardFactorParser::parse_line(const string& line) {
         split_hardfactor(key, name, implementation);
         ParsedCompositeHardFactor* hf = new ParsedCompositeHardFactor(name, order, hftlist);
 
-        // temporary hack: take the type of the composite hard factor
-        // to be the type of its first term
-        const IntegrationType* itype = hftlist[0]->get_type();
-        if (itype == &position::dipole || itype == &position::quadrupole) {
-            implementation = "p";
-        }
-        else if (itype == &radial::dipole || itype == &radial::quadrupole || itype == &radial::rescaled_dipole || itype == &radial::rescaled_quadrupole) {
-            implementation = "r";
-        }
-        else if (itype == &momentum::momentum1 || itype == &momentum::momentum2 || itype == &momentum::momentum3 || itype == &momentum::momentumxip1 ||
-                 itype == &momentum::momentumxip2 || itype == &momentum::none || itype == &momentum::qlim || itype == &momentum::radialmomentum1 ||
-                 itype == &momentum::radialmomentum2 || itype == &momentum::radialmomentum3) {
-            implementation = "m";
-        }
-        else {
-            assert(false); // unknown integration type
+        if (implementation.empty()) {
+            // temporary hack: take the type of the composite hard factor
+            // to be the type of its first term
+            const IntegrationType* itype = hftlist[0]->get_type();
+            if (itype == &position::dipole || itype == &position::quadrupole) {
+                implementation = "p";
+            }
+            else if (itype == &radial::dipole || itype == &radial::quadrupole || itype == &radial::rescaled_dipole || itype == &radial::rescaled_quadrupole) {
+                implementation = "r";
+            }
+            else if (itype == &momentum::momentum1 || itype == &momentum::momentum2 || itype == &momentum::momentum3 || itype == &momentum::momentumxip1 ||
+                     itype == &momentum::momentumxip2 || itype == &momentum::none || itype == &momentum::qlim || itype == &momentum::radialmomentum1 ||
+                     itype == &momentum::radialmomentum2 || itype == &momentum::radialmomentum3) {
+                implementation = "m";
+            }
+            else {
+                assert(false); // unknown integration type
+            }
         }
 
         registry.add_hard_factor(name, implementation, hf, true);
@@ -613,6 +650,28 @@ const HardFactorGroup* HardFactorParser::parse_hard_factor_group(const string& s
         return new HardFactorGroup(specname, p_hfobjs, splitspec);
     }
 }
+
+void HardFactorParser::flush_groups() {
+    while (!unparsed_hard_factor_group_specs.empty()) {
+        string line = unparsed_hard_factor_group_specs.front();
+        const HardFactorGroup* hfg = parse_hard_factor_group(line);
+        if (hfg != NULL) {
+            if (hard_factor_groups.find(hfg->label) != hard_factor_groups.end()) {
+                throw InvalidHardFactorDefinitionException(line, hfg->label, line, "Duplicate hard factor group label");
+            }
+            registry.add_hard_factor_group(hfg);
+            hard_factor_groups[hfg->label] = hfg;
+            if (hard_factor_group_callback) {
+                hard_factor_group_callback(*hfg);
+            }
+        }
+        else {
+            throw InvalidHardFactorSpecException(line, "Unknown error parsing group specification (parser returned NULL)");
+        }
+        unparsed_hard_factor_group_specs.pop_front();
+    }
+}
+
 
 void HardFactorParser::split_hardfactor(const string& spec, string& name, string& implementation) {
     vector<string> splitspec;
