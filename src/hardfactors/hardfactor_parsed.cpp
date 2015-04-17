@@ -305,7 +305,12 @@ HardFactorParser::~HardFactorParser() {
 
 
 void HardFactorParser::parse_line(const string& line) {
+    // ignore empty lines
     if (line.length() == 0) {
+        return;
+    }
+    // ignore comments
+    if (line[0] == '#') {
         return;
     }
     /* A hard factor definition consists of a name, an order
