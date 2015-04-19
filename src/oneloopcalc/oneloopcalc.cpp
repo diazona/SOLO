@@ -568,7 +568,7 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
 
     // write headers
     if (rc.separate) {
-        out << setw(lw) << left << "pT" << OFS << setw(lw) << "Y" << OFS;
+        out << setw(lw) << left << "pT" << OFS << setw(lw) << "Y" << OFS << setw(lw) << "seed" << OFS;
         for (size_t hfgindex = 0; hfgindex < rc._hfglen; hfgindex++) {
             out << setw(rw) << rc.hfgnames[hfgindex] << OFS;
             size_t hflen = rc.hfgroups[hfgindex]->size();
@@ -590,7 +590,7 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
         out << endl;
     }
     else {
-        out << setw(lw) << left << "pT" << OFS << setw(lw) << "Y" << OFS;
+        out << setw(lw) << left << "pT" << OFS << setw(lw) << "Y" << OFS << setw(lw) << "seed" << OFS;
         for (vector<string>::iterator it = rc.hfgnames.begin(); it != rc.hfgnames.end(); it++) {
             ostringstream valstream;
             valstream << *it << "-val";
@@ -608,6 +608,7 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
     for (size_t ccindex = 0; ccindex < rc.cc.size(); ccindex++) {
         out << setw(lw) << sqrt(rc.cc[ccindex].pT2) << OFS;
         out << setw(lw) << rc.cc[ccindex].Y << OFS;
+        out << setw(lw) << rc.cc[ccindex].pseudorandom_generator_seed << OFS;
 
         double total = 0;
         size_t hfglen = rc.separate ? rc._hflen : rc._hfglen;

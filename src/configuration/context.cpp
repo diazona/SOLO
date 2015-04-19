@@ -267,6 +267,14 @@ vector<double> parse_double_vector(pair<multimap<string, string>::iterator, mult
     return v;
 }
 
+vector<unsigned long int> parse_ulong_vector(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
+    vector<unsigned long int> v;
+    for (multimap<string, string>::iterator it = range.first; it != range.second; it++) {
+        v.push_back(strtoul(it->second.c_str(), NULL, 0));
+    }
+    return v;
+}
+
 vector<string> parse_string_vector(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
     vector<string> v;
     for (multimap<string, string>::iterator it = range.first; it != range.second; it++) {
@@ -489,11 +497,12 @@ void ContextCollection::create_contexts() {
     check_property_default( relerr, double, parse_double, 0)
     check_property(         quasirandom_generator_type, const gsl_qrng_type*, parse_qrng_type)
     check_property(         pseudorandom_generator_type, const gsl_rng_type*, parse_rng_type)
-    check_property(         pseudorandom_generator_seed, unsigned long int, parse_ulong)
+    check_property(         pseudorandom_generator_seed, vector<unsigned long int>, parse_ulong_vector)
     check_property_default( css_r_regularization, bool, parse_boolean, false)
     check_property_default( css_r2_max, double, parse_double, 0) // 0 is a dummy value for when the regularization is not being used
     check_property_default( resummation_constant, double, parse_double, 1)
     check_property_default( exact_kinematics, bool, parse_boolean, false)
+
     /*
      * For dimensions in which the lower and upper bounds are -infinity and +infinity,
      * we have to pick a finite value to cut off the integral. It shouldn't be made
@@ -583,33 +592,36 @@ void ContextCollection::create_contexts() {
 
     contexts_created = true;
     // create contexts
-    for (vector<double>::iterator pTit = pT.begin(); pTit != pT.end(); pTit++) {
-        for (vector<double>::iterator Yit = Y.begin(); Yit != Y.end(); Yit++) {
-            double pT = *pTit;
-            double Y = *Yit;
-            try {
-                const Context c = {
-                  x0, mass_number, centrality, lambda, Nc, Nf, CF, TR, Sperp,
-                  gsl_pow_2(pT), sqs, Y,
-                  hardfactor_definitions, pdf_filename, ff_filename,
-                  quasirandom_generator_type, pseudorandom_generator_type, pseudorandom_generator_seed,
-                  gdist, cpl, fs, _c0r_optimization, css_r_regularization, css_r2_max, resummation_constant,
-                  exact_kinematics,
-                  projectile, hadron,
-                  integration_strategy,
-                  abserr, relerr,
-                  cubature_iterations, miser_iterations,
-                  vegas_initial_iterations, vegas_incremental_iterations, quasi_iterations,
-                  inf, cutoff,
-                  Context::compute_Q02x0lambda(centrality, mass_number, x0, lambda),
-                  Context::compute_tau(pT, sqs, Y),
-                  Context::compute_tauhat(pT, sqs, Y)
-                };
-                c.check_kinematics();
-                contexts.push_back(c);
-            }
-            catch (const InvalidKinematicsException& e) {
-                logger << "Failed to create context at pT = " << pT << ", Y = " << Y << ": " << e.what() << endl;
+    for (vector<unsigned long int>::iterator seedit = pseudorandom_generator_seed.begin(); seedit != pseudorandom_generator_seed.end(); seedit++) {
+        for (vector<double>::iterator pTit = pT.begin(); pTit != pT.end(); pTit++) {
+            for (vector<double>::iterator Yit = Y.begin(); Yit != Y.end(); Yit++) {
+                double pT = *pTit;
+                double Y = *Yit;
+                unsigned long int seed = *seedit;
+                try {
+                    const Context c = {
+                      x0, mass_number, centrality, lambda, Nc, Nf, CF, TR, Sperp,
+                      gsl_pow_2(pT), sqs, Y,
+                      hardfactor_definitions, pdf_filename, ff_filename,
+                      quasirandom_generator_type, pseudorandom_generator_type, seed,
+                      gdist, cpl, fs, _c0r_optimization, css_r_regularization, css_r2_max, resummation_constant,
+                      exact_kinematics,
+                      projectile, hadron,
+                      integration_strategy,
+                      abserr, relerr,
+                      cubature_iterations, miser_iterations,
+                      vegas_initial_iterations, vegas_incremental_iterations, quasi_iterations,
+                      inf, cutoff,
+                      Context::compute_Q02x0lambda(centrality, mass_number, x0, lambda),
+                      Context::compute_tau(pT, sqs, Y),
+                      Context::compute_tauhat(pT, sqs, Y)
+                    };
+                    c.check_kinematics();
+                    contexts.push_back(c);
+                }
+                catch (const InvalidKinematicsException& e) {
+                    logger << "Failed to create context at pT = " << pT << ", Y = " << Y << ": " << e.what() << endl;
+                }
             }
         }
     }
@@ -635,7 +647,7 @@ bool ContextCollection::empty() {
 
 size_t ContextCollection::size() {
     if (!contexts_created) {
-        return options.count("pt") * options.count("y");
+        return options.count("pt") * options.count("y") * options.count("pseudorandom_generator_seed");
     }
     else {
         return contexts.size();
