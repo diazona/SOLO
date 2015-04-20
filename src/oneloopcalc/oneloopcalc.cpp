@@ -566,9 +566,23 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
     int lw = 6;
     int rw = 14; // "label width" and "result width"
 
+    bool multiseed_mode = false;
+    {
+        unsigned long int first_seed = rc.cc[0].pseudorandom_generator_seed;
+        for (size_t i = 1; i < rc.cc.size(); i++) {
+            if (rc.cc[i].pseudorandom_generator_seed != first_seed) {
+                multiseed_mode = true;
+                break;
+            }
+        }
+    }
+
     // write headers
     if (rc.separate) {
-        out << setw(lw) << left << "pT" << OFS << setw(lw) << "Y" << OFS << setw(lw) << "seed" << OFS;
+        out << setw(lw) << left << "pT" << OFS << setw(lw) << "Y" << OFS;
+        if (multiseed_mode) {
+            out << setw(lw) << "seed" << OFS;
+        }
         for (size_t hfgindex = 0; hfgindex < rc._hfglen; hfgindex++) {
             out << setw(rw) << rc.hfgnames[hfgindex] << OFS;
             size_t hflen = rc.hfgroups[hfgindex]->size();
@@ -579,6 +593,9 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
         out << setw(rw) << "total" << endl;
 
         out << setw(lw) << BLANK << OFS << setw(lw) << BLANK << OFS;
+        if (multiseed_mode) {
+            out << setw(lw) << "seed" << OFS;
+        }
         for (vector<string>::iterator termname_iterator = rc.hfnames.begin(); termname_iterator != rc.hfnames.end(); termname_iterator++) {
             ostringstream valstream;
             valstream << *termname_iterator << "-val";
@@ -590,7 +607,10 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
         out << endl;
     }
     else {
-        out << setw(lw) << left << "pT" << OFS << setw(lw) << "Y" << OFS << setw(lw) << "seed" << OFS;
+        out << setw(lw) << left << "pT" << OFS << setw(lw) << "Y" << OFS;
+        if (multiseed_mode) {
+            out << setw(lw) << "seed" << OFS;
+        }
         for (vector<string>::iterator it = rc.hfgnames.begin(); it != rc.hfgnames.end(); it++) {
             ostringstream valstream;
             valstream << *it << "-val";
@@ -605,13 +625,18 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
     // write data
     double l_real, l_imag, l_error;
     size_t hfglen = rc.separate ? rc._hflen : rc._hfglen;
-    double* counts = new double[hfglen];
-    double* means  = new double[hfglen];
-    double* errors = new double[hfglen];
+    double* counts = NULL;
+    double* means  = NULL;
+    double* errors = NULL;
+    if (multiseed_mode) {
+        counts = new double[hfglen];
+        means  = new double[hfglen];
+        errors = new double[hfglen];
+    }
     bool all_valid = true;
     double last_pt = NAN, last_Y = NAN;
     for (size_t ccindex = 0; ccindex < rc.cc.size(); ccindex++) {
-        if (last_pt != rc.cc[ccindex].pT2 || last_Y != rc.cc[ccindex].Y) {
+        if (multiseed_mode && (last_pt != rc.cc[ccindex].pT2 || last_Y != rc.cc[ccindex].Y)) {
             if (ccindex > 0) {
                 out << setw(lw) << "mean" << OFS << setw(lw) << BLANK << OFS << setw(lw) << BLANK << OFS;
                 for (size_t hfgindex = 0; hfgindex < hfglen; hfgindex++) {
@@ -634,7 +659,9 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
 
         out << setw(lw) << sqrt(rc.cc[ccindex].pT2) << OFS;
         out << setw(lw) << rc.cc[ccindex].Y << OFS;
-        out << setw(lw) << rc.cc[ccindex].pseudorandom_generator_seed << OFS;
+        if (multiseed_mode) {
+            out << setw(lw) << rc.cc[ccindex].pseudorandom_generator_seed << OFS;
+        }
 
         double total = 0;
         bool row_valid = true;
@@ -661,23 +688,27 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
             out << setw(rw) << "---" << endl;
         }
     }
-    out << setw(lw) << "mean" << OFS << setw(lw) << BLANK << OFS << setw(lw) << BLANK << OFS;
-    for (size_t hfgindex = 0; hfgindex < hfglen; hfgindex++) {
-        out << setw(rw) << means[hfgindex] << OFS << setw(rw) << BLANK << OFS;
+    if (multiseed_mode) {
+        out << setw(lw) << "mean" << OFS << setw(lw) << BLANK << OFS << setw(lw) << BLANK << OFS;
+        for (size_t hfgindex = 0; hfgindex < hfglen; hfgindex++) {
+            out << setw(rw) << means[hfgindex] << OFS << setw(rw) << BLANK << OFS;
+        }
+        out << endl;
+        out << setw(lw) << "stddev" << OFS << setw(lw) << BLANK << OFS << setw(lw) << BLANK << OFS;
+        for (size_t hfgindex = 0; hfgindex < hfglen; hfgindex++) {
+            out << setw(rw) << sqrt(errors[hfgindex])/counts[hfgindex] << OFS << setw(rw) << BLANK << OFS;
+        }
+        out << endl;
     }
-    out << endl;
-    out << setw(lw) << "stddev" << OFS << setw(lw) << BLANK << OFS << setw(lw) << BLANK << OFS;
-    for (size_t hfgindex = 0; hfgindex < hfglen; hfgindex++) {
-        out << setw(rw) << sqrt(errors[hfgindex])/counts[hfgindex] << OFS << setw(rw) << BLANK << OFS;
-    }
-    out << endl;
     if (!all_valid) {
         out << "WARNING: some results were not computed" << endl;
     }
 
-    delete[] counts;
-    delete[] means;
-    delete[] errors;
+    if (multiseed_mode) {
+        delete[] counts;
+        delete[] means;
+        delete[] errors;
+    }
 
     if (rc.minmax) {
 #define process(v) out << #v << "\t" << min_ictx.v << "\t" << max_ictx.v << "\t" << endl;
