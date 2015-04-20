@@ -604,20 +604,50 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
 
     // write data
     double l_real, l_imag, l_error;
+    size_t hfglen = rc.separate ? rc._hflen : rc._hfglen;
+    double* counts = new double[hfglen];
+    double* means  = new double[hfglen];
+    double* errors = new double[hfglen];
     bool all_valid = true;
+    double last_pt = NAN, last_Y = NAN;
     for (size_t ccindex = 0; ccindex < rc.cc.size(); ccindex++) {
+        if (last_pt != rc.cc[ccindex].pT2 || last_Y != rc.cc[ccindex].Y) {
+            if (ccindex > 0) {
+                out << setw(lw) << "mean" << OFS << setw(lw) << BLANK << OFS << setw(lw) << BLANK << OFS;
+                for (size_t hfgindex = 0; hfgindex < hfglen; hfgindex++) {
+                    out << setw(rw) << means[hfgindex] << OFS << setw(rw) << BLANK << OFS;
+                }
+                out << endl;
+                out << setw(lw) << "stddev" << OFS << setw(lw) << BLANK << OFS << setw(lw) << BLANK << OFS;
+                for (size_t hfgindex = 0; hfgindex < hfglen; hfgindex++) {
+                    out << setw(rw) << sqrt(errors[hfgindex])/counts[hfgindex] << OFS << setw(rw) << BLANK << OFS;
+                }
+                out << endl;
+            }
+            memset(counts, 0, hfglen * sizeof(double));
+            memset(means,  0, hfglen * sizeof(double));
+            memset(errors, 0, hfglen * sizeof(double));
+
+            last_pt = rc.cc[ccindex].pT2;
+            last_Y = rc.cc[ccindex].Y;
+        }
+
         out << setw(lw) << sqrt(rc.cc[ccindex].pT2) << OFS;
         out << setw(lw) << rc.cc[ccindex].Y << OFS;
         out << setw(lw) << rc.cc[ccindex].pseudorandom_generator_seed << OFS;
 
         double total = 0;
-        size_t hfglen = rc.separate ? rc._hflen : rc._hfglen;
         bool row_valid = true;
         for (size_t hfgindex = 0; hfgindex < hfglen; hfgindex++) {
             if (rc.valid(ccindex, hfgindex)) {
                 rc.result(ccindex, hfgindex, &l_real, &l_imag, &l_error);
                 out << setw(rw) << l_real << OFS << setw(rw) << l_error << OFS;
                 total += l_real;
+
+                counts[hfgindex]++;
+                double old_mean = means[hfgindex];
+                means[hfgindex] += (l_real - old_mean) / counts[hfgindex];
+                errors[hfgindex] += (l_real - old_mean) * (l_real - means[hfgindex]);
             }
             else {
                 out << setw(rw) << "---" << OFS << setw(rw) << "---" << OFS;
@@ -631,9 +661,23 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
             out << setw(rw) << "---" << endl;
         }
     }
+    out << setw(lw) << "mean" << OFS << setw(lw) << BLANK << OFS << setw(lw) << BLANK << OFS;
+    for (size_t hfgindex = 0; hfgindex < hfglen; hfgindex++) {
+        out << setw(rw) << means[hfgindex] << OFS << setw(rw) << BLANK << OFS;
+    }
+    out << endl;
+    out << setw(lw) << "stddev" << OFS << setw(lw) << BLANK << OFS << setw(lw) << BLANK << OFS;
+    for (size_t hfgindex = 0; hfgindex < hfglen; hfgindex++) {
+        out << setw(rw) << sqrt(errors[hfgindex])/counts[hfgindex] << OFS << setw(rw) << BLANK << OFS;
+    }
+    out << endl;
     if (!all_valid) {
         out << "WARNING: some results were not computed" << endl;
     }
+
+    delete[] counts;
+    delete[] means;
+    delete[] errors;
 
     if (rc.minmax) {
 #define process(v) out << #v << "\t" << min_ictx.v << "\t" << max_ictx.v << "\t" << endl;

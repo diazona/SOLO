@@ -592,9 +592,9 @@ void ContextCollection::create_contexts() {
 
     contexts_created = true;
     // create contexts
-    for (vector<unsigned long int>::iterator seedit = pseudorandom_generator_seed.begin(); seedit != pseudorandom_generator_seed.end(); seedit++) {
-        for (vector<double>::iterator pTit = pT.begin(); pTit != pT.end(); pTit++) {
-            for (vector<double>::iterator Yit = Y.begin(); Yit != Y.end(); Yit++) {
+    for (vector<double>::iterator pTit = pT.begin(); pTit != pT.end(); pTit++) {
+        for (vector<double>::iterator Yit = Y.begin(); Yit != Y.end(); Yit++) {
+            for (vector<unsigned long int>::iterator seedit = pseudorandom_generator_seed.begin(); seedit != pseudorandom_generator_seed.end(); seedit++) {
                 double pT = *pTit;
                 double Y = *Yit;
                 unsigned long int seed = *seedit;
