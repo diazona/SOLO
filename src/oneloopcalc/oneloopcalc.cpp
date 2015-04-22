@@ -671,10 +671,12 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
                 out << setw(rw) << l_real << OFS << setw(rw) << l_error << OFS;
                 total += l_real;
 
-                counts[hfgindex]++;
-                double old_mean = means[hfgindex];
-                means[hfgindex] += (l_real - old_mean) / counts[hfgindex];
-                errors[hfgindex] += (l_real - old_mean) * (l_real - means[hfgindex]);
+                if (multiseed_mode) {
+                    counts[hfgindex]++;
+                    double old_mean = means[hfgindex];
+                    means[hfgindex] += (l_real - old_mean) / counts[hfgindex];
+                    errors[hfgindex] += (l_real - old_mean) * (l_real - means[hfgindex]);
+                }
             }
             else {
                 out << setw(rw) << "---" << OFS << setw(rw) << "---" << OFS;
