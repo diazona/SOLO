@@ -778,8 +778,8 @@ std::ostream& operator<<(std::ostream& out, const DSSpiNLO::hadron& hadron) {
 }
 
 template<typename T>
-ostream& operator<<(ostream& out, vector<T>& vec) {
-    for (typename vector<T>::iterator it = vec.begin(); it != vec.end(); it++) {
+ostream& operator<<(ostream& out, const vector<T>& vec) {
+    for (typename vector<T>::const_iterator it = vec.begin(); it != vec.end(); it++) {
         if (it != vec.begin()) {
             out << ", ";
         }
@@ -788,7 +788,7 @@ ostream& operator<<(ostream& out, vector<T>& vec) {
     return out;
 }
 
-std::ostream& operator<<(std::ostream& out, Context& ctx) {
+std::ostream& operator<<(std::ostream& out, const Context& ctx) {
     out << "x0\t= "         << ctx.x0           << endl;
     out << "mass number\t= "<< ctx.mass_number  << endl;
     out << "centrality\t= " << ctx.centrality   << endl;

@@ -508,7 +508,7 @@ std::ostream& operator<<(std::ostream& out, ContextCollection& cc);
  * This is a human-readable representation and cannot necessarily
  * be used to reconstruct the Context programmatically.
  */
-std::ostream& operator<<(std::ostream& out, Context& ctx);
+std::ostream& operator<<(std::ostream& out, const Context& ctx);
 
 /**
  * Another Context-like class that holds objects which should not be shared
