@@ -45,7 +45,7 @@
 #include "../integration/integrator.h"
 #include "../utils/utils.h"
 #include "../log.h"
-#include "../hardfactors/hardfactor_parsed.h"
+#include "../hardfactors/hardfactor_parser.h"
 
 using namespace std;
 

@@ -26,7 +26,7 @@
 #include <gsl/gsl_math.h>
 #include "gsl_mu.h"
 #include "hardfactor.h"
-#include "hardfactor_parsed.h"
+#include "hardfactor_parser.h"
 #include "../typedefs.h"
 #include "../utils/utils.h"
 
