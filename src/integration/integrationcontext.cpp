@@ -222,5 +222,3 @@ void IntegrationContext::update_parton_functions() {
 
     this->qgfactor = qgfactor;
 }
-
-

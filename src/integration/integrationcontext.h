@@ -1,8 +1,8 @@
 /*
  * Part of oneloopcalc
- * 
+ *
  * Copyright 2012 David Zaslavsky
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -58,7 +58,7 @@ public:
     double Fq1, Fq2, Fq3;
     double Fkq1, Fkq2, Fkq3;
     double qmax;
-    
+
     IntegrationContext(const Context* ctx, const ThreadLocalContext* tlctx) :
       ctx(ctx),
       tlctx(tlctx),
