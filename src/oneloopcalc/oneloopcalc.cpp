@@ -897,14 +897,17 @@ int main(int argc, char** argv) {
         return run(argc, argv);
     }
     catch (const mu::ParserError& e) {
-        string spaces(e.GetPos(), ' ');
         cerr << "Parser error: " << e.GetMsg() << endl;
-        cerr << "in expression:" << endl;
-        cerr << e.GetExpr() << endl;
-        cerr << spaces << "^" << endl;
+        string expr = e.GetExpr();
+        if (!expr.empty()) {
+            cerr << "in expression:" << endl;
+            cerr << expr << endl;
+            string spaces(e.GetPos(), ' ');
+            cerr << spaces << "^" << endl;
+        }
         return 1;
     }
-    catch (const exception& e) {
+    catch (const std::exception& e) {
         cerr << "Caught exception:" << endl << e.what() << endl;
         return 1;
     }

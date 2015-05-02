@@ -96,7 +96,14 @@ int main(const int argc, char** argv) {
             return 1;
         }
         catch (const mu::ParserError& e) {
-            cerr << e.GetMsg() << endl;
+            cerr << "Parser error: " << e.GetMsg() << endl;
+            string expr = e.GetExpr();
+            if (!expr.empty()) {
+                cerr << "in expression:" << endl;
+                cerr << expr << endl;
+                string spaces(e.GetPos(), ' ');
+                cerr << spaces << "^" << endl;
+            }
             return 1;
         }
     }
