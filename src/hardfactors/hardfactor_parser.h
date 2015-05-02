@@ -308,6 +308,7 @@ private:
     const ParsedHardFactorTerm* create_hard_factor_term();
     void reset_current_term();
 
+    const ParsedCompositeHardFactor* parse_composite_hard_factor(const string& key, const string& value);
     HardFactorList hard_factors;
     std::list<std::string> unparsed_hard_factor_group_specs;
     std::string Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag;
