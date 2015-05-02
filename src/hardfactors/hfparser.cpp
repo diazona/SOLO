@@ -100,6 +100,7 @@ int main(const int argc, char** argv) {
             return 1;
         }
     }
+    parser.flush_groups();
     if (encountered_error) {
         return 1;
     }
