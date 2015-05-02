@@ -31,12 +31,14 @@ public:
     ParsedHardFactorTerm(
         const std::string& name,
         const std::string& implementation,
-        const HardFactorOrder order,
+        const HardFactor::HardFactorOrder order,
         const IntegrationType* type,
-        const string& Fs_real, const string& Fs_imag,
-        const string& Fn_real, const string& Fn_imag,
-        const string& Fd_real, const string& Fd_imag
+        const std::string& Fs_real, const std::string& Fs_imag,
+        const std::string& Fn_real, const std::string& Fn_imag,
+        const std::string& Fd_real, const std::string& Fd_imag,
+        const std::list<std::pair<std::string, std::string> >& variable_list
     );
+    ~ParsedHardFactorTerm();
 
     const char* get_name() const { return m_name.c_str(); }
     const char* get_implementation() const { return m_implementation.c_str(); }
@@ -107,7 +109,10 @@ private:
     const HardFactorOrder m_order;
     const IntegrationType* mp_type;
 
-    void init_parser(mu::Parser& parser, mu::varmap_type& all_variables, const string& real_expr, const string& imag_expr, const char* debug_message);
+    size_t aux_variable_count;
+    double* aux_variable_storage;
+
+    void init_parser(mu::Parser& parser, mu::varmap_type& all_used_variables, const string& aux_variables, const string& real_expr, const string& imag_expr, const char* debug_message);
 #ifndef NDEBUG
     void print_parser_info(const char* message, mu::Parser& parser, const double* real, const double* imag) const;
     void print_parser_info(const char* message, mu::Parser& parser) const;
@@ -309,8 +314,11 @@ private:
     void reset_current_term();
 
     const ParsedCompositeHardFactor* parse_composite_hard_factor(const string& key, const string& value);
+    void parse_variable_definition(const string& key, const string& value);
+
     HardFactorList hard_factors;
     std::list<std::string> unparsed_hard_factor_group_specs;
+    std::list<std::pair<std::string, std::string> > variable_definitions;
     std::string Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag;
     std::string name, implementation;
     HardFactor::HardFactorOrder order;

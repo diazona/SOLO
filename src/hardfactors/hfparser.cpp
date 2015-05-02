@@ -134,9 +134,9 @@ int main(const int argc, char** argv) {
             cout << endl;
             try {
                 const ParsedHardFactorTerm& phft = dynamic_cast<const ParsedHardFactorTerm&>(hf);
-                cout << "  Fs = " << phft.Fs_expr() << endl;
-                cout << "  Fn = " << phft.Fn_expr() << endl;
-                cout << "  Fd = " << phft.Fd_expr() << endl;
+                cout << "  Fs: " << phft.Fs_expr() << endl;
+                cout << "  Fn: " << phft.Fn_expr() << endl;
+                cout << "  Fd: " << phft.Fd_expr() << endl;
                 cout << endl;
             }
             catch (const bad_cast& e) {

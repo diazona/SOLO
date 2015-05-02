@@ -121,8 +121,8 @@ value_type norm2(const value_type a1, const value_type a2) {
     return gsl_hypot(a1, a2);
 }
 
-void ParsedHardFactorTerm::init_parser(Parser& parser, varmap_type& all_variables, const string& real_expr, const string& imag_expr, const char* debug_message) {
-    parser.SetExpr(e0(real_expr) + "," + e0(imag_expr));
+void ParsedHardFactorTerm::init_parser(Parser& parser, varmap_type& all_used_variables, const string& aux_variables, const string& real_expr, const string& imag_expr, const char* debug_message) {
+    parser.SetExpr(aux_variables + e0(real_expr) + "," + e0(imag_expr));
     mu_load_gsl(parser);
     parser.DefineFun("F", gluon_distribution_F);
     parser.DefineFun("S2", gluon_distribution_S2);
@@ -136,7 +136,7 @@ void ParsedHardFactorTerm::init_parser(Parser& parser, varmap_type& all_variable
     // use GetUsedVar() to trigger an attempt to parse the expression
     // we want any parsing errors to be revealed now, not when evaluating expressions
     varmap_type variables_from_parser = parser.GetUsedVar();
-    all_variables.insert(variables_from_parser.begin(), variables_from_parser.end());
+    all_used_variables.insert(variables_from_parser.begin(), variables_from_parser.end());
 }
 
 ParsedHardFactorTerm::ParsedHardFactorTerm(
@@ -146,30 +146,54 @@ ParsedHardFactorTerm::ParsedHardFactorTerm(
     const IntegrationType* type,
     const string& Fs_real, const string& Fs_imag,
     const string& Fn_real, const string& Fn_imag,
-    const string& Fd_real, const string& Fd_imag) :
+    const string& Fd_real, const string& Fd_imag,
+    const list<pair<string, string> >& variable_list) :
   m_name(name),
   m_implementation(implementation),
   m_order(order),
   mp_type(type) {
-    varmap_type all_variables;
-    init_parser(Fs_parser, all_variables, Fs_real, Fs_imag, "Fs");
-    init_parser(Fn_parser, all_variables, Fn_real, Fn_imag, "Fn");
-    init_parser(Fd_parser, all_variables, Fd_real, Fd_imag, "Fd");
+    aux_variable_count = variable_list.size();
+    ostringstream aux_variables_oss;
+    for (list<pair<string, string> >::const_iterator vi = variable_list.begin(); vi != variable_list.end(); vi++) {
+        string var = vi->first;
+        string expr = vi->second;
+        aux_variables_oss << var << "=" << expr << ",";
+    }
+    string aux_variables = aux_variables_oss.str();
+    varmap_type all_used_variables;
+    init_parser(Fs_parser, all_used_variables, aux_variables, Fs_real, Fs_imag, "Fs");
+    init_parser(Fn_parser, all_used_variables, aux_variables, Fn_real, Fn_imag, "Fn");
+    init_parser(Fd_parser, all_used_variables, aux_variables, Fd_real, Fd_imag, "Fd");
 
     // make sure only existing variables are used
-#define process(var) all_variables.erase(#var);
+#define process(var) all_used_variables.erase(#var);
 #include "../integration/ictx_var_list.inc"
 #include "../configuration/ctx_var_list.inc"
 #undef process
-    if (!all_variables.empty()) {
-        ostringstream oss;
-        oss << "Invalid variables used:";
-        for (varmap_type::const_iterator it = all_variables.begin(); it != all_variables.end(); it++) {
-            oss << " " << it->first;
+    aux_variable_storage = new double[aux_variable_count];
+    size_t i = 0;
+    for (list<pair<string, string> >::const_iterator vi = variable_list.begin(); vi != variable_list.end(); vi++, i++) {
+        const string& varname = vi->first;
+        Fs_parser.DefineVar(varname, &aux_variable_storage[i]);
+        Fn_parser.DefineVar(varname, &aux_variable_storage[i]);
+        Fd_parser.DefineVar(varname, &aux_variable_storage[i]);
+        all_used_variables.erase(varname);
+    }
+    if (!all_used_variables.empty()) {
+        ostringstream doss;
+        doss << "Invalid variables used:";
+        for (varmap_type::const_iterator it = all_used_variables.begin(); it != all_used_variables.end(); it++) {
+            doss << " " << it->first;
         }
-        throw mu::ParserError(oss.str());
+        delete[] aux_variable_storage;
+        throw mu::ParserError(doss.str());
     }
 }
+
+ParsedHardFactorTerm::~ParsedHardFactorTerm() {
+    delete[] aux_variable_storage;
+}
+
 
 void define_variables(Parser& parser, const IntegrationContext* ictx) {
     /* An alternative implementation would be to have an IntegrationContext
@@ -224,12 +248,12 @@ void evaluate_hard_factor(Parser& parser, double* real, double* imag) {
     int number_of_values;
     value_type* values;
     values = parser.Eval(number_of_values);
-    if (number_of_values != 2) {
+    if (number_of_values < 2) {
         throw mu::ParserError("invalid number of values");
         return;
     }
-    *real = values[0];
-    *imag = values[1];
+    *real = values[number_of_values - 2];
+    *imag = values[number_of_values - 1];
 }
 
 void ParsedHardFactorTerm::Fs(const IntegrationContext* ictx, double* real, double* imag) const {
@@ -438,11 +462,22 @@ void HardFactorParser::parse_line(const string& line) {
         Fd_imag = value;
     }
     /* Anything other than those keys, if it doesn't contain spaces, is
-     * taken to represent a specification of a hard factor which
-     * contains multiple terms.
+     * taken to represent either:
+     *
+     * - A definition of a variable to be used in the hard factor expressions,
+     *   if it occurs when a hard factor term definition is already in progress
+     *   (i.e. any of name, order, type, etc. have already been given but the
+     *   hard factor definition is not complete); or
+     * - A specification of a hard factor which contains multiple terms,
+     *   if there is not a hard factor definition already in progress.
      */
-    else if (key.find_first_of(" \t\r\n") == string::npos && hard_factor_definition_empty()) {
-        parse_composite_hard_factor(key, value);
+    else if (key.find_first_of(" \t\r\n") == string::npos) {
+        if (hard_factor_definition_empty()) {
+            parse_composite_hard_factor(key, value);
+        }
+        else {
+            parse_variable_definition(key, value);
+        }
     }
     else {
         throw InvalidHardFactorDefinitionException(line, key, value, "Unknown property:");
@@ -471,6 +506,12 @@ void HardFactorParser::parse_file(const string& filename) {
     }
     create_hard_factor_term();
 }
+
+void HardFactorParser::parse_variable_definition(const string& key, const string& value) {
+    pair<string, string> p(key, value);
+    variable_definitions.push_back(p);
+}
+
 
 const ParsedCompositeHardFactor* HardFactorParser::parse_composite_hard_factor(const string& key, const string& value) {
     assert(hard_factor_definition_empty());
@@ -638,9 +679,10 @@ bool HardFactorParser::hard_factor_definition_empty() const {
       order == sentinel &&
       name.empty() &&
       implementation.empty() &&
-       (   Fs_real.empty() && Fs_imag.empty()
-        && Fn_real.empty() && Fn_imag.empty()
-        && Fd_real.empty() && Fd_imag.empty());
+      Fs_real.empty() && Fs_imag.empty() &&
+      Fn_real.empty() && Fn_imag.empty() &&
+      Fd_real.empty() && Fd_imag.empty() &&
+      variable_definitions.empty();
 }
 
 bool HardFactorParser::hard_factor_definition_complete() const {
@@ -658,7 +700,7 @@ const ParsedHardFactorTerm* HardFactorParser::create_hard_factor_term() {
         throw IncompleteHardFactorDefinitionException();
     }
 
-    ParsedHardFactorTerm* hf = new ParsedHardFactorTerm(name, implementation.empty() ? default_implementation(type) : implementation, order, type, Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag);
+    ParsedHardFactorTerm* hf = new ParsedHardFactorTerm(name, implementation.empty() ? default_implementation(type) : implementation, order, type, Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag, variable_definitions);
     registry.add_hard_factor(hf, true);
     hard_factors.push_back(hf);
     if (hard_factor_callback != NULL) {
@@ -673,12 +715,13 @@ void HardFactorParser::reset_current_term() {
     implementation.erase();
     order = sentinel;
     type = NULL;
-    Fs_real.erase();
-    Fs_imag.erase();
-    Fn_real.erase();
-    Fn_imag.erase();
-    Fd_real.erase();
-    Fd_imag.erase();
+    variable_definitions.clear();
+    Fs_real.clear();
+    Fs_imag.clear();
+    Fn_real.clear();
+    Fn_imag.clear();
+    Fd_real.clear();
+    Fd_imag.clear();
     assert(hard_factor_definition_empty());
 }
 
