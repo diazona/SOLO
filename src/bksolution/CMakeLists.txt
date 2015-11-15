@@ -8,3 +8,6 @@ set(LIBS ${LIBS} ${GSL_LIBRARIES})
 set(LIBS ${LIBS} m)
 
 include_directories(${interp2d_SOURCE_DIR} ${quasimontecarlo_SOURCE_DIR})
+
+add_library(bksol discretize.c solver.cpp)
+target_link_libraries(bksol ${LIBS})
