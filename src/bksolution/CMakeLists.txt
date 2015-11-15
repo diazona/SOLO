@@ -11,3 +11,6 @@ include_directories(${interp2d_SOURCE_DIR} ${quasimontecarlo_SOURCE_DIR})
 
 add_library(bksol discretize.c solver.cpp)
 target_link_libraries(bksol ${LIBS})
+
+add_executable(bksolver discretize.c solver.cpp bk.cpp)
+target_link_libraries(bksolver ${LIBS})
