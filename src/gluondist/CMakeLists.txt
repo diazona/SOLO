@@ -21,3 +21,23 @@ add_executable(gluondisteval
   ../configuration/context.cpp
   ../utils/utils.cpp)
 target_link_libraries(gluondisteval dsspinlo interp2d ${LIBS})
+
+install(TARGETS gdist
+ RUNTIME DESTINATION bin
+ LIBRARY DESTINATION lib
+ ARCHIVE DESTINATION lib
+ COMPONENT libraries
+ CONFIGURATIONS Debug Release
+)
+install(FILES gluondist.h
+ DESTINATION include/SOLO
+ COMPONENT libraries
+ CONFIGURATIONS Debug Release
+)
+install(TARGETS gluondisteval
+ RUNTIME DESTINATION bin
+ LIBRARY DESTINATION lib
+ ARCHIVE DESTINATION lib
+ COMPONENT auxiliary_executables
+ CONFIGURATIONS Debug Release
+)

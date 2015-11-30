@@ -42,3 +42,10 @@ add_executable(oneloopcalc
     ${SOLO_SOURCE_DIR}/utils/utils.cpp)
 target_link_libraries(oneloopcalc gslmuparser interp2d quasimontecarlo dsspinlo gdist ${LIBS})
 add_dependencies(oneloopcalc git_revision.h)
+
+install(TARGETS oneloopcalc
+ RUNTIME DESTINATION bin
+ LIBRARY DESTINATION lib
+ ARCHIVE DESTINATION lib
+ COMPONENT executables
+)

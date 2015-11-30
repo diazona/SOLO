@@ -8,6 +8,15 @@ set(LIBS ${LIBS} ${OPENSSL_LIBRARIES})
 link_directories(${GSL_LIBRARY_DIRS})
 add_executable(kovr kov-position/gauleg.cpp kov-position/interr.cpp kov-position/kovr.cpp)
 target_link_libraries(kovr m)
+
+install(TARGETS kovr
+ RUNTIME DESTINATION bin
+ LIBRARY DESTINATION lib
+ ARCHIVE DESTINATION lib
+ COMPONENT executables
+ CONFIGURATIONS Debug Release Minimal
+)
+
 add_subdirectory(configuration)
 add_subdirectory(dss_pinlo)
 add_subdirectory(gluondist)

@@ -17,3 +17,22 @@ add_executable(dsspinlotest
   dss_pinlo.cpp)
 target_link_libraries(dsspinlotest interp2d ${LIBS})
 
+install(TARGETS dsspinlo
+ RUNTIME DESTINATION bin
+ LIBRARY DESTINATION lib
+ ARCHIVE DESTINATION lib
+ COMPONENT libraries
+ CONFIGURATIONS Debug Release
+)
+install(FILES dss_pinlo.h
+ DESTINATION include/SOLO
+ COMPONENT libraries
+ CONFIGURATIONS Debug Release
+)
+install(TARGETS dsspinlotest
+ RUNTIME DESTINATION bin
+ LIBRARY DESTINATION lib
+ ARCHIVE DESTINATION lib
+ COMPONENT testing
+ CONFIGURATIONS Debug
+)

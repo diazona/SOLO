@@ -16,3 +16,11 @@ add_executable(contextreader
   ${SOLO_SOURCE_DIR}/factorizationscale.cpp)
 target_link_libraries(contextreader dsspinlo interp2d gdist ${LIBS})
 set_target_properties(contextreader PROPERTIES COMPILE_DEFINITIONS CONTEXT_TEST)
+
+install(TARGETS contextreader
+ RUNTIME DESTINATION bin
+ LIBRARY DESTINATION lib
+ ARCHIVE DESTINATION lib
+ COMPONENT auxiliary_executables
+ CONFIGURATIONS Debug Release
+)
