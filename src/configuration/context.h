@@ -484,6 +484,13 @@ private:
     PlateauPowerGluonDistribution* create_pp_gluon_distribution();
     FileDataGluonDistribution* create_file_gluon_distribution(GluonDistribution* lower_dist, GluonDistribution* upper_dist, const bool extended);
     GluonDistribution* create_gluon_distribution(const string&);
+
+    /* Disallow copying, because the memory management in this class is terrible.
+     * If you want to implement reference-counting or something, no reason this
+     * couldn't become public, if a suitable implementation is provided.
+     */
+    ContextCollection(const ContextCollection& c) {}
+    ContextCollection& operator=(const ContextCollection& c) {return *this;}
 };
 
 /**

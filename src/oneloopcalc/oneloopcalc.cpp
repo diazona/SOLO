@@ -791,7 +791,7 @@ int run(int argc, char** argv) {
     gsl_set_error_handler(&gsl_error_throw);
 
     ProgramConfiguration pc(argc, argv);
-    ContextCollection cc = pc.context_collection();
+    ContextCollection& cc = pc.context_collection();
     if (cc.empty()) {
         logger << "No momenta or no rapidities specified!" << endl;
         return 1;
