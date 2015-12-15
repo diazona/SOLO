@@ -483,7 +483,31 @@ FileDataGluonDistribution::FileDataGluonDistribution(string pos_filename, string
 
 
 FileDataGluonDistribution::FileDataGluonDistribution(string pos_filename, string mom_filename, double Q02, double x0, double lambda, double xinit) :
-  GluonDistribution(), Q02x0lambda(Q02 * pow(x0, lambda)), lambda(lambda), Qs2_values(NULL), satscale_source(NONE) {
+  GluonDistribution(),
+  r2_values(NULL),
+  Y_values_rspace(NULL),
+  q2_values(NULL),
+  Y_values_pspace(NULL),
+  S_dist(NULL),
+  F_dist(NULL),
+  satscale_source(NONE),
+  interp_dist_momentum_1D(NULL),
+  interp_dist_momentum_2D(NULL),
+  interp_dist_position_1D(NULL),
+  interp_dist_position_2D(NULL),
+  Qs2_values(NULL),
+  interp_Qs2_1D(NULL),
+  r2_accel(NULL),
+  q2_accel(NULL),
+  Y_accel_r(NULL),
+  Y_accel_p(NULL),
+  r2_dimension(0),
+  q2_dimension(0),
+  Y_dimension_r(0),
+  Y_dimension_p(0),
+  Q02x0lambda(Q02 * pow(x0, lambda)),
+  lambda(lambda)
+   {
     setup(pos_filename, mom_filename, xinit);
     ostringstream s;
     s << "file(pos_filename = " << pos_filename << ", mom_filename = " << mom_filename << ", xinit = " << xinit << ", default saturation scale)";
@@ -502,6 +526,7 @@ FileDataGluonDistribution::~FileDataGluonDistribution() {
     gsl_interp_accel_free(q2_accel);
     gsl_interp_accel_free(Y_accel_r);
     gsl_interp_accel_free(Y_accel_p);
+    // This may still have some memory leaks
     if (Y_dimension_r == 1) {
         gsl_interp_free(interp_dist_position_1D);
         gsl_interp_free(interp_dist_momentum_1D);
