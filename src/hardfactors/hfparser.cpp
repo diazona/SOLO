@@ -173,14 +173,14 @@ int main(const int argc, char** argv) {
         cout << endl;
     }
     for (std::vector<const HardFactorGroup*>::const_iterator it = hgl.begin(); it != hgl.end(); it++) {
-        const HardFactorGroup& hfg = **it;
-        cout << "+ " << hfg.label << " : ";
-        for (HardFactorList::const_iterator lit = hfg.objects->begin(); lit != hfg.objects->end(); lit++) {
-            const HardFactor& hf = **lit;
-            if (lit != hfg.objects->begin()) {
+        const HardFactorGroup* hfg = *it;
+        cout << "+ " << hfg->label << " : ";
+        for (HardFactorList::const_iterator lit = hfg->objects.begin(); lit != hfg->objects.end(); lit++) {
+            const HardFactor* hf = *lit;
+            if (lit != hfg->objects.begin()) {
                 cout << ", ";
             }
-            cout << hf.get_name();
+            cout << hf->get_name();
         }
         cout << endl;
     }

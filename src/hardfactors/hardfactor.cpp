@@ -83,6 +83,14 @@ const HardFactorTerm* const* HardFactorTerm::get_terms() const {
 }
 
 
+HardFactorGroup::HardFactorGroup(const string& label, const HardFactorList& objects, const vector<string>& specifications) :
+ label(label), objects(objects), specifications(specifications) {
+}
+
+HardFactorGroup::~HardFactorGroup() {
+}
+
+
 void HardFactorRegistry::add_hard_factor(const HardFactor* hf, bool manage) {
     add_hard_factor(hf->get_name(), hf->get_implementation(), hf, manage);
 }

@@ -165,12 +165,7 @@ private:
     /**
      * The list of groups of hard factors
      */
-    vector<const HardFactorList*> hfgroups;
-    /**
-     * The list of names of the hard factor groups. Each name goes with the
-     * hard factor group at the corresponding index in hfgroups.
-     */
-    vector<string> hfgnames;
+    vector<const HardFactorGroup*> hfgroups;
     /**
      * The list of names of the hard factors. They are stored according to the
      * group they were given in, then by order within the group.
@@ -279,11 +274,7 @@ private:
     /**
      * The list of hard factor groups given on the command line
      */
-    vector<const HardFactorList*> hfgroups;
-    /**
-     * The list of names of hard factor groups given on the command line
-     */
-    vector<string> hfgnames;
+    vector<const HardFactorGroup*> hfgroups;
     /**
      * The list of names of hard factors from the groups given on the command line
      */
@@ -426,11 +417,14 @@ void ProgramConfiguration::parse_hf_specs() {
         const string& spec = *it;
         if (spec.find(":") != string::npos) {
             // includes a colon, so it is a complete hard factor group specification
-            // parse it but don't add it to the parser
             hfg = parser.parse_hard_factor_group(spec);
+            if (hfg != NULL) {
+                registry.add_hard_factor_group(hfg, true);
+            }
         }
         else {
             // no colon, so it references either a group specification defined in the file
+            // or earlier on the command line
             hfg = registry.get_hard_factor_group(spec);
             if (hfg == NULL) {
                 // or an isolated hard factor
@@ -438,30 +432,28 @@ void ProgramConfiguration::parse_hf_specs() {
                 if (hfg == NULL) {
                     throw InvalidHardFactorSpecException(spec, "hard factor group not found");
                 }
+                else {
+                    registry.add_hard_factor_group(hfg, true);
+                }
             }
         }
-        hfgroups.push_back(hfg->objects);
-        hfgnames.push_back(hfg->label);
+        hfgroups.push_back(hfg);
         hfnames.insert(hfnames.end(), hfg->specifications.begin(), hfg->specifications.end());
     }
     assert(!hfgroups.empty());
-    assert(hfgroups.size() == hfgnames.size());
-    assert(hfnames.size() >= hfgnames.size());
+    assert(hfnames.size() >= hfgroups.size());
 }
 
 ProgramConfiguration::~ProgramConfiguration() {
-    for (vector<const HardFactorList*>::iterator it = hfgroups.begin(); it != hfgroups.end(); it++) {
-        delete *it;
-    }
 }
 
 ResultsCalculator::ResultsCalculator(ContextCollection& cc, ThreadLocalContext& tlctx, ProgramConfiguration& pc) :
-    cc(cc), tlctx(tlctx), hfgroups(pc.hfgroups), hfgnames(pc.hfgnames), hfnames(pc.hfnames), result_array_len(cc.size()), _hfglen(0), _hflen(0), trace(pc.trace), minmax(pc.minmax), separate(pc.separate), xg_min(pc.xg_min), xg_max(pc.xg_max) {
+    cc(cc), tlctx(tlctx), hfgroups(pc.hfgroups), hfnames(pc.hfnames), result_array_len(cc.size()), _hfglen(0), _hflen(0), trace(pc.trace), minmax(pc.minmax), separate(pc.separate), xg_min(pc.xg_min), xg_max(pc.xg_max) {
     _hfglen = hfgroups.size();
     assert(_hfglen > 0);
     if (separate) {
-        for (vector<const HardFactorList*>::iterator hflit = hfgroups.begin(); hflit != hfgroups.end(); hflit++) {
-            _hflen += (*hflit)->size();
+        for (vector<const HardFactorGroup*>::iterator hfgit = hfgroups.begin(); hfgit != hfgroups.end(); hfgit++) {
+            _hflen += (*hfgit)->objects.size();
         }
         result_array_len *= _hflen;
     }
@@ -512,18 +504,18 @@ void ResultsCalculator::calculate() {
             hf_index = 0;
             // recall the definition
             // typedef HardFactorList std::vector<const HardFactor*>
-            for (vector<const HardFactorList*>::iterator hit = hfgroups.begin(); hit != hfgroups.end(); hit++) {
+            for (vector<const HardFactorGroup*>::iterator hgit = hfgroups.begin(); hgit != hfgroups.end(); hgit++) {
                 if (separate) {
                     // go through the hard factors in each group one at a time
                     HardFactorList one_hf;
-                    for (HardFactorList::const_iterator hfit = (*hit)->begin(); hfit != (*hit)->end(); hfit++) {
+                    for (HardFactorList::const_iterator hfit = (*hgit)->objects.begin(); hfit != (*hgit)->objects.end(); hfit++) {
                         one_hf.assign(1, *hfit);
                         integrate_hard_factor(ctx, tlctx, one_hf, index_from(cc_index, hf_index));
                         hf_index++;
                     }
                 }
                 else {
-                    integrate_hard_factor(ctx, tlctx, **hit, index_from(cc_index, hf_index));
+                    integrate_hard_factor(ctx, tlctx, (*hgit)->objects, index_from(cc_index, hf_index));
                     hf_index++;
                 }
             }
@@ -584,8 +576,8 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
             out << setw(lw) << "seed" << OFS;
         }
         for (size_t hfgindex = 0; hfgindex < rc._hfglen; hfgindex++) {
-            out << setw(rw) << rc.hfgnames[hfgindex] << OFS;
-            size_t hflen = rc.hfgroups[hfgindex]->size();
+            out << setw(rw) << rc.hfgroups[hfgindex]->label << OFS;
+            size_t hflen = rc.hfgroups[hfgindex]->objects.size();
             for (size_t hfindex = 1; hfindex < 2 * hflen; hfindex++) {
                 out << setw(rw) << BLANK << OFS;
             }
@@ -611,12 +603,12 @@ ostream& operator<<(ostream& out, ResultsCalculator& rc) {
         if (multiseed_mode) {
             out << setw(lw) << "seed" << OFS;
         }
-        for (vector<string>::iterator it = rc.hfgnames.begin(); it != rc.hfgnames.end(); it++) {
+        for (vector<const HardFactorGroup*>::iterator it = rc.hfgroups.begin(); it != rc.hfgroups.end(); it++) {
             ostringstream valstream;
-            valstream << *it << "-val";
+            valstream << (*it)->label << "-val";
             out << setw(rw) << valstream.str() << OFS;
             ostringstream errstream;
-            errstream << *it << "-err";
+            errstream << (*it)->label << "-err";
             out << setw(rw) << errstream.str() << OFS;
         }
         out << setw(rw) << "total" << endl;

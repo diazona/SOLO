@@ -110,10 +110,10 @@ private:
  */
 class HardFactorGroup {
 public:
-    HardFactorGroup(const std::string& label, const HardFactorList* objects, const std::vector<std::string>& specifications) :
-     label(label), objects(objects), specifications(specifications) {}
+    HardFactorGroup(const std::string& label, const HardFactorList& objects, const std::vector<std::string>& specifications);
+    ~HardFactorGroup();
     const std::string label;
-    const HardFactorList* objects;
+    const HardFactorList objects;
     const std::vector<std::string> specifications;
 };
 

@@ -620,9 +620,8 @@ const HardFactorGroup* HardFactorParser::parse_hard_factor_group(const string& s
         throw InvalidHardFactorSpecException(spec, "No valid hard factors in specification");
     }
     else {
-        HardFactorList* p_hfobjs = new HardFactorList(hfobjs);
         // parsing seems to have succeeded, so go ahead and create the object
-        return new HardFactorGroup(specname, p_hfobjs, splitspec);
+        return new HardFactorGroup(specname, hfobjs, splitspec);
     }
 }
 
