@@ -195,6 +195,8 @@ public:
     const bool minmax;
     /** Whether to calculate individual hard factors separately */
     const bool separate;
+    /** Whether to print integration progress updates */
+    const bool print_integration_progress;
 
     ResultsCalculator(ContextCollection& cc, ThreadLocalContext& tlctx, ProgramConfiguration& pc);
     ~ResultsCalculator();
@@ -251,7 +253,13 @@ public:
      */
     void parse_hf_specs();
 
+    /** Indicates whether the --print-config or --no-print-config option was specified */
+    bool print_config;
+    /** Indicates whether the --print-integration-progress or --no-print-integration-progress option was specified */
+    bool print_integration_progress;
+
     friend class ResultsCalculator;
+
 private:
     /** Indicates whether the --trace option was specified */
     bool trace;
@@ -286,7 +294,7 @@ private:
     HardFactorRegistry registry;
 };
 
-ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false), trace_gdist(false), minmax(false), separate(false), xg_min(0), xg_max(1) {
+ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false), trace_gdist(false), minmax(false), separate(false), print_config(true), print_integration_progress(true), xg_min(0), xg_max(1) {
     string gdist_type;
     bool current_arg_is_config_line = false;
     for (int i = 1; i < argc; i++) {
@@ -340,6 +348,18 @@ ProgramConfiguration::ProgramConfiguration(int argc, char** argv) : trace(false)
         }
         else if (a == "--trace-gdist") {
             trace_gdist = true;
+        }
+        else if (a == "--print-config") {
+            print_config = true;
+        }
+        else if (a == "--no-print-config") {
+            print_config = false;
+        }
+        else if (a == "--print-integration-progress") {
+            print_integration_progress = true;
+        }
+        else if (a == "--no-print-integration-progress") {
+            print_integration_progress = false;
         }
         else if (a == "--minmax") {
             minmax = true;
@@ -448,7 +468,7 @@ ProgramConfiguration::~ProgramConfiguration() {
 }
 
 ResultsCalculator::ResultsCalculator(ContextCollection& cc, ThreadLocalContext& tlctx, ProgramConfiguration& pc) :
-    cc(cc), tlctx(tlctx), hfgroups(pc.hfgroups), hfnames(pc.hfnames), result_array_len(cc.size()), _hfglen(0), _hflen(0), trace(pc.trace), minmax(pc.minmax), separate(pc.separate), xg_min(pc.xg_min), xg_max(pc.xg_max) {
+    cc(cc), tlctx(tlctx), hfgroups(pc.hfgroups), hfnames(pc.hfnames), result_array_len(cc.size()), _hfglen(0), _hflen(0), trace(pc.trace), minmax(pc.minmax), separate(pc.separate), print_integration_progress(pc.print_integration_progress), xg_min(pc.xg_min), xg_max(pc.xg_max) {
     _hfglen = hfgroups.size();
     assert(_hfglen > 0);
     if (separate) {
@@ -537,10 +557,12 @@ void ResultsCalculator::integrate_hard_factor(const Context& ctx, const ThreadLo
     else if (minmax) {
         integrator.set_callback(store_minmax);
     }
-    integrator.set_cubature_callback(cubature_eprint_callback);
-    integrator.set_miser_callback(miser_eprint_callback);
-    integrator.set_vegas_callback(vegas_eprint_callback);
-    integrator.set_quasi_callback(quasi_eprint_callback);
+    if (print_integration_progress) {
+        integrator.set_cubature_callback(cubature_eprint_callback);
+        integrator.set_miser_callback(miser_eprint_callback);
+        integrator.set_vegas_callback(vegas_eprint_callback);
+        integrator.set_quasi_callback(quasi_eprint_callback);
+    }
     integrator.integrate(&l_real, &l_imag, &l_error);
     real[index] = l_real;
     imag[index] = l_imag;
@@ -801,16 +823,18 @@ int run(int argc, char** argv) {
      * out as part of the output file makes it easy to tell what parameters were used in
      * and given run, and is also useful in case we want to reproduce a run.
      */
+    if (pc.print_config) {
 #ifdef GIT_REVISION
-    cout << "# git revision " << GIT_REVISION;
+        cout << "# git revision " << GIT_REVISION;
 #ifdef GIT_DIRTY
-    cout << " (dirty)";
+        cout << " (dirty)";
 #endif
-    cout << endl;
+        cout << endl;
 #endif
+    }
     {
         FileDataGluonDistribution* fgdist = dynamic_cast<FileDataGluonDistribution*>(cc[0].gdist);
-        if (fgdist != NULL) {
+        if (pc.print_config && fgdist != NULL) {
             // print hashes of the input files
             // TODO: make the gdist compute the hashes itself
             cout << "# momentum gdist file hash: " << sha1_file(cc.get("gdist_momentum_filename")) << endl;
@@ -828,17 +852,23 @@ int run(int argc, char** argv) {
             }
             cerr << "BEGIN hf definition file " << hf_definition_filename << endl << hfdefs.rdbuf() << "END hf definition file " << hf_definition_filename << endl;
             hfdefs.close();
-            cout << "# hard factor definition file hash: " << hf_definition_filename << ": " << sha1_file(hf_definition_filename) << endl;
+            if (pc.print_config) {
+                cout << "# hard factor definition file hash: " << hf_definition_filename << ": " << sha1_file(hf_definition_filename) << endl;
+            }
         }
     }
 
+    if (pc.print_config) {
 #ifdef EXACT_LIMIT_SCHEME
-    cout << "# EXACT_LIMIT_SCHEME = " << EXACT_LIMIT_SCHEME << endl;
+        cout << "# EXACT_LIMIT_SCHEME = " << EXACT_LIMIT_SCHEME << endl;
 #else
-    cout << "# EXACT_LIMIT_SCHEME undefined" << endl;
+        cout << "# EXACT_LIMIT_SCHEME undefined" << endl;
 #endif
+    }
 
-    cout << cc << "------------" << endl;
+    if (pc.print_config) {
+        cout << cc << "------------" << endl;
+    }
 
     cc.create_contexts();
     if (cc.empty()) {
