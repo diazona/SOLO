@@ -29,10 +29,13 @@ include_directories(${gslmuparser_SOURCE_DIR} ${interp2d_SOURCE_DIR} ${quasimont
 
 add_executable(oneloopcalc
     oneloopcalc.cpp
+    programconfiguration.cpp
+    resultscalculator.cpp
     ${SOLO_SOURCE_DIR}/mstwpdf.cc
     ${SOLO_SOURCE_DIR}/coupling.cpp
     ${SOLO_SOURCE_DIR}/factorizationscale.cpp
     ${SOLO_SOURCE_DIR}/configuration/context.cpp
+    ${SOLO_SOURCE_DIR}/configuration/configuration.cpp
     ${SOLO_SOURCE_DIR}/hardfactors/hardfactor.cpp
     ${SOLO_SOURCE_DIR}/hardfactors/hardfactor_parser.cpp
     ${SOLO_SOURCE_DIR}/integration/cubature.c

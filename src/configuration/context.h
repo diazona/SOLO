@@ -1,7 +1,7 @@
 /*
- * Part of oneloopcalc
+ * Part of SOLO
  *
- * Copyright 2012 David Zaslavsky
+ * Copyright 2012-2015 David Zaslavsky
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,6 +33,7 @@
 #include "../coupling.h"
 #include "../factorizationscale.h"
 #include "../gluondist/gluondist.h"
+#include "configuration.h"
 
 /**
  * Enumerates the types of Monte Carlo integration available
@@ -127,6 +128,8 @@ public:
         return _message.c_str();
     }
 };
+
+string canonicalize(const string& i_key);
 
 /**
  * Storage for all the assorted parameters that get used in the integration.
@@ -266,26 +269,7 @@ public:
         return pT / sqs * (exp(Y) + exp(-Y));
     }
 
-    void check_kinematics() const {
-        if (compute_Q02x0lambda(centrality, mass_number, x0, lambda) != Q02x0lambda) {
-            throw InvalidPropertyValueException<double>("Q02x0lambda", Q02x0lambda, "value provided in initializer does not match the one calculated from other context parameters");
-        }
-        if (compute_tau(sqrt(pT2), sqs, Y) != tau) {
-            throw InvalidPropertyValueException<double>("tau", tau, "value provided in initializer does not match the one calculated from other context parameters");
-        }
-        if (compute_tauhat(sqrt(pT2), sqs, Y) != tauhat) {
-            throw InvalidPropertyValueException<double>("tauhat", tauhat, "value provided in initializer does not match the one calculated from other context parameters");
-        }
-        if (tau > 1) {
-            throw InvalidKinematicsException("τ > 1: empty phase space");
-        }
-        if (tauhat > 1) {
-            throw InvalidKinematicsException("\\hat{τ} > 1: empty phase space");
-        }
-        if (css_r_regularization) {
-            assert(css_r2_max > 0);
-        }
-    }
+    void check_kinematics() const;
 };
 
 /**
@@ -308,172 +292,34 @@ public:
  * indexed or iterated over much like a vector. (It should be considered
  * read-only; do not assign to the iterator.)
  */
-class ContextCollection {
+class ContextCollection : public std::vector<Context> {
 public:
-    typedef std::vector<Context>::iterator iterator;
-
-    ContextCollection() :
-      gdist(NULL),
-      cpl(NULL),
-      fs(NULL),
-      trace_gdist(false),
-      contexts_created(false) {
-        setup_defaults();
-    }
     /**
      * Construct a ContextCollection and initialize it with settings
      * read from the named file.
      */
-    ContextCollection(const std::string& filename) :
-      gdist(NULL),
-      cpl(NULL),
-      fs(NULL),
-      trace_gdist(false),
-      contexts_created(false) {
-        setup_defaults();
-        ifstream in(filename.c_str());
-        if (!in.good()) {
-            throw ios_base::failure("Unable to read file " + filename);
-        }
-        read_config(in);
-        in.close();
-    }
-    ~ContextCollection() {
-        delete gdist;
-        gdist = NULL;
-        delete cpl;
-        cpl = NULL;
-    }
-    /**
-     * Gets the nth context. Internally, the contexts are stored indexed
-     * first by pT and then by Y. That is, if N is the number of Y values:
-     * - Context 0 has pT[0] and Y[0]
-     * - Context 1 has pT[0] and Y[1]
-     * ...
-     * - Context N-1 has pT[0] and Y[N-1]
-     * - Context N has pT[1] and Y[0]
-     * and so on.
-     *
-     * When this method is called, if the Context objects have not already
-     * been created, this creates the Contexts and freezes the ContextCollection.
-     */
-    Context& get_context(size_t n);
-    /**
-     * Allows access to contexts by subscript notation.
-     *
-     * This is exactly equivalent to get_context().
-     *
-     * When this method is called, if the Context objects have not already
-     * been created, this creates the Contexts and freezes the ContextCollection.
-     */
-    Context& operator[](size_t n);
-    /**
-     * Tests whether the ContextCollection is empty.
-     *
-     * This will return true if the number of pT values or the number
-     * of Y values held by the ContextCollection is zero.
-     *
-     * If this returns true, calling get_context() with any argument
-     * will cause an error.
-     */
-    bool empty();
-    /**
-     * Returns the size of this ContextCollection.
-     *
-     * This returns the product of the number of pT values specified so far
-     * and the number of Y values specified so far. Before Contexts are created,
-     * the return value can change as more settings are added. After Contexts
-     * are created, the return value will not change.
-     */
-    size_t size();
-    /**
-     * Returns an iterator to the first Context.
-     *
-     * When this method is called, if the Context objects have not already
-     * been created, this creates the Contexts and freezes the ContextCollection.
-     */
-    iterator begin();
-    /**
-     * Returns an iterator to one past the last Context.
-     *
-     * When this method is called, if the Context objects have not already
-     * been created, this creates the Contexts and freezes the ContextCollection.
-     */
-    iterator end();
+    ContextCollection(const Configuration& conf);
+
+    ~ContextCollection();
 
     /**
-     * Removes all settings with the given key.
+     * The underlying Configuration object. This is updated as contexts are
+     * created, to contain all the default values used.
      */
-    void erase(std::string key);
-    /**
-     * Returns the value of a setting, if any, or the empty string if unset.
-     */
-    std::string get(std::string key, size_t index = 0);
-    /**
-     * Add a setting, replacing any existing settings with the same key.
-     */
-    void set(std::string key, std::string value);
-    /**
-     * Add a setting. Any existing settings with the same key are left alone;
-     * in this case there will be multiple values with that key.
-     */
-    void add(std::string key, std::string value);
+    const Configuration& config() const;
 
+    /**
+     * Whether to use the tracing gluon distribution wrapper. (See gluondist.h/cpp)
+     */
+    bool trace_gdist;
+
+    friend class ThreadLocalContext;
+
+protected:
     /**
      * Create the Context objects.
      */
     void create_contexts();
-
-    /**
-     * Read a config file, or something in an equivalent format, from an input stream
-     * and add the settings to the ContextCollection.
-     */
-    void read_config(std::istream& in);
-    /**
-     * Process a string representing one line of a config file (i.e. one setting)
-     */
-    void read_config_line(std::string& line);
-
-    /**
-     * Whether to use the tracing gluon distribution wrapper. (See gluondist.h/cpp)
-     * Changes made to this variable after contexts are created have no effect.
-     */
-    bool trace_gdist;
-
-    friend ContextCollection& operator>>(std::string& line, ContextCollection& cc);
-    friend std::istream& operator>>(std::istream& in, ContextCollection& cc);
-    friend std::ostream& operator<<(std::ostream& out, ContextCollection& cc);
-    friend class ThreadLocalContext;
-
-private:
-    /**
-     * The gluon distribution. NULL until contexts are created.
-     */
-    GluonDistribution* gdist;
-    /**
-     * The coupling. NULL until contexts are created.
-     */
-    Coupling* cpl;
-    /**
-     * The factorization scale strategy. NULL until contexts are created.
-     */
-    FactorizationScale* fs;
-    /**
-     * The map of key-value pairs provided to the ContextCollection.
-     */
-    std::multimap<std::string, std::string> options;
-    /**
-     * The Contexts. This is empty until contexts are created.
-     */
-    std::vector<Context> contexts;
-    /**
-     * Whether contexts have been created.
-     */
-    bool contexts_created;
-    /**
-     * Called from the constructor to set default values.
-     */
-    void setup_defaults();
 
     /* Auxiliary methods and variables used to create gluon distributions */
     double Q02, x0, lambda, sqs, inf;
@@ -485,6 +331,24 @@ private:
     FileDataGluonDistribution* create_file_gluon_distribution(GluonDistribution* lower_dist, GluonDistribution* upper_dist, const bool extended);
     GluonDistribution* create_gluon_distribution(const string&);
 
+private:
+    /**
+     * The map of key-value pairs provided to the ContextCollection.
+     */
+    Configuration m_config;
+    /**
+     * The gluon distribution. NULL until contexts are created.
+     */
+    GluonDistribution* m_gdist;
+    /**
+     * The coupling. NULL until contexts are created.
+     */
+    Coupling* m_cpl;
+    /**
+     * The factorization scale strategy. NULL until contexts are created.
+     */
+    FactorizationScale* m_fs;
+
     /* Disallow copying, because the memory management in this class is terrible.
      * If you want to implement reference-counting or something, no reason this
      * couldn't become public, if a suitable implementation is provided.
@@ -492,22 +356,6 @@ private:
     ContextCollection(const ContextCollection& c) {}
     ContextCollection& operator=(const ContextCollection& c) {return *this;}
 };
-
-/**
- * Allows adding a setting to a ContextCollection using >> notation.
- */
-ContextCollection& operator>>(std::string& line, ContextCollection& cc);
-/**
- * Allows reading a ContextCollection in from a stream using >> notation.
- */
-std::istream& operator>>(std::istream& in, ContextCollection& cc);
-/**
- * Allows writing a ContextCollection out to a stream using << notation.
- *
- * What is written out is just the list of key-value pairs. The output
- * could be read in to reconstruct the ContextCollection.
- */
-std::ostream& operator<<(std::ostream& out, ContextCollection& cc);
 
 /**
  * Allows writing a Context out to a stream using << notation.

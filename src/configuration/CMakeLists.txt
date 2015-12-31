@@ -9,7 +9,9 @@ set(LIBS ${LIBS} m)
 include_directories(${interp2d_SOURCE_DIR} ${quasimontecarlo_SOURCE_DIR})
 
 add_executable(contextreader
+  contextreader.cpp
   context.cpp
+  configuration.cpp
   ${SOLO_SOURCE_DIR}/mstwpdf.cc
   ${SOLO_SOURCE_DIR}/utils/utils.cpp
   ${SOLO_SOURCE_DIR}/coupling.cpp

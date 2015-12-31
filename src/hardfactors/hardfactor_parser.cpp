@@ -194,6 +194,14 @@ ParsedHardFactorTerm::~ParsedHardFactorTerm() {
     delete[] aux_variable_storage;
 }
 
+// need to pull some tricks with templates to only call DefineVar on double-type variables
+// see https://stackoverflow.com/a/16924234/56541
+template<typename T> void define_one_variable(Parser& parser, const char* var_name, const T* var) {
+}
+
+template<> void define_one_variable(Parser& parser, const char* var_name, const double* var) {
+    parser.DefineVar(var_name, const_cast<value_type*>(var));
+}
 
 void define_variables(Parser& parser, const IntegrationContext* ictx) {
     /* An alternative implementation would be to have an IntegrationContext
@@ -205,10 +213,10 @@ void define_variables(Parser& parser, const IntegrationContext* ictx) {
      * elsewhere in the program, those changes won't be reflected in the
      * Parser. That's why I don't do that.
      */
-#define process(var) parser.DefineVar(#var, const_cast<value_type*>(&(ictx->var)));
+#define process(var) define_one_variable(parser, #var, &(ictx->var));
 #include "../integration/ictx_var_list.inc"
 #undef process
-#define process(var) parser.DefineVar(#var, const_cast<value_type*>(&(ictx->ctx->var)));
+#define process(var) define_one_variable(parser, #var, &(ictx->ctx->var));
 #include "../configuration/ctx_var_list.inc"
 #undef process
     // and now some aliases

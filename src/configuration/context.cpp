@@ -1,7 +1,7 @@
 /*
- * Part of oneloopcalc
+ * Part of SOLO
  *
- * Copyright 2012 David Zaslavsky
+ * Copyright 2012-2015 David Zaslavsky
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,17 +36,17 @@
 using namespace std;
 
 #define check_property_default(p, typename, parse, default) \
-    itit = options.equal_range(canonicalize(#p));\
+    itit = m_config.equal_range(canonicalize(#p));\
     typename p;\
     if (itit.first == itit.second) {\
         p = default;\
-        set(#p, format(p));\
+        m_config.set(#p, format(p));\
     }\
     else {\
         p = parse(itit);\
     }
 #define check_property(p, typename, parse) \
-    itit = options.equal_range(canonicalize(#p));\
+    itit = m_config.equal_range(canonicalize(#p));\
     typename p;\
     if (itit.first == itit.second) {\
         throw MissingPropertyException(#p);\
@@ -61,7 +61,7 @@ const string trim_lower(const string& i_str) {
     return str;
 }
 
-const string canonicalize(const string& i_key) {
+string canonicalize(const string& i_key) {
     const string key = trim_lower(i_key);
     if (key == "lambda_qcd") {
         return "lambdaqcd";
@@ -138,41 +138,41 @@ const string format(const T& v) {
     return s.str();
 }
 
+static inline void assert_range_size_one(const pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
+    multimap<string, string>::iterator el1 = range.first;
+    multimap<string, string>::iterator el2 = range.second;
+    assert(++el1 == el2);
+}
+
 size_t parse_size(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
-    multimap<string, string>::iterator el = range.first;
-    assert(++el == range.second);
+    assert_range_size_one(range);
     return static_cast<size_t>(strtoul(range.first->second.c_str(), NULL, 0));
 }
 
 unsigned long int parse_ulong(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
-    multimap<string, string>::iterator el = range.first;
-    assert(++el == range.second);
+    assert_range_size_one(range);
     return strtoul(range.first->second.c_str(), NULL, 0);
 }
 
 double parse_double(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
-    multimap<string, string>::iterator el = range.first;
-    assert(++el == range.second);
+    assert_range_size_one(range);
     return strtod(range.first->second.c_str(), NULL);
 }
 
 bool parse_boolean(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
-    multimap<string, string>::iterator el = range.first;
-    assert(++el == range.second);
+    assert_range_size_one(range);
     return range.first->second == "true"
         || range.first->second == "yes"
         || range.first->second == "1";
 }
 
 string& parse_string(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
-    multimap<string, string>::iterator el = range.first;
-    assert(++el == range.second);
+    assert_range_size_one(range);
     return range.first->second;
 }
 
 projectile_type parse_projectile_type(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
-    multimap<string, string>::iterator el = range.first;
-    assert(++el == range.second);
+    assert_range_size_one(range);
     string val = range.first->second;
     transform(val.begin(), val.end(), val.begin(), ::tolower);
     if (val == "proton") {
@@ -187,8 +187,7 @@ projectile_type parse_projectile_type(pair<multimap<string, string>::iterator, m
 }
 
 DSSpiNLO::hadron parse_hadron(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
-    multimap<string, string>::iterator el = range.first;
-    assert(++el == range.second);
+    assert_range_size_one(range);
     string val = trim_lower(range.first->second);
     if (val == "pim" || val == "pi-" || val == "pi minus") {
         return DSSpiNLO::pi_minus;
@@ -205,8 +204,7 @@ DSSpiNLO::hadron parse_hadron(pair<multimap<string, string>::iterator, multimap<
 }
 
 integration_strategy parse_strategy(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
-    multimap<string, string>::iterator el = range.first;
-    assert(++el == range.second);
+    assert_range_size_one(range);
     string val = trim_lower(range.first->second);
     if (val == "plain") {
         return MC_PLAIN;
@@ -226,8 +224,7 @@ integration_strategy parse_strategy(pair<multimap<string, string>::iterator, mul
 }
 
 const gsl_rng_type* parse_rng_type(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
-    multimap<string, string>::iterator el = range.first;
-    assert(++el == range.second);
+    assert_range_size_one(range);
     static const gsl_rng_type** types = gsl_rng_types_setup();
     for (const gsl_rng_type** t = types; *t != NULL; t++) {
         string name((*t)->name);
@@ -239,8 +236,7 @@ const gsl_rng_type* parse_rng_type(pair<multimap<string, string>::iterator, mult
 }
 
 const gsl_qrng_type* parse_qrng_type(pair<multimap<string, string>::iterator, multimap<string, string>::iterator> range) {
-    multimap<string, string>::iterator el = range.first;
-    assert(++el == range.second);
+    assert_range_size_one(range);
     string val = trim_lower(range.first->second);
     if (val == "niederreiter_2") {
         return gsl_qrng_niederreiter_2;
@@ -295,6 +291,24 @@ struct PT2x4Mu2Strategy {
         return 4*pT2;
     }
 };
+
+
+ContextCollection::ContextCollection(const Configuration& conf) :
+  m_config(conf),
+  m_gdist(NULL),
+  m_cpl(NULL),
+  m_fs(NULL),
+  trace_gdist(false) {
+    cerr << "cc constructor" << endl;
+    create_contexts();
+}
+
+ContextCollection::~ContextCollection() {
+    delete m_gdist;
+    m_gdist = NULL;
+    delete m_cpl;
+    m_cpl = NULL;
+}
 
 GBWGluonDistribution* ContextCollection::create_gbw_gluon_distribution() {
     return new GBWGluonDistribution(Q02, x0, lambda);
@@ -463,10 +477,6 @@ GluonDistribution* ContextCollection::create_gluon_distribution(const string& gd
 }
 
 void ContextCollection::create_contexts() {
-    if (contexts_created) {
-        return;
-    }
-
     bool _c0r_optimization = false;
     pair<multimap<string, string>::iterator, multimap<string, string>::iterator> itit;
 
@@ -495,13 +505,28 @@ void ContextCollection::create_contexts() {
     check_property_default( quasi_iterations, size_t, parse_size, 1000000)
     check_property_default( abserr, double, parse_double, 1e-20)
     check_property_default( relerr, double, parse_double, 0)
-    check_property(         quasirandom_generator_type, const gsl_qrng_type*, parse_qrng_type)
-    check_property(         pseudorandom_generator_type, const gsl_rng_type*, parse_rng_type)
-    check_property(         pseudorandom_generator_seed, vector<unsigned long int>, parse_ulong_vector)
     check_property_default( css_r_regularization, bool, parse_boolean, false)
     check_property_default( css_r2_max, double, parse_double, 0) // 0 is a dummy value for when the regularization is not being used
     check_property_default( resummation_constant, double, parse_double, 1)
     check_property_default( exact_kinematics, bool, parse_boolean, false)
+
+    // Adapted from the GSL source code - basically this reimplements gsl_rng_env_setup
+    if (!m_config.contains("quasirandom_generator_type")) {
+        const char* qtype = getenv("GSL_QRNG_TYPE");
+        m_config.set("quasirandom_generator_type", qtype == NULL ? "halton" : qtype);
+    }
+    if (!m_config.contains("pseudorandom_generator_type")) {
+        const char* type = getenv("GSL_RNG_TYPE");
+        m_config.set("pseudorandom_generator_type", type == NULL ? "mt19937" : type);
+    }
+    if (!m_config.contains("pseudorandom_generator_seed")) {
+        const char* seed = getenv("GSL_RNG_SEED");
+        m_config.set("pseudorandom_generator_seed", seed == NULL ? "0" : seed);
+    }
+
+    check_property(         quasirandom_generator_type, const gsl_qrng_type*, parse_qrng_type)
+    check_property(         pseudorandom_generator_type, const gsl_rng_type*, parse_rng_type)
+    check_property(         pseudorandom_generator_seed, vector<unsigned long int>, parse_ulong_vector)
 
     /*
      * For dimensions in which the lower and upper bounds are -infinity and +infinity,
@@ -527,37 +552,37 @@ void ContextCollection::create_contexts() {
     }
 
     // create gluon distribution
-    assert (gdist == NULL);
+    assert (m_gdist == NULL);
     check_property(gdist_type, string, parse_string)
     gdist_type = trim_lower(gdist_type);
-    gdist = create_gluon_distribution(gdist_type);
-    assert(gdist != NULL);
+    m_gdist = create_gluon_distribution(gdist_type);
+    assert(m_gdist != NULL);
     if (trace_gdist) {
         logger << "Activating gluon distribution trace wrapper" << endl;
-        gdist = new GluonDistributionTraceWrapper(gdist);
+        m_gdist = new GluonDistributionTraceWrapper(m_gdist);
     }
-    assert(gdist != NULL);
+    assert(m_gdist != NULL);
 
     // create coupling
-    assert(cpl == NULL);
+    assert(m_cpl == NULL);
     check_property(coupling_type, string, parse_string)
     if (coupling_type == "fixed") {
         check_property_default(alphas, double, parse_double, 0.2)
-        cpl = new FixedCoupling(alphas);
+        m_cpl = new FixedCoupling(alphas);
     }
     else if (coupling_type == "running") {
         check_property_default(lambdaQCD, double, parse_double, sqrt(0.0588))
         check_property_default(regulator, double, parse_double, 1.0)
         check_property_default(Ncbeta, double, parse_double, (11.0 * Nc - 2.0 * Nf) / 12.0)
-        cpl = new LORunningCoupling(lambdaQCD, Ncbeta, regulator);
+        m_cpl = new LORunningCoupling(lambdaQCD, Ncbeta, regulator);
     }
     else {
         throw InvalidPropertyValueException<string>("coupling_type", coupling_type);
     }
-    assert(cpl != NULL);
+    assert(m_cpl != NULL);
 
     // create factorization scale strategy
-    assert(fs == NULL);
+    assert(m_fs == NULL);
     check_property_default(factorization_scale, string, parse_string, "fixed")
     factorization_scale = trim_lower(factorization_scale);
     if (factorization_scale == "fixed") {
@@ -566,31 +591,30 @@ void ContextCollection::create_contexts() {
          * and convert it to new format
          *  factorization_scale = 4pT2
          */
-        itit = options.equal_range(canonicalize("mu2"));
+        itit = m_config.equal_range(canonicalize("mu2"));
         if (trim_lower(itit.first->second) == "4pt2") {
-            fs = new PTProportionalFactorizationScale(4);
+            m_fs = new PTProportionalFactorizationScale(4);
         }
         else {
             // this is the normal case
             check_property_default(mu2, double, parse_double, 10)
-            fs = new FixedFactorizationScale(mu2);
+            m_fs = new FixedFactorizationScale(mu2);
         }
     }
     else if (factorization_scale == "4pt2") {
-        fs = new PTProportionalFactorizationScale(4);
+        m_fs = new PTProportionalFactorizationScale(4);
     }
     else if (factorization_scale == "cpt2") {
         check_property(factorization_scale_coefficient, double, parse_double)
-        fs = new PTProportionalFactorizationScale(factorization_scale_coefficient);
+        m_fs = new PTProportionalFactorizationScale(factorization_scale_coefficient);
     }
     else if (factorization_scale == "c0r") {
         check_property_default(c0r_optimization, bool, parse_boolean, true)
         _c0r_optimization = c0r_optimization;
-        fs = new RPerpFactorizationScale(4 * exp(-2*M_EULER)); // this value is c_0^2, with c_0 defined in the long paper
+        m_fs = new RPerpFactorizationScale(4 * exp(-2*M_EULER)); // this value is c_0^2, with c_0 defined in the long paper
     }
-    assert(fs != NULL);
+    assert(m_fs != NULL);
 
-    contexts_created = true;
     // create contexts
     for (vector<double>::iterator pTit = pT.begin(); pTit != pT.end(); pTit++) {
         for (vector<double>::iterator Yit = Y.begin(); Yit != Y.end(); Yit++) {
@@ -604,7 +628,7 @@ void ContextCollection::create_contexts() {
                       gsl_pow_2(pT), sqs, Y,
                       hardfactor_definitions, pdf_filename, ff_filename,
                       quasirandom_generator_type, pseudorandom_generator_type, seed,
-                      gdist, cpl, fs, _c0r_optimization, css_r_regularization, css_r2_max, resummation_constant,
+                      m_gdist, m_cpl, m_fs, _c0r_optimization, css_r_regularization, css_r2_max, resummation_constant,
                       exact_kinematics,
                       projectile, hadron,
                       integration_strategy,
@@ -617,7 +641,7 @@ void ContextCollection::create_contexts() {
                       Context::compute_tauhat(pT, sqs, Y)
                     };
                     c.check_kinematics();
-                    contexts.push_back(c);
+                    push_back(c);
                 }
                 catch (const InvalidKinematicsException& e) {
                     logger << "Failed to create context at pT = " << pT << ", Y = " << Y << ": " << e.what() << endl;
@@ -627,110 +651,9 @@ void ContextCollection::create_contexts() {
     }
 }
 
-Context& ContextCollection::get_context(size_t n) {
-    if (!contexts_created) {
-        create_contexts();
-    }
-    return contexts[n];
+const Configuration& ContextCollection::config() const {
+    return m_config;
 }
-
-Context& ContextCollection::operator[](size_t n) {
-    if (!contexts_created) {
-        create_contexts();
-    }
-    return get_context(n);
-}
-
-bool ContextCollection::empty() {
-    return size() == 0;
-}
-
-size_t ContextCollection::size() {
-    if (!contexts_created) {
-        return options.count("pt") * options.count("y") * options.count("pseudorandom_generator_seed");
-    }
-    else {
-        return contexts.size();
-    }
-}
-
-string ContextCollection::get(string key, size_t index) {
-    key = canonicalize(key);
-    pair<multimap<string,string>::iterator, multimap<string,string>::iterator> p = options.equal_range(key);
-    multimap<string,string>::iterator it = p.first;
-    while (index-- > 0) {
-        if (++it == p.second) {
-            return "";
-        }
-    }
-    return it->second;
-}
-
-
-void ContextCollection::set(string key, string value) {
-    erase(key);
-    add(key, value);
-}
-
-void ContextCollection::erase(string key) {
-    assert(!contexts_created);
-    key = canonicalize(key);
-    options.erase(key);
-}
-
-void ContextCollection::add(string key, string value) {
-    assert(!contexts_created);
-    key = canonicalize(key);
-    options.insert(pair<string, string>(key, value));
-}
-
-void ContextCollection::setup_defaults() {
-    // Adapted from the GSL source code - basically this reimplements gsl_rng_env_setup
-    const char* qtype = getenv("GSL_QRNG_TYPE");
-    options.insert(pair<string, string>("quasirandom_generator_type", qtype == NULL ? "halton" : qtype));
-    const char* type = getenv("GSL_RNG_TYPE");
-    options.insert(pair<string, string>("pseudorandom_generator_type", type == NULL ? "mt19937" : type));
-    const char* seed = getenv("GSL_RNG_SEED");
-    options.insert(pair<string, string>("pseudorandom_generator_seed", seed == NULL ? "0" : seed));
-}
-
-void ContextCollection::read_config(istream& in) {
-    string line;
-    do {
-        getline(in, line);
-        read_config_line(line);
-    } while (!in.eof());
-}
-
-void ContextCollection::read_config_line(string& line) {
-    if (line.size() > 2 && line[0] != '#') {
-        // Split the line into two pieces on the '=' character
-        // The first piece becomes the key, the second becomes the value
-        vector<string> kv = split(line, "\n=", 2);
-        if (kv.size() < 2) {
-            return;
-        }
-        assert(kv.size() == 2);
-        bool replace_config = true;
-        string key = kv[0];
-        size_t keylen = key.length();
-        if (key[keylen-1] == '+') {
-            replace_config = false;
-            key = trim(key, " \n\t", 0, keylen-1);
-        }
-        key = canonicalize(key);
-        if (replace_config) {
-            erase(key);
-        }
-        // split the value on commas
-        vector<string> v = split(kv[1], ",");
-        for (vector<string>::iterator it = v.begin(); it != v.end(); it++) {
-            string value = trim(*it, " \n\t");
-            add(key, value);
-        }
-    }
-}
-
 
 std::ostream& operator<<(std::ostream& out, const integration_strategy& strategy) {
     switch (strategy) {
@@ -830,45 +753,25 @@ std::ostream& operator<<(std::ostream& out, const Context& ctx) {
     return out;
 }
 
-ContextCollection& operator>>(std::string& line, ContextCollection& cc) {
-    cc.read_config_line(line);
-    return cc;
-}
-
-std::istream& operator>>(std::istream& in, ContextCollection& cc) {
-    cc.read_config(in);
-    return in;
-}
-
-std::ostream& operator<<(std::ostream& out, ContextCollection& cc) {
-    string last_key;
-    for (multimap<string, string>::iterator it = cc.options.begin(); it != cc.options.end(); it++) {
-        if (last_key == it->first) {
-            out << ", " << it->second;
-        }
-        else {
-            if (!last_key.empty()) {
-                out << endl;
-            }
-            out << it->first << " = " << it->second;
-        }
-        last_key = it->first;
+void Context::check_kinematics() const {
+    if (compute_Q02x0lambda(centrality, mass_number, x0, lambda) != Q02x0lambda) {
+        throw InvalidPropertyValueException<double>("Q02x0lambda", Q02x0lambda, "value provided in initializer does not match the one calculated from other context parameters");
     }
-    out << endl;
-    return out;
-}
-
-ContextCollection::iterator ContextCollection::begin() {
-    if (contexts.empty()) {
-        create_contexts();
+    if (compute_tau(sqrt(pT2), sqs, Y) != tau) {
+        throw InvalidPropertyValueException<double>("tau", tau, "value provided in initializer does not match the one calculated from other context parameters");
     }
-    return contexts.begin();
-}
-ContextCollection::iterator ContextCollection::end() {
-    if (contexts.empty()) {
-        create_contexts();
+    if (compute_tauhat(sqrt(pT2), sqs, Y) != tauhat) {
+        throw InvalidPropertyValueException<double>("tauhat", tauhat, "value provided in initializer does not match the one calculated from other context parameters");
     }
-    return contexts.end();
+    if (tau > 1) {
+        throw InvalidKinematicsException("τ > 1: empty phase space");
+    }
+    if (tauhat > 1) {
+        throw InvalidKinematicsException("\\hat{τ} > 1: empty phase space");
+    }
+    if (css_r_regularization) {
+        assert(css_r2_max > 0);
+    }
 }
 
 ThreadLocalContext::ThreadLocalContext(const Context& ctx) :
@@ -878,13 +781,13 @@ ThreadLocalContext::ThreadLocalContext(const Context& ctx) :
 
 ThreadLocalContext::ThreadLocalContext(const ContextCollection& cc) :
   pdf_object(NULL), ff_object(NULL) {
-    multimap<string,string>::const_iterator it = cc.options.find("pdf_filename");
-    if (it == cc.options.end()) {
+    multimap<string,string>::const_iterator it = cc.config().find("pdf_filename");
+    if (it == cc.m_config.end()) {
         throw "no PDF filename";
     }
     pdf_object = new c_mstwpdf(it->second.c_str());
-    it = cc.options.find("ff_filename");
-    if (it == cc.options.end()) {
+    it = cc.m_config.find("ff_filename");
+    if (it == cc.m_config.end()) {
         throw "no FF filename";
     }
     ff_object = new DSSpiNLO(it->second.c_str());
@@ -894,44 +797,3 @@ ThreadLocalContext::~ThreadLocalContext() {
     delete pdf_object;
     delete ff_object;
 }
-
-
-#ifdef CONTEXT_TEST
-ostream& logger = cerr;
-
-int main(int argc, char** argv) {
-    if (argc < 2) {
-        cerr << "Usage: " << argv[0] << " <filename.cfg> ..." << endl;
-        return 1;
-    }
-    ContextCollection cc;
-    for (size_t i = 1; i < static_cast<size_t>(argc); i++) {
-        ifstream config;
-        config.open(argv[i]);
-        if (config.good()) {
-            config >> cc;
-        }
-        config.close();
-    }
-    try {
-        cc.create_contexts();
-    }
-    catch (const exception& e) {
-        cout << "Error in parsing: " << e.what() << endl;
-        return 1;
-    }
-    cout << "Successfully parsed " << argv[1];
-    if (cc.empty()) {
-        cout << endl << cc << "No contexts defined!" << endl;
-    }
-    else {
-        cout << " into " << cc.size() << " contexts" << endl;
-        cout << cc;
-        for (ContextCollection::iterator it = cc.begin(); it != cc.end(); it++) {
-            cout << "-----------------------------------" << endl << "Context:" << endl << *it;
-        }
-    }
-    return 0;
-}
-#endif
-

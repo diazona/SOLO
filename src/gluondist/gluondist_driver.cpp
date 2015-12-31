@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <iostream>
+#include "../configuration/configuration.h"
 #include "../configuration/context.h"
 #include "gluondist.h"
 
@@ -54,10 +55,10 @@ int main(int argc, char** argv) {
     string quantity(argv[2]);
     string filename(argv[3]);
     
-    ContextCollection cc(filename);
+    Configuration conf(filename, canonicalize);
     GluonDistribution* gdist;
     try {
-        cc.create_contexts();
+        ContextCollection cc(conf);
         gdist = cc[0].gdist;
     }
     catch (const exception& e) {
