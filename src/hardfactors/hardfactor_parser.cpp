@@ -216,12 +216,12 @@ void define_variables(Parser& parser, const IntegrationContext* ictx) {
 #define process(var) define_one_variable(parser, #var, &(ictx->var));
 #include "../integration/ictx_var_list.inc"
 #undef process
-#define process(var) define_one_variable(parser, #var, &(ictx->ctx->var));
+#define process(var) define_one_variable(parser, #var, &(ictx->ctx.var));
 #include "../configuration/ctx_var_list.inc"
 #undef process
     // and now some aliases
-    parser.DefineVar("A", const_cast<value_type*>(&(ictx->ctx->mass_number)));
-    parser.DefineVar("c", const_cast<value_type*>(&(ictx->ctx->centrality)));
+    parser.DefineVar("A", const_cast<value_type*>(&(ictx->ctx.mass_number)));
+    parser.DefineVar("c", const_cast<value_type*>(&(ictx->ctx.centrality)));
 
     /* The last "variables" we need on a per-IntegrationContext basis are
      * the gluon distribution functions. These functions need access to
@@ -236,7 +236,7 @@ void define_variables(Parser& parser, const IntegrationContext* ictx) {
      * with some more sophisticated plan.
      */
     if (gdist == NULL) {
-        gdist = ictx->ctx->gdist;
+        gdist = ictx->ctx.gdist;
     }
     else {
         /* I think it's safe to make this an assertion (which gets stripped
@@ -245,7 +245,7 @@ void define_variables(Parser& parser, const IntegrationContext* ictx) {
          * of the program there's no way this assertion should ever be false.
          * The program doesn't allow you to define multiple gluon distributions.
          */
-        assert(gdist == ictx->ctx->gdist);
+        assert(gdist == ictx->ctx.gdist);
     }
 
     // just in case ictx->ctx->gdist is NULL or something,  I dunno

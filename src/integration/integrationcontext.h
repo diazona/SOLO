@@ -24,8 +24,8 @@
 
 class IntegrationContext {
 public:
-    const Context* ctx;
-    const ThreadLocalContext* tlctx;
+    const Context& ctx;
+    const ThreadLocalContext& tlctx;
     // updated
     double z;
     double xi;
@@ -59,7 +59,7 @@ public:
     double Fkq1, Fkq2, Fkq3;
     double qmax;
 
-    IntegrationContext(const Context* ctx, const ThreadLocalContext* tlctx) :
+    IntegrationContext(const Context& ctx, const ThreadLocalContext& tlctx) :
       ctx(ctx),
       tlctx(tlctx),
       z(0), xi(0),

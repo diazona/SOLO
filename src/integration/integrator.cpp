@@ -58,7 +58,7 @@
  */
 #define checkfinite(d) assert(gsl_finite(d))
 
-Integrator::Integrator(const Context* ctx, const ThreadLocalContext* tlctx, const HardFactorList& hflist, const double xg_min, const double xg_max) :
+Integrator::Integrator(const Context& ctx, const ThreadLocalContext& tlctx, const HardFactorList& hflist, const double xg_min, const double xg_max) :
   ictx(ctx, tlctx), current_type(NULL), core_dimensions(0), terms(compare_integration_types), xg_min(xg_min), xg_max(xg_max),
   callback(NULL), cubature_callback(NULL), miser_callback(NULL), vegas_callback(NULL), quasi_callback(NULL) {
     assert(hflist.size() > 0);
@@ -71,7 +71,7 @@ Integrator::Integrator(const Context* ctx, const ThreadLocalContext* tlctx, cons
         const HardFactorTerm* const* l_terms = p_hf->get_terms();
         for (size_t i = 0; i < p_hf->get_term_count(); i++) {
             const HardFactorTerm* term = l_terms[i];
-            if (ictx.ctx->exact_kinematics && term->get_order() == HardFactor::MIXED) {
+            if (ictx.ctx.exact_kinematics && term->get_order() == HardFactor::MIXED) {
                 throw KinematicSchemeMismatchException(*term);
             }
             const IntegrationType* type = term->get_type();
@@ -109,7 +109,7 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
     assert(current_terms.size() > 0);
     if (core_dimensions == 1) {
         assert(ictx.xi == 1.0);
-        double log_factor = log(1 - ictx.ctx->tau / ictx.z);
+        double log_factor = log(1 - ictx.ctx.tau / ictx.z);
         checkfinite(log_factor);
         for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
             const HardFactorTerm* h = (*it);
@@ -131,7 +131,7 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
         checkfinite(xi_factor);
         for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
             const HardFactorTerm* h = (*it);
-            if (ictx.ctx->exact_kinematics) {
+            if (ictx.ctx.exact_kinematics) {
                 // double check that there are no mixed-order hard factors when using exact kinematics
                 assert(h->get_order() == HardFactor::LO || h->get_order() == HardFactor::NLO);
             }
@@ -347,24 +347,24 @@ void Integrator::integrate_impl(size_t core_dimensions, double* result, double* 
     switch (dimensions) {
         case 1:
         case 2:
-            cubature_integrate(cubature_wrapper, dimensions, this, min, max, result, error, ictx.ctx->cubature_iterations, ictx.ctx->relerr, ictx.ctx->abserr, cubature_callback);
+            cubature_integrate(cubature_wrapper, dimensions, this, min, max, result, error, ictx.ctx.cubature_iterations, ictx.ctx.relerr, ictx.ctx.abserr, cubature_callback);
             break;
         default:
-            if (ictx.ctx->strategy == MC_QUASI) {
-                gsl_qrng* qrng = gsl_qrng_alloc(ictx.ctx->quasirandom_generator_type, static_cast<unsigned int>(dimensions));
-                quasi_integrate(gsl_monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->quasi_iterations, ictx.ctx->relerr, ictx.ctx->abserr, qrng, quasi_callback);
+            if (ictx.ctx.strategy == MC_QUASI) {
+                gsl_qrng* qrng = gsl_qrng_alloc(ictx.ctx.quasirandom_generator_type, static_cast<unsigned int>(dimensions));
+                quasi_integrate(gsl_monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx.quasi_iterations, ictx.ctx.relerr, ictx.ctx.abserr, qrng, quasi_callback);
                 gsl_qrng_free(qrng);
                 qrng = NULL;
             }
             else {
-                gsl_rng* rng = gsl_rng_alloc(ictx.ctx->pseudorandom_generator_type);
-                gsl_rng_set(rng, ictx.ctx->pseudorandom_generator_seed);
-                switch (ictx.ctx->strategy) {
+                gsl_rng* rng = gsl_rng_alloc(ictx.ctx.pseudorandom_generator_type);
+                gsl_rng_set(rng, ictx.ctx.pseudorandom_generator_seed);
+                switch (ictx.ctx.strategy) {
                     case MC_VEGAS:
-                        vegas_integrate(gsl_monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->vegas_initial_iterations, ictx.ctx->vegas_incremental_iterations, rng, vegas_callback);
+                        vegas_integrate(gsl_monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx.vegas_initial_iterations, ictx.ctx.vegas_incremental_iterations, rng, vegas_callback);
                         break;
                     case MC_MISER:
-                        miser_integrate(gsl_monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx->miser_iterations, rng, miser_callback);
+                        miser_integrate(gsl_monte_wrapper, dimensions, this, min, max, result, error, ictx.ctx.miser_iterations, rng, miser_callback);
                         break;
                     case MC_PLAIN:
                         throw "Unsupported integration method PLAIN";

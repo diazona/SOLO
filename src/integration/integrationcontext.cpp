@@ -27,7 +27,7 @@
 #define checkfinite(d) assert(gsl_finite(d))
 
 void IntegrationContext::update_kinematics(double z, double xi, size_t core_dimensions) {
-    /* when using exact kinematics (ctx->exact_kinematics is true),
+    /* when using exact kinematics (ctx.exact_kinematics is true),
      *  core_dimensions == 1 means we are calculating an LO term
      *  core_dimensions == 2 means we are calculating an NLO term
      *
@@ -37,27 +37,27 @@ void IntegrationContext::update_kinematics(double z, double xi, size_t core_dime
      */
     assert(core_dimensions == 1 || core_dimensions == 2);
     assert(z <= 1);
-    assert(z >= ctx->tau);
+    assert(z >= ctx.tau);
 
     this->z = z;
     this->z2 = this->z*this->z;
-    this->kT2 = ctx->pT2 / this->z2;
+    this->kT2 = ctx.pT2 / this->z2;
     this->kT = sqrt(this->kT2);
-    this->xg = kT / ctx->sqs * exp(-ctx->Y); // doubles as \hat{x}_a
+    this->xg = kT / ctx.sqs * exp(-ctx.Y); // doubles as \hat{x}_a
     this->xi = xi;
     this->xi2 = xi*xi;
 
-    this->xp = ctx->tau / (this->z * xi);
-    if (ctx->exact_kinematics) {
+    this->xp = ctx.tau / (this->z * xi);
+    if (ctx.exact_kinematics) {
         if (core_dimensions == 1) {
             // means we are calculating an LO term
             this->xa = xg;
         }
         else {
             // means we are calculating an NLO term
-            this->xa = exp(-ctx->Y) / ctx->sqs * (kT + ((kT - q1x)*(kT - q1x) + q1y*q1y) / kT * xi / (1 - xi));
+            this->xa = exp(-ctx.Y) / ctx.sqs * (kT + ((kT - q1x)*(kT - q1x) + q1y*q1y) / kT * xi / (1 - xi));
             // qmax is only meaningful for NLO terms with exact kinematics
-            this->qmax = sqrt(kT * (ctx->sqs * exp(ctx->Y) - kT) * (1 - xi) / xi);
+            this->qmax = sqrt(kT * (ctx.sqs * exp(ctx.Y) - kT) * (1 - xi) / xi);
             checkfinite(qmax);
         }
     }
@@ -67,9 +67,9 @@ void IntegrationContext::update_kinematics(double z, double xi, size_t core_dime
     }
     this->Yg = -log(this->xg);
     this->Ya = -log(this->xa);
-    this->Qs2 = ctx->gdist->Qs2(this->Ya);
-    this->Fk = ctx->gdist->F(this->kT2, this->Ya);
-    this->alphas = ctx->cpl->alphas(this->kT2);
+    this->Qs2 = ctx.gdist->Qs2(this->Ya);
+    this->Fk = ctx.gdist->F(this->kT2, this->Ya);
+    this->alphas = ctx.cpl->alphas(this->kT2);
     this->alphas_2pi = this->alphas * 0.5 * M_1_PI;
 }
 
@@ -99,9 +99,9 @@ void IntegrationContext::update_positions(double xx, double xy, double yx, doubl
     // Calculate the new gluon distribution values
     // this has to be done after kinematics are updated
     if (r2 > 0) {
-        this->S2r = ctx->gdist->S2(r2, this->Ya);
+        this->S2r = ctx.gdist->S2(r2, this->Ya);
         if (s2 > 0 || t2 > 0) {
-            this->S4rst = ctx->gdist->S4(r2, s2, t2, this->Ya);
+            this->S4rst = ctx.gdist->S4(r2, s2, t2, this->Ya);
         }
         else {
             this->S4rst = NAN;
@@ -132,12 +132,12 @@ void IntegrationContext::update_momenta(double q1x, double q1y, double q2x, doub
     assert(q12 >= 0);
     assert(q22 >= 0);
     assert(q32 >= 0);
-    this->Fq1 = ctx->gdist->F(q12, this->Ya);
-    this->Fkq1 = ctx->gdist->F((kT - q1x)*(kT - q1x) + q1y*q1y, this->Ya);
-    this->Fq2 = ctx->gdist->F(q22, this->Ya);
-    this->Fkq2 = ctx->gdist->F((kT - q2x)*(kT - q2x) + q2y*q2y, this->Ya);
-    this->Fq3 = ctx->gdist->F(q32, this->Ya);
-    this->Fkq3 = ctx->gdist->F((kT - q3x)*(kT - q3x) + q3y*q3y, this->Ya);
+    this->Fq1 = ctx.gdist->F(q12, this->Ya);
+    this->Fkq1 = ctx.gdist->F((kT - q1x)*(kT - q1x) + q1y*q1y, this->Ya);
+    this->Fq2 = ctx.gdist->F(q22, this->Ya);
+    this->Fkq2 = ctx.gdist->F((kT - q2x)*(kT - q2x) + q2y*q2y, this->Ya);
+    this->Fq3 = ctx.gdist->F(q32, this->Ya);
+    this->Fkq3 = ctx.gdist->F((kT - q3x)*(kT - q3x) + q3y*q3y, this->Ya);
 }
 
 void IntegrationContext::update_auxiliary(double xiprime) {
@@ -150,13 +150,13 @@ void IntegrationContext::update_auxiliary(double xiprime) {
 void IntegrationContext::update_parton_functions() {
     double qqfactor = 0.0, ggfactor = 0.0, gqfactor = 0.0, qgfactor = 0.0;
 
-    c_mstwpdf* pdf_object = tlctx->pdf_object;
-    DSSpiNLO* ff_object = tlctx->ff_object;
+    c_mstwpdf* pdf_object = tlctx.pdf_object;
+    DSSpiNLO* ff_object = tlctx.ff_object;
 
-    DSSpiNLO::hadron hadron = ctx->hadron;
+    DSSpiNLO::hadron hadron = ctx.hadron;
 
     // Calculate the new quark/gluon factors
-    this->mu2 = ctx->fs->mu2(*this);
+    this->mu2 = ctx.fs->mu2(*this);
     pdf_object->update(this->xp, sqrt(this->mu2));
     ff_object->update(this->z, this->mu2);
 
@@ -168,7 +168,7 @@ void IntegrationContext::update_parton_functions() {
     qqfactor += pdf_object->cont.str * ff_object->fragmentation(DSSpiNLO::strange, hadron);
     qqfactor += pdf_object->cont.sbar * ff_object->fragmentation(DSSpiNLO::strange_bar, hadron);
 
-    if (ctx->projectile == deuteron) {
+    if (ctx.projectile == deuteron) {
         // Neutron contributions (for deuteron collisions), assuming isospin symmetry:
         qqfactor += (pdf_object->cont.dnv + pdf_object->cont.dsea) * ff_object->fragmentation(DSSpiNLO::up, hadron);
         qqfactor += pdf_object->cont.dsea * ff_object->fragmentation(DSSpiNLO::up_bar, hadron);
@@ -184,7 +184,7 @@ void IntegrationContext::update_parton_functions() {
     // Proton contribution:
     ggfactor += pdf_object->cont.glu * ff_object->fragmentation(DSSpiNLO::gluon, hadron);
 
-    if (ctx->projectile == deuteron) {
+    if (ctx.projectile == deuteron) {
         // Neutron contribution (for deuteron collisions), assuming isospin symmetry:
         ggfactor *= 2;
     }
@@ -199,7 +199,7 @@ void IntegrationContext::update_parton_functions() {
                  + pdf_object->cont.sbar
                 ) * ff_object->fragmentation(DSSpiNLO::gluon, hadron);
 
-    if (ctx->projectile == deuteron) {
+    if (ctx.projectile == deuteron) {
         // Neutron contributions (for deuteron collisions), assuming isospin symmetry:
         gqfactor *= 2;
     }
@@ -215,7 +215,7 @@ void IntegrationContext::update_parton_functions() {
                                         + ff_object->fragmentation(DSSpiNLO::strange, hadron)
                                         + ff_object->fragmentation(DSSpiNLO::strange_bar, hadron));
 
-    if (ctx->projectile == deuteron) {
+    if (ctx.projectile == deuteron) {
         // Neutron contributions (for deuteron collisions), assuming isospin symmetry:
         qgfactor *= 2;
     }

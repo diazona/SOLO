@@ -43,7 +43,7 @@ PTProportionalFactorizationScale::PTProportionalFactorizationScale(double coeffi
     _name = s.str();
 }
 double PTProportionalFactorizationScale::mu2(const IntegrationContext& ictx) {
-    return coefficient * ictx.ctx->pT2;
+    return coefficient * ictx.ctx.pT2;
 }
 const char* PTProportionalFactorizationScale::name() {
     return _name.c_str();
@@ -57,8 +57,8 @@ RPerpFactorizationScale::RPerpFactorizationScale(double coefficient) : coefficie
 double RPerpFactorizationScale::mu2(const IntegrationContext& ictx) {
     assert(ictx.r2 > 0);
     // implement the CSS r regularization
-    if (ictx.ctx->css_r_regularization) {
-        return coefficient * (1 + ictx.r2 / ictx.ctx->css_r2_max) / ictx.r2;
+    if (ictx.ctx.css_r_regularization) {
+        return coefficient * (1 + ictx.r2 / ictx.ctx.css_r2_max) / ictx.r2;
     }
     else {
         return coefficient / ictx.r2;

@@ -85,7 +85,7 @@ private:
     
     double xg_min, xg_max;
 public:
-    Integrator(const Context* ctx, const ThreadLocalContext* tlctx, const HardFactorList& hflist, const double xg_min, const double xg_max);
+    Integrator(const Context& ctx, const ThreadLocalContext& tlctx, const HardFactorList& hflist, const double xg_min, const double xg_max);
     ~Integrator();
     /**
      * Evaluates the 1D or 2D integrand, using the values of variables currently stored

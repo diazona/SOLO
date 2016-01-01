@@ -45,10 +45,15 @@ void write_data_point(const IntegrationContext* ictx, const double real, const d
     trace_stream << endl;
 }
 
-/** An IntegrationContext to store the minimum values of variables */
-static IntegrationContext min_ictx(NULL, NULL);
-/** An IntegrationContext to store the maximum values of variables */
-static IntegrationContext max_ictx(NULL, NULL);
+#define process(property) double property;
+
+/** A version of IntegrationContext without the methods */
+struct IntegrationContextData {
+    #include "../integration/ictx_var_list.inc"
+};
+
+static IntegrationContextData min_ictx;
+static IntegrationContextData max_ictx;
 
 /** Stores a property into min_ictx and/or max_ictx if it is a min or max, respectively */
 #define process(property) \
@@ -252,7 +257,7 @@ void ResultsCalculator::calculate() {
 
 void ResultsCalculator::integrate_hard_factor(const Context& ctx, const ThreadLocalContext& tlctx, const HardFactorList& hflist, size_t index) {
     double l_real, l_imag, l_error;
-    Integrator integrator(&ctx, &tlctx, hflist, xg_min, xg_max);
+    Integrator integrator(ctx, tlctx, hflist, xg_min, xg_max);
     if (trace) {
         integrator.set_callback(write_data_point);
     }
