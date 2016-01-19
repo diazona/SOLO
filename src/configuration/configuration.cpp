@@ -50,23 +50,22 @@ string Configuration::get(const string& key, const size_t index) const {
     return it->second;
 }
 
-bool Configuration::contains(const string& key, const std::size_t n) const {
-    pair<option_iterator_type, option_iterator_type> p = equal_range(canonicalize(key));
-    option_iterator_type it = p.first;
-    size_t i = n;
-    while (i-- > 0) {
-        if (++it == p.second) {
-            return false;
-        }
-    }
-    return true;
+bool Configuration::contains(const string& key, const size_t n) const {
+    /* This is inefficient if count(key) is much larger than n, because technically
+     * we'd only have to count the first n elements with that key, not all of them.
+     * However, I'm assuming that's not likely to happen in practice, and if it does,
+     * it's not likely to actually matter anyway because contains() is not going to
+     * be called millions of times in a tight loop. This code is a lot simpler
+     * to maintain.
+     */
+    return count(key) >= n;
 }
 
 size_t Configuration::count(const string& key) const {
     pair<option_iterator_type, option_iterator_type> p = equal_range(canonicalize(key));
     option_iterator_type it = p.first;
     size_t i = 0;
-    while (++it != p.second) {
+    while (it++ != p.second) {
         ++i;
     }
     return i;
