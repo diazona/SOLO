@@ -93,7 +93,7 @@ private:
      * This will force a ContextCollection to be constructed if it has not been
      * done already.
      */
-    void parse_hf_specs(const std::vector<std::string>& hfspecs);
+    void parse_hf_specs(const vector< string >& hfspecs);
 
     /**
      * Construct an Integrator and use it

@@ -127,7 +127,7 @@ ProgramConfiguration::ProgramConfiguration(const int argc, char const * const * 
                 config.close();
             }
             else {
-                m_hfspecs.push_back(a);
+                m_conf.add("hardfactor_specifications", a);
             }
         }
     }
@@ -141,9 +141,14 @@ ProgramConfiguration::ProgramConfiguration(const int argc, char const * const * 
     if (!gdist_type.empty()) {
         m_conf.set("gdist", gdist_type);
     }
-    if (m_hfspecs.empty()) {
-        m_hfspecs.push_back("lo");
-        m_hfspecs.push_back("nlo");
+
+    if (!m_conf.contains("hardfactor_specifications")) {
+        m_conf.add("hardfactor_specifications", "lo");
+        m_conf.add("hardfactor_specifications", "nlo");
+    }
+    pair<Configuration::iterator,Configuration::iterator> hf_bounds = m_conf.equal_range("hardfactor_specifications");
+    for (Configuration::iterator it = hf_bounds.first; it != hf_bounds.second; it++) {
+        m_hfspecs.push_back(it->first);
     }
 }
 
