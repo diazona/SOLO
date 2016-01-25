@@ -337,6 +337,16 @@ double MVGluonDistribution::S2(double r2, double Y) {
     return pow(M_E + 1.0 / (sqrt(r2) * LambdaMV), -0.25 * pow(r2 * Qs2(Y), gammaMV));
 }
 
+double MVGluonDistribution::F(double q2, double Y) {
+    if (q2 > u2max) {
+        // use the 1/q^4 extrapolation
+        return AbstractPositionGluonDistribution::F(u2max, Y) * gsl_pow_2(u2max) / gsl_pow_2(q2);
+    }
+    else {
+        return AbstractPositionGluonDistribution::F(q2, Y);
+    }
+}
+
 double MVGluonDistribution::Qs2(const double Y) const {
     return Q02x0lambda * exp(lambda * Y);
 }
