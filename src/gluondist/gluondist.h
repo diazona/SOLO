@@ -433,7 +433,7 @@ public:
      * q2 at which you can get a value for `F`. It just represents the point
      * at which the object switches over from interpolation to extrapolation
      * using the 1/q^4 trend. Typically, a good value for `q2max` is around
-     * `1e6` or so; it's high enough that the low-q deviations from the 1/q^4
+     * `1e4` or so; it's high enough that the low-q deviations from the 1/q^4
      * trend are negligible, but low enough not to cause numerical instabilities.
      */
     MVGluonDistribution(
@@ -461,7 +461,7 @@ public:
      *  F(q2) = F(q2max) q2max^2 / q2^2
      * This corresponds to the assumption that the gluon distribution at large
      * `q` is proportional to `1/q^4`. The MV distribution satisfies this criterion
-     * fairly well for `q2 > 1e6` or so. (In fact any distribution which is
+     * fairly well for `q2 > 1e4` or so. (In fact any distribution which is
      * consistent with perturbative QCD should have the same trend.)
      *
      * This behavior differs from the superclass implementation, which throws
