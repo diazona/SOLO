@@ -299,7 +299,6 @@ ContextCollection::ContextCollection(const Configuration& conf) :
   m_cpl(NULL),
   m_fs(NULL),
   trace_gdist(false) {
-    cerr << "cc constructor" << endl;
     create_contexts();
 }
 
