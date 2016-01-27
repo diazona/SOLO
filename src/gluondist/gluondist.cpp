@@ -78,11 +78,11 @@ const char* GBWGluonDistribution::name() {
 class GDistIntegrationParameters {
 public:
     double u; // use u instead of u2 because that's what we need for the integrand
-    double Qs2;
+    double Y;
     size_t n; // for integrating a term of the series: this is the order of the term being integrated
     AbstractTransformGluonDistribution* gdist;
 
-    GDistIntegrationParameters(AbstractTransformGluonDistribution* gdist) : gdist(gdist), u(0), Qs2(0), n(0) {}
+    GDistIntegrationParameters(AbstractTransformGluonDistribution* gdist) : gdist(gdist), u(0), Y(0), n(0) {}
 };
 
 AbstractTransformGluonDistribution::AbstractTransformGluonDistribution(
@@ -142,8 +142,7 @@ void AbstractTransformGluonDistribution::setup() {
     G_dist_leading_u2 = new double[Y_dimension]; // zeroth order term in series around u2 = 0
     G_dist_subleading_u2 = new double[Y_dimension]; // second order term in series around u2 = 0
     for (size_t i_Y = 0; i_Y < Y_dimension; i_Y++) {
-        Y_values[i_Y] = Ymin + i_Y * log_step;
-        params.Qs2 = Qs2(Y_values[i_Y]); // TODO: verify whether sat scale is available at this point
+        params.Y = Y_values[i_Y] = Ymin + i_Y * log_step;
 
         params.n = 0;
         gsl_integration_qagiu(&func, 0, 0, 0.0001, subinterval_limit, workspace, G_dist_leading_u2 + i_Y, &error);
@@ -159,7 +158,7 @@ void AbstractTransformGluonDistribution::setup() {
         log_u2_values[i_u2] = log_u2min + i_u2 * log_step;
         params.u = exp(0.5 * log_u2_values[i_u2]);
         for (size_t i_Y = 0; i_Y < Y_dimension; i_Y++) {
-            params.Qs2 = Qs2(Y_values[i_Y]);
+            params.Y = Y_values[i_Y];
             size_t index = INDEX_2D(i_u2, i_Y, u2_dimension, Y_dimension);
             gsl_integration_qagiu(&func, 0, 0, 0.0001, subinterval_limit, workspace, G_dist + index, &error);
         }
@@ -256,7 +255,7 @@ static double position_gdist_integrand(double r, void* closure) {
     GDistIntegrationParameters* params = static_cast<GDistIntegrationParameters*>(closure);
     double q = params->u;
     // Implements 1/(2pi) int_0^inf dr r S2(r) J_0(qr)
-    return 0.5 * M_1_PI * r * params->gdist->S2(r*r, params->Qs2) * gsl_sf_bessel_J0(q * r);
+    return 0.5 * M_1_PI * r * params->gdist->S2(r*r, params->Y) * gsl_sf_bessel_J0(q * r);
 }
 
 static double position_gdist_series_term_integrand(double r, void* closure) {
@@ -266,9 +265,9 @@ static double position_gdist_series_term_integrand(double r, void* closure) {
     //  1/(2pi) int_0^inf dr r S2(r) J_0(qr)
     switch (params->n) {
         case 0:
-            return 0.5 * M_1_PI * r * params->gdist->S2(r*r, params->Qs2);
+            return 0.5 * M_1_PI * r * params->gdist->S2(r*r, params->Y);
         case 2:
-            return -0.125 * M_1_PI * gsl_pow_3(r) * params->gdist->S2(r*r, params->Qs2);
+            return -0.125 * M_1_PI * gsl_pow_3(r) * params->gdist->S2(r*r, params->Y);
         default: // a term not in the series
             return 0;
     }
@@ -293,7 +292,7 @@ static double momentum_gdist_integrand(double q, void* closure) {
     GDistIntegrationParameters* params = static_cast<GDistIntegrationParameters*>(closure);
     double r = params->u;
     // Implements 2pi int_0^inf dq q F(q) J_0(qr)
-    return 2 * M_PI * q * params->gdist->F(q*q, params->Qs2) * gsl_sf_bessel_J0(r * q);
+    return 2 * M_PI * q * params->gdist->F(q*q, params->Y) * gsl_sf_bessel_J0(r * q);
 }
 
 static double momentum_gdist_series_term_integrand(double q, void* closure) {
@@ -303,9 +302,9 @@ static double momentum_gdist_series_term_integrand(double q, void* closure) {
     //  2pi int_0^inf dq q F(q) J_0(qr)
     switch (params->n) {
         case 0:
-            return 2 * M_PI * q * params->gdist->F(q*q, params->Qs2);
+            return 2 * M_PI * q * params->gdist->F(q*q, params->Y);
         case 2:
-            return -0.5 * M_PI * gsl_pow_3(q) * params->gdist->F(q*q, params->Qs2);
+            return -0.5 * M_PI * gsl_pow_3(q) * params->gdist->F(q*q, params->Y);
         default: // a term not in the series
             return 0;
     }
