@@ -321,8 +321,15 @@ MVGluonDistribution* ContextCollection::create_mv_gluon_distribution() {
     check_property_default(lambdaMV, double, parse_double, 0.241)
     check_property_default(gammaMV,  double, parse_double, 1)
     check_property_default(q2minMV,  double, parse_double, 1e-6)
-    // q2max = (2 qxmax + sqrt(smax) / exp(Ymin))^2 + (2 qymax)^2
-    check_property_default(q2maxMV,  double, parse_double, gsl_pow_2(2 * inf + sqs / exp(Ymin)) + gsl_pow_2(2 * inf))
+    /* q2maxMV by default is the lesser of
+     *  (2 qxmax + sqrt(smax) / exp(Ymin))^2 + (2 qymax)^2
+     * or 1e4. The value is empirically chosen to be small enough not to
+     * produce numerical errors in the MV distribution's Fourier transform,
+     * but large enough that the distribution above q2maxMV follows
+     * 1/q^4 scaling. This really should be tuned in the configuration file,
+     * as the ideal value may differ from one calculation to the next.
+     */
+    check_property_default(q2maxMV,  double, parse_double, min(gsl_pow_2(2 * inf + sqs / exp(Ymin)) + gsl_pow_2(2 * inf), 1.e4))
     check_property_default(YminMV, double, parse_double, 2 * Ymin)
     check_property_default(YmaxMV, double, parse_double, Ymax - log(pTmin) + log(sqs))
     check_property_default(gdist_subinterval_limit, size_t, parse_size, 10000)

@@ -299,9 +299,13 @@ protected:
      */
     void write_grid(std::ostream& out);
 
+    /**
+     * Limits of the 2D interpolation region. These should be considered read-only,
+     * though they can't be marked `const` because they are modified in `setup()`.
+     */
+    double u2min, u2max, Ymin, Ymax;
+
 private:
-    double u2min, u2max;
-    double Ymin, Ymax;
     /** Values of ln(u2) for the interpolation. */
     double* log_u2_values;
     /** Values of Y for the interpolation. */
@@ -424,6 +428,13 @@ class MVGluonDistribution: public AbstractPositionGluonDistribution {
 public:
     /**
      * Constructs a new MV gluon distribution object.
+     *
+     * Unlike the superclass, `q2max` does not represent the maximum value of
+     * q2 at which you can get a value for `F`. It just represents the point
+     * at which the object switches over from interpolation to extrapolation
+     * using the 1/q^4 trend. Typically, a good value for `q2max` is around
+     * `1e4` or so; it's high enough that the low-q deviations from the 1/q^4
+     * trend are negligible, but low enough not to cause numerical instabilities.
      */
     MVGluonDistribution(
         double LambdaMV,
@@ -443,6 +454,20 @@ public:
      * exp(-(r2 Qs02MV)^gammaMV ln(e + 1 / (LambdaMV r)) / 4)
      */
     double S2(double r2, double Y);
+    /**
+     * Returns the value of the momentum space dipole gluon distribution.
+     *
+     * If `q2 > q2max`, this implementation computes a value using the formula
+     *  F(q2) = F(q2max) q2max^2 / q2^2
+     * This corresponds to the assumption that the gluon distribution at large
+     * `q` is proportional to `1/q^4`. The MV distribution satisfies this criterion
+     * fairly well for `q2 > 1e4` or so. (In fact any distribution which is
+     * consistent with perturbative QCD should have the same trend.)
+     *
+     * This behavior differs from the superclass implementation, which throws
+     * an exception for `q2 > q2max`.
+     */
+    double F(double q2, double Y);
     /**
      * Returns the standard saturation scale, Q0^2(x0/x)^λ
      */
