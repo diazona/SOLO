@@ -19,32 +19,8 @@
 
 #include <string>
 #include "hardfactor.h"
+#include "../integration/integrationregion.h"
 #include "../utils/utils.h"
-
-namespace position {
-    const PositionIntegrationType dipole(2);
-    const PositionIntegrationType quadrupole(4);
-}
-
-namespace radial {
-    const AngleIndependentPositionIntegrationType dipole(1);
-    const AngleIndependentPositionIntegrationType quadrupole(2);
-    const RescaledAngleIndependentPositionIntegrationType rescaled_dipole(1);
-    const RescaledAngleIndependentPositionIntegrationType rescaled_quadrupole(2);
-}
-
-namespace momentum {
-    const NoIntegrationType none;
-    const MomentumIntegrationType momentum1(2);
-    const MomentumIntegrationType momentum2(4);
-    const MomentumIntegrationType momentum3(6);
-    const RadialMomentumIntegrationType radialmomentum1(2);
-    const RadialMomentumIntegrationType radialmomentum2(4);
-    const RadialMomentumIntegrationType radialmomentum3(6);
-    const XiPIntegrationType momentumxip1(3);
-    const XiPIntegrationType momentumxip2(5);
-    const QLimitedMomentumIntegrationType qlim(2);
-}
 
 using std::list;
 using std::pair;
@@ -172,6 +148,7 @@ HardFactorRegistry::~HardFactorRegistry() {
     }
     hardfactor_groups_to_delete.clear();
 }
+
 
 KinematicSchemeMismatchException::KinematicSchemeMismatchException(const HardFactor& hf) throw() {
     _message = "Mixed-order hard factor ";

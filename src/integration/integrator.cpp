@@ -37,7 +37,7 @@
  * and calls integrate() on it.
  * (this happens in ResultsCalculator::calculate())
  *
- * integrate() iterates over the IntegrationTypes, and for each, calls
+ * integrate() iterates over the IntegrationRegions, and for each, calls
  *   integrate_impl() to do the "2D" integral, which calls
  *     vegas_integrate(), which calls
  *       gsl_monte_vegas_integrate(), passing the wrapper function gsl_monte_wrapper as the function to be integrated.
@@ -58,9 +58,23 @@
  */
 #define checkfinite(d) assert(gsl_finite(d))
 
-Integrator::Integrator(const Context& ctx, const ThreadLocalContext& tlctx, const HardFactorList& hflist, const double xg_min, const double xg_max) :
-  ictx(ctx, tlctx), current_type(NULL), core_dimensions(0), terms(compare_integration_types), xg_min(xg_min), xg_max(xg_max),
-  callback(NULL), cubature_callback(NULL), miser_callback(NULL), vegas_callback(NULL), quasi_callback(NULL) {
+Integrator::Integrator(
+    const Context& ctx,
+    const ThreadLocalContext& tlctx,
+    const HardFactorList& hflist,
+    const double xg_min,
+    const double xg_max) :
+  ictx(ctx, tlctx),
+  current_integration_region(NULL),
+  xi_preintegrated_term(false),
+  terms(),
+  xg_min(xg_min),
+  xg_max(xg_max),
+  callback(NULL),
+  cubature_callback(NULL),
+  miser_callback(NULL),
+  vegas_callback(NULL),
+  quasi_callback(NULL) {
     assert(hflist.size() > 0);
 #ifndef NDEBUG
     size_t total1 = 0;
@@ -74,8 +88,8 @@ Integrator::Integrator(const Context& ctx, const ThreadLocalContext& tlctx, cons
             if (ictx.ctx.exact_kinematics && term->get_order() == HardFactor::MIXED) {
                 throw KinematicSchemeMismatchException(*term);
             }
-            const IntegrationType* type = term->get_type();
-            terms[type].push_back(term);
+            const IntegrationRegion* region = term->get_integration();
+            terms[region].push_back(term);
 #ifndef NDEBUG
             total1++;
 #endif
@@ -105,9 +119,10 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
     }
     double l_real = 0.0, l_imag = 0.0; // l for "local"
     double t_real, t_imag;             // t for temporary
-    HardFactorTermList& current_terms = terms[current_type];
+    HardFactorTermList& current_terms = terms[current_integration_region];
     assert(current_terms.size() > 0);
-    if (core_dimensions == 1) {
+    if (xi_preintegrated_term) {
+        // This evaluates the [Fs(1) ln(1 - tau/z) + Fd(1)] term
         assert(ictx.xi == 1.0);
         double log_factor = log(1 - ictx.ctx.tau / ictx.z);
         checkfinite(log_factor);
@@ -126,7 +141,7 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
         }
     }
     else {
-        assert(core_dimensions == 2);
+        // This branch evaluates the [Fs(xi) - Fs(1)] / (1 - xi) + Fn(xi) terms
         double xi_factor = 1.0 / (1 - ictx.xi);
         checkfinite(xi_factor);
         for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
@@ -161,7 +176,8 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
             l_real += t_real;
             l_imag += t_imag;
         }
-        ictx.set_xi_to_1(2);
+        ictx.xi = 1;
+        ictx.recalculate_everything();
         for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
             const HardFactorTerm* h = (*it);
             h->Fs(&ictx, &t_real, &t_imag);
@@ -190,9 +206,10 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
 void cubature_wrapper(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nresults, double* results) {
     double real, imag, jacobian;
     Integrator* integrator = static_cast<Integrator*>(closure);
-    integrator->current_type->update(integrator->ictx, integrator->core_dimensions, coordinates);
+    integrator->current_integration_region->update(integrator->ictx, coordinates);
+    integrator->ictx.recalculate_everything();
     // computing the Jacobian here allows the method to access the untransformed coordinates
-    jacobian = integrator->current_type->jacobian(ncoords, coordinates, integrator->ictx, integrator->core_dimensions);
+    jacobian = integrator->current_integration_region->jacobian(integrator->ictx);
     integrator->evaluate_integrand(&real, &imag);
     assert(nresults == 1 || nresults == 2);
     results[0] = real * jacobian;
@@ -334,16 +351,16 @@ void cubature_integrate(integrand func, size_t dim, void* closure, double* min, 
     }
 }
 
-void Integrator::integrate_impl(size_t core_dimensions, double* result, double* error) {
+void Integrator::integrate_impl(double* result, double* error) {
     // it should already have been checked that there is at least one term of the appropriate type
     // and the type should be set appropriately
-    assert(core_dimensions == 1 || core_dimensions == 2);
-    this->core_dimensions = core_dimensions;
-    size_t dimensions = core_dimensions + current_type->extra_dimensions;
+    size_t dimensions = current_integration_region->dimensions;
     double min[10];
     double max[10];
-    current_type->fill_min(ictx.ctx, core_dimensions, min);
-    current_type->fill_max(ictx.ctx, core_dimensions, max);
+    assert(sizeof(min) / sizeof(min[0]) >= dimensions);
+    assert(sizeof(max) / sizeof(max[0]) >= dimensions);
+    current_integration_region->fill_min(ictx.ctx, min);
+    current_integration_region->fill_max(ictx.ctx, max);
     switch (dimensions) {
         case 1:
         case 2:
@@ -388,10 +405,14 @@ void Integrator::integrate(double* real, double* imag, double* error) {
     for (HardFactorTypeMap::iterator it = terms.begin(); it != terms.end(); it++) {
         assert(it->second.size() > 0);
         set_current_integration_type(it->first);
-        integrate_impl(2, &tmp_result, &tmp_error);
+
+        xi_preintegrated_term = false;
+        integrate_impl(&tmp_result, &tmp_error);
         result += tmp_result;
         abserr += tmp_error;
-        integrate_impl(1, &tmp_result, &tmp_error);
+
+        xi_preintegrated_term = true;
+        integrate_impl(&tmp_result, &tmp_error);
         result += tmp_result;
         abserr += tmp_error;
     }

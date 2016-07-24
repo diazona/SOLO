@@ -46,11 +46,11 @@ void write_data_point(const IntegrationContext* ictx, const double real, const d
 }
 
 #define process(property) double property;
-
 /** A version of IntegrationContext without the methods */
 struct IntegrationContextData {
     #include "../integration/ictx_var_list.inc"
 };
+#undef process
 
 static IntegrationContextData min_ictx;
 static IntegrationContextData max_ictx;
@@ -196,9 +196,11 @@ void ResultsCalculator::parse_hf_specs(const vector<string>& hfspecs) {
         hfgroups.push_back(hfg);
         hfnames.insert(hfnames.end(), hfg->specifications.begin(), hfg->specifications.end());
     }
+    parser.flush_groups();
     assert(!hfgroups.empty());
     assert(hfnames.size() >= hfgroups.size());
 }
+
 size_t ResultsCalculator::index_from(size_t ccindex, size_t hfindex) {
     size_t index = ccindex * (separate ? _hflen : _hfglen) + hfindex;
     assert(index < result_array_len);

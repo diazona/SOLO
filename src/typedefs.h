@@ -1,8 +1,8 @@
 /*
  * Part of SOLO
- * 
+ *
  * Copyright 2014 David Zaslavsky
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -21,7 +21,7 @@
 
 #include <map>
 #include <vector>
-#include "integration/integrationtype.h"
+#include "integration/integrationregion.h"
 
 // declared in hardfactor.h
 class HardFactor;
@@ -29,4 +29,4 @@ class HardFactorTerm;
 
 typedef std::vector<const HardFactor*> HardFactorList;
 typedef std::vector<const HardFactorTerm*> HardFactorTermList;
-typedef std::map<const IntegrationType*, HardFactorTermList, bool(*)(const IntegrationType*, const IntegrationType*)> HardFactorTypeMap;
+typedef std::map<const IntegrationRegion*, HardFactorTermList, bool(*)(const IntegrationRegion*, const IntegrationRegion*)> HardFactorTypeMap;
