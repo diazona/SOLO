@@ -155,7 +155,8 @@ string canonicalize(const string& i_key);
  */
 class Context {
 public:
-    // Actually making these const is tricky
+    // IMPORTANT: all numerical variables declared here should also be listed in ctx_var_list.inc
+
     /** The fit parameter from the saturation scale */
     double x0;
     /** The mass number */
@@ -216,6 +217,11 @@ public:
 
     /** The factor in front of the resummation term, see H1qqCorrection */
     double resummation_constant;
+
+    /**
+     * The rapidity factorization scale xi_f from Ducloue/Lappi/Zhu,
+     * DOI 10.1103/PhysRevD.93.114016 */
+    double xif;
 
     /** Whether to use exact (or approximate) kinematic expressions */
     bool exact_kinematics;

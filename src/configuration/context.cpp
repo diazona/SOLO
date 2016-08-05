@@ -514,6 +514,7 @@ void ContextCollection::create_contexts() {
     check_property_default( css_r_regularization, bool, parse_boolean, false)
     check_property_default( css_r2_max, double, parse_double, 0) // 0 is a dummy value for when the regularization is not being used
     check_property_default( resummation_constant, double, parse_double, 1)
+    check_property_default( xif, double, parse_double, 0)
     check_property_default( exact_kinematics, bool, parse_boolean, false)
 
     // Adapted from the GSL source code - basically this reimplements gsl_rng_env_setup
@@ -634,7 +635,9 @@ void ContextCollection::create_contexts() {
                       gsl_pow_2(pT), sqs, Y,
                       hardfactor_definitions, pdf_filename, ff_filename,
                       quasirandom_generator_type, pseudorandom_generator_type, seed,
-                      m_gdist, m_cpl, m_fs, _c0r_optimization, css_r_regularization, css_r2_max, resummation_constant,
+                      m_gdist, m_cpl, m_fs, _c0r_optimization, css_r_regularization, css_r2_max,
+                      resummation_constant,
+                      xif,
                       exact_kinematics,
                       projectile, hadron,
                       integration_strategy,
@@ -752,6 +755,7 @@ std::ostream& operator<<(std::ostream& out, const Context& ctx) {
     out << "CSS r regularization\t = " << ctx.css_r_regularization << endl;
     out << "CSS r_max\t = " << ctx.css_r2_max << endl;
     out << "resummation constant\t = " << ctx.resummation_constant << endl;
+    out << "rapidity factorization scale\t = " << ctx.xif << endl;
     out << "exact kinematics\t = " << ctx.exact_kinematics << endl;
     out << "quasirandom generator type: " <<  ctx.quasirandom_generator_type->name << endl;
     out << "pseudorandom generator type: " <<  ctx.pseudorandom_generator_type->name << endl;
