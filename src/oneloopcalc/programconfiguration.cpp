@@ -148,7 +148,7 @@ ProgramConfiguration::ProgramConfiguration(const int argc, char const * const * 
     }
     pair<Configuration::iterator,Configuration::iterator> hf_bounds = m_conf.equal_range("hardfactor_specifications");
     for (Configuration::iterator it = hf_bounds.first; it != hf_bounds.second; it++) {
-        m_hfspecs.push_back(it->first);
+        m_hfspecs.push_back(it->second);
     }
 }
 
