@@ -324,12 +324,31 @@ HardFactorParser::HardFactorParser(HardFactorRegistry& registry) :
 }
 
 HardFactorParser::~HardFactorParser() {
+    // Try to create one last term from whatever the parser has been fed.
+    // If something goes wrong, we absorb the exception because destructors
+    // shouldn't throw exceptions.
     try {
         create_hard_factor_term();
     }
     catch (const IncompleteHardFactorDefinitionException& e) {
-        // nothing we can do about it
+#ifndef NDEBUG
         cerr << "Incomplete hard factor definition on destruction of parser" << endl;
+#endif
+    }
+    catch (const InvalidHardFactorDefinitionException& e) {
+#ifndef NDEBUG
+        cerr << "Invalid hard factor definition on destruction of parser: " << e.what() << endl;
+#endif
+    }
+    catch (const InvalidHardFactorSpecException& e) {
+#ifndef NDEBUG
+        cerr << "Invalid hard factor specification on destruction of parser: " << e.what() << endl;
+#endif
+    }
+    catch (const mu::ParserError& e) {
+#ifndef NDEBUG
+        cerr << "Parser error on destruction of parser" << endl;
+#endif
     }
     reset_current_term();
     flush_groups();
