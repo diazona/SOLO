@@ -34,6 +34,15 @@ namespace trace_variable {
  */
 void write_data_point(const IntegrationContext* ictx, const double real, const double imag) {
     static ofstream trace_stream("trace.output");
+    static bool needs_header = true;
+
+    if (needs_header) {
+        #define process(v) if (trace_vars[static_cast<size_t>(trace_variable::v)]) { trace_stream << #v << "\t"; }
+        #include "../integration/ictx_var_list.inc"
+        #undef process
+        trace_stream << "real\timag\t" << endl;
+        needs_header = false;
+    }
     if (ictx == NULL) {
         trace_stream << endl;
         return;
