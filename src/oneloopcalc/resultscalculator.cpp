@@ -52,6 +52,8 @@ struct IntegrationContextData {
     #include "../integration/ictx_var_list.inc"
 };
 
+#undef process
+
 static IntegrationContextData min_ictx;
 static IntegrationContextData max_ictx;
 
