@@ -103,12 +103,12 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
         *real = *imag = 0.0;
         return;
     }
-    double l_real = 0.0, l_imag = 0.0; // l for "local"
     double t_real, t_imag;             // t for temporary
     HardFactorTermList& current_terms = terms[current_type];
     assert(current_terms.size() > 0);
     if (core_dimensions == 1) {
         assert(ictx.xi == 1.0);
+        double l_real = 0.0, l_imag = 0.0; // l for "local"
         double log_factor = log(1 - ictx.ctx.tau / ictx.z);
         checkfinite(log_factor);
         for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
@@ -124,9 +124,16 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
             l_real += t_real;
             l_imag += t_imag;
         }
+        if (callback) {
+            callback(&ictx, l_real, l_imag);
+        }
+        *real = l_real;
+        *imag = l_imag;
     }
     else {
         assert(core_dimensions == 2);
+        double l_real = 0.0, l_imag = 0.0; // l for "local"
+        double s_real = 0.0, s_imag = 0.0; // s for "subtracted"
         double xi_factor = 1.0 / (1 - ictx.xi);
         checkfinite(xi_factor);
         for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
@@ -161,20 +168,23 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
             l_real += t_real;
             l_imag += t_imag;
         }
-        ictx.set_xi_to_1(2);
+        if (callback) {
+            callback(&ictx, l_real, l_imag);
+        }
+        ictx.set_xi_to_1(core_dimensions);
         for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
             const HardFactorTerm* h = (*it);
             h->Fs(&ictx, &t_real, &t_imag);
             checkfinite(t_real);
             checkfinite(t_imag);
-            l_real -= t_real * xi_factor;
-            l_imag -= t_imag * xi_factor;
+            s_real += t_real * xi_factor;
+            s_imag += t_imag * xi_factor;
         }
-    }
-    *real = l_real;
-    *imag = l_imag;
-    if (callback) {
-        callback(&ictx, *real, *imag);
+        if (callback) {
+            callback(&ictx, -s_real, -s_imag);
+        }
+        *real = l_real - s_real;
+        *imag = l_imag - s_imag;
     }
     checkfinite(*real);
     checkfinite(*imag);
