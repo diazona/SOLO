@@ -205,7 +205,7 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
  *
  * This updates the IntegrationContext using the values in `coordinates`
  * and then evaluates the current list of hard factors. The `coordinates`
- * are interpreted as z, (y if applicable), (xiprime if applicable), rx, ry, etc.
+ * are interpreted as z, (y if applicable), rx, ry, etc.
  */
 void cubature_wrapper(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nresults, double* results) {
     double real, imag, jacobian;

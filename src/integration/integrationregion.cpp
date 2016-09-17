@@ -306,32 +306,6 @@ void NLOClippedKinematicsIntegrationRegion::update(IntegrationContext& ictx, con
 }
 
 
-NLOPrimeIntegrationRegion::NLOPrimeIntegrationRegion() :
-  IntegrationRegion(2) {
-}
-
-void NLOPrimeIntegrationRegion::fill_min(const Context& ctx, double* min) const {
-    min[0] = ctx.tau;
-    min[1] = 0;
-}
-
-void NLOPrimeIntegrationRegion::fill_max(const Context& ctx, double* max) const {
-    max[0] = 1;
-    max[1] = 1;
-}
-
-double NLOPrimeIntegrationRegion::jacobian(const IntegrationContext& ictx) const {
-    return 1;
-}
-
-void NLOPrimeIntegrationRegion::update(IntegrationContext& ictx, const double* values) const {
-    ictx.z = values[0];
-    ictx.xi = 1;
-    ictx.xiprime = values[1];
-}
-
-
-
 CartesianIntegrationRegion::CartesianIntegrationRegion() :
   IntegrationRegion(2) {
 }

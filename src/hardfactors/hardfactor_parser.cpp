@@ -382,7 +382,6 @@ HardFactorParser::~HardFactorParser() {
 static LOKinematicsIntegrationRegion LO;
 static NLOKinematicsIntegrationRegion NLO;
 static NLOClippedKinematicsIntegrationRegion NLOClipped;
-static NLOPrimeIntegrationRegion NLOPrime;
 static R1CartesianIntegrationRegion R1C;
 static R1PolarIntegrationRegion R1P;
 static R1RadialIntegrationRegion R1R;
@@ -469,10 +468,6 @@ void HardFactorParser::parse_line(const string& line) {
         }
         else if (e == "nlo clipped") {
             subregions.push_back(&NLOClipped);
-            order = HardFactor::NLO;
-        }
-        else if (e == "nlo prime") {
-            subregions.push_back(&NLOPrime);
             order = HardFactor::NLO;
         }
         else {

@@ -140,23 +140,6 @@ public:
 };
 
 /**
- * An integration subregion that works like `NLOKinematicsIntegrationRegion`
- * but using `xiprime` instead of `xi`. This exists to support old hard factors
- * which used the `xiprime` variable for contributions from the virtual
- * terms (see arxiv:1203.6139 for the formula that motivated this choice).
- * It's quite clunky and not recommended for future use.
- */
-class NLOPrimeIntegrationRegion : public IntegrationRegion {
-public:
-    NLOPrimeIntegrationRegion();
-
-    virtual void fill_min(const Context& ctx, double* min) const;
-    virtual void fill_max(const Context& ctx, double* max) const;
-    virtual double jacobian(const IntegrationContext& ictx) const;
-    virtual void update(IntegrationContext& ictx, const double* values) const;
-};
-
-/**
  * A superclass for integration subregions parametrized in Cartesian
  * coordinates, ranging from -inf to inf.
  */

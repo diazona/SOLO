@@ -44,8 +44,6 @@ public:
     double q1x, q1y, q12;
     double q2x, q2y, q22;
     double q3x, q3y, q32;
-    double xiprime;
-    double xiprime2;
     double Qs2;
     double mu2;
     double alphas, alphas_2pi; // αs/2π
@@ -57,7 +55,6 @@ public:
     double Fk;
     double Fq1, Fq2, Fq3;
     double Fkq1, Fkq2, Fkq3;
-    double qmax;
 
     IntegrationContext(const Context& ctx, const ThreadLocalContext& tlctx) :
       ctx(ctx),
@@ -69,8 +66,6 @@ public:
       q1x(0), q1y(0),
       q2x(0), q2y(0),
       q3x(0), q3y(0),
-      xiprime(0),
-      xiprime2(0),
       z2(0), xi2(0),
       kT2(0), kT(0),
       xp(0), xg(0), xa(0),
@@ -88,8 +83,7 @@ public:
       S2r(0), S4rst(0),
       Fk(0),
       Fq1(0), Fq2(0), Fq3(0),
-      Fkq1(0), Fkq2(0), Fkq3(0),
-      qmax(0) {
+      Fkq1(0), Fkq2(0), Fkq3(0) {
     };
 //     void update_kinematics(double z, double xi);
 //     void update_positions(double xx, double xy, double yx, double yy, double bx, double by);

@@ -79,8 +79,6 @@ void IntegrationContext::recalculate_everything() {
     Fk = ctx.gdist->F(kT2, Ya);
     alphas = ctx.cpl->alphas(kT2);
     alphas_2pi = alphas * 0.5 * M_1_PI;
-    xiprime2 = xiprime * xiprime;
-
 
     // Calculate the new gluon distribution values
     // this has to be done after kinematics are updated
