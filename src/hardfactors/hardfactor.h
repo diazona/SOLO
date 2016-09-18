@@ -86,6 +86,8 @@ public:
     HardFactorTerm() : p_this(this) {};
     /** The IntegrationRegion needed to integrate this term. */
     virtual const IntegrationRegion* get_integration() const = 0;
+    /** The evaluation modifiers that apply to this term. */
+    virtual const Modifiers& get_modifiers() const = 0;
     /** The plus-regulated ("singular") part of the term. */
     virtual void Fs(const IntegrationContext* ictx, double* real, double* imag) const { *real = 0; *imag = 0; }
     /** The normal part of the term. */

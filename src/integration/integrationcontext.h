@@ -22,6 +22,12 @@
 
 #include "../configuration/context.h"
 
+class Modifiers {
+public:
+    bool exact_xg;
+    bool divide_xi;
+};
+
 class IntegrationContext {
 public:
     const Context& ctx;
@@ -86,8 +92,9 @@ public:
       Fkq1(0), Fkq2(0), Fkq3(0) {
     };
 
+    void recalculate_everything(const bool exact_xg, const bool divide_xi);
     void recalculate_everything_from_position(const bool quadrupole, const bool divide_xi);
-    void recalculate_everything_from_momentum(const size_t dimensions, const bool exact, const bool divide_xi);
+    void recalculate_everything_from_momentum(const size_t dimensions, const bool exact_xg, const bool divide_xi);
 
 private:
     void recalculate_from_position(const bool quadrupole);
@@ -96,7 +103,7 @@ private:
     void recalculate_exact_longitudinal();
     void recalculate_coupling();
     void recalculate_position_gdist(const bool quadrupole);
-    void recalculate_momentum_gdist(const size_t dimensions, const bool exact);
+    void recalculate_momentum_gdist(const size_t dimensions, const bool exact_xg);
     void recalculate_parton_functions(const bool divide_xi);
 };
 

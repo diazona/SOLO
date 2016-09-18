@@ -139,6 +139,7 @@ ParsedHardFactorTerm::ParsedHardFactorTerm(
     const string& implementation,
     const HardFactor::HardFactorOrder order,
     const IntegrationRegion* region,
+    const Modifiers& modifiers,
     const string& Fs_real, const string& Fs_imag,
     const string& Fn_real, const string& Fn_imag,
     const string& Fd_real, const string& Fd_imag,
@@ -146,6 +147,7 @@ ParsedHardFactorTerm::ParsedHardFactorTerm(
   m_name(name),
   m_implementation(implementation),
   m_order(order),
+  m_modifiers(modifiers),
   mp_region(region),
   m_free_region(false) {
     init_term(Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag, variable_list);
@@ -156,6 +158,7 @@ ParsedHardFactorTerm::ParsedHardFactorTerm(
     const string& implementation,
     const HardFactor::HardFactorOrder order,
     const vector<const IntegrationRegion*> subregions,
+    const Modifiers& modifiers,
     const string& Fs_real, const string& Fs_imag,
     const string& Fn_real, const string& Fn_imag,
     const string& Fd_real, const string& Fd_imag,
@@ -163,6 +166,7 @@ ParsedHardFactorTerm::ParsedHardFactorTerm(
   m_name(name),
   m_implementation(implementation),
   m_order(order),
+  m_modifiers(modifiers),
   mp_region(new CompositeIntegrationRegion(subregions)),
   m_free_region(true) {
     init_term(Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag, variable_list);
@@ -600,6 +604,24 @@ void HardFactorParser::parse_line(const string& line) {
         }
         return;
     }
+    else if (key == "modifiers") {
+        // This initializes a blank instance of Modifiers with proper defaults in place
+        Modifiers m;
+        vector<string> elements = split(value, ",");
+        for (vector<string>::const_iterator it = elements.begin(); it != elements.end(); it++) {
+            string mod = trim(*it);
+            if (mod == "approximate xtarget") {
+                m.exact_xg = false;
+            }
+            else if (mod == "exact xtarget") {
+                m.exact_xg = true;
+            }
+            else if (mod == "divide xi") {
+                m.divide_xi = true;
+            }
+        }
+        modifiers = m;
+    }
     else if (key == "Fs real") {
         Fs_real = value;
     }
@@ -851,10 +873,13 @@ void HardFactorParser::set_hard_factor_group_callback(void (*callback)(const Har
     this->hard_factor_group_callback = callback;
 }
 
+static const Modifiers default_modifiers;
+
 bool HardFactorParser::hard_factor_definition_empty() const {
     return
       subregions.empty() &&
       order == sentinel &&
+      modifiers == default_modifiers &&
       name.empty() &&
       implementation.empty() &&
       Fs_real.empty() && Fs_imag.empty() &&
@@ -878,7 +903,16 @@ const ParsedHardFactorTerm* HardFactorParser::create_hard_factor_term() {
         throw IncompleteHardFactorDefinitionException();
     }
 
-    ParsedHardFactorTerm* hf = new ParsedHardFactorTerm(name, implementation.empty() ? default_implementation : implementation, order, subregions, Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag, variable_definitions);
+    ParsedHardFactorTerm* hf = new ParsedHardFactorTerm(
+        name,
+        implementation.empty() ? default_implementation : implementation,
+        order,
+        subregions,
+        modifiers,
+        Fs_real, Fs_imag,
+        Fn_real, Fn_imag,
+        Fd_real, Fd_imag,
+        variable_definitions);
     registry.add_hard_factor(hf, true);
     hard_factors.push_back(hf);
     if (hard_factor_callback != NULL) {
@@ -894,6 +928,7 @@ void HardFactorParser::reset_current_term() {
     default_implementation.erase();
     order = sentinel;
     subregions.clear();
+    modifiers = default_modifiers;
     variable_definitions.clear();
     Fs_real.clear();
     Fs_imag.clear();

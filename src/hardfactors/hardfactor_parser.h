@@ -33,6 +33,7 @@ public:
         const std::string& implementation,
         const HardFactor::HardFactorOrder order,
         const IntegrationRegion* region,
+        const Modifiers& modifiers,
         const std::string& Fs_real, const std::string& Fs_imag,
         const std::string& Fn_real, const std::string& Fn_imag,
         const std::string& Fd_real, const std::string& Fd_imag,
@@ -42,7 +43,8 @@ public:
         const std::string& name,
         const std::string& implementation,
         const HardFactor::HardFactorOrder order,
-        const std::vector<const IntegrationRegion*> region,
+        const std::vector<const IntegrationRegion*> subregions,
+        const Modifiers& modifiers,
         const std::string& Fs_real, const std::string& Fs_imag,
         const std::string& Fn_real, const std::string& Fn_imag,
         const std::string& Fd_real, const std::string& Fd_imag,
@@ -54,6 +56,7 @@ public:
     const char* get_implementation() const { return m_implementation.c_str(); }
     const IntegrationRegion* get_integration() const { return mp_region; }
     HardFactorOrder get_order() const { return m_order; }
+    const Modifiers& get_modifiers() const { return m_modifiers; }
     void Fs(const IntegrationContext* ictx, double* real, double* imag) const;
     void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
@@ -117,6 +120,7 @@ private:
     const std::string m_name;
     const std::string m_implementation;
     const HardFactorOrder m_order;
+    const Modifiers m_modifiers;
 
     const IntegrationRegion* mp_region;
     const bool m_free_region;
@@ -173,14 +177,14 @@ public:
      * Parses a file containing hard factor specifications. The parser recognizes
      * three kinds of content:
      *
-     * - Elementary hard factor specifications, which contain a name, an order, an
-     *   integration region specification, as well as formulas to be used to evaluate the
-     *   parts of the hard factor. Each of these is given on a line in `key = value`
-     *   format. For example:
+     * - Elementary hard factor specifications, which contain a name, an integration
+     *   region specification, optional evaluation modifiers, as well as formulas
+     *   to be used to evaluate the parts of the hard factor. Each of these is given
+     *   on a line in `key = value` format. For example:
      *
      *     name = testhf1
-     *     order = LO
-     *     integration = LO
+     *     integration = nlo clipped * cartesian position
+     *     modifiers = exact, divide xi
      *     Fs real = 1 + xi2
      *     Fs imag = 1 - xi2
      *     Fn real = 1/z
@@ -341,6 +345,7 @@ private:
     std::string Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag;
     std::string name, implementation, default_implementation;
     HardFactor::HardFactorOrder order;
+    Modifiers modifiers;
     vector<const IntegrationRegion*> subregions;
 
     // callbacks

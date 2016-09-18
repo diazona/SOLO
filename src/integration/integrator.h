@@ -58,12 +58,16 @@ private:
     /**
      * The type of term being integrated.
      *
-     * Types are defined in integrationtype.h.
+     * Types are defined in integrationregion.h.
      *
      * This is a pointer rather than a reference because it starts out being
      * set to NULL.
      */
     IntegrationRegion const * current_integration_region;
+    /**
+     * Modifiers for the current term.
+     */
+    Modifiers current_modifiers;
     /**
      * The IntegrationContext object associated with this Integrator.
      */

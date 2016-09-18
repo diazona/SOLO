@@ -205,14 +205,32 @@ void IntegrationContext::recalculate_everything_from_position(const bool quadrup
     recalculate_parton_functions(divide_xi);
 }
 
-void IntegrationContext::recalculate_everything_from_momentum(const size_t dimensions, const bool exact, const bool divide_xi) {
+void IntegrationContext::recalculate_everything_from_momentum(const size_t dimensions, const bool exact_xg, const bool divide_xi) {
     recalculate_from_momentum(dimensions);
     recalculate_longitudinal();
-    if (exact) {
+    if (exact_xg) {
         recalculate_exact_longitudinal();
     }
     recalculate_coupling();
-    recalculate_momentum_gdist(dimensions, exact);
+    recalculate_momentum_gdist(dimensions, exact_xg);
     recalculate_parton_functions(divide_xi);
 }
 
+void IntegrationContext::recalculate_everything(const bool exact_xg, const bool divide_xi) {
+    recalculate_from_position(true);
+    recalculate_from_momentum(3);
+    recalculate_longitudinal();
+    recalculate_exact_longitudinal();
+    recalculate_coupling();
+    // use some heuristics to guess whether to compute position or momentum gluon distributions
+    if (r2 > 0 || s2 > 0 || t2 > 0) {
+        recalculate_position_gdist(s2 > 0 || t2 > 0);
+    }
+    if (q12 > 0 || q22 > 0 || q32 > 0) {
+        recalculate_momentum_gdist(3, exact_xg);
+    }
+    else {
+        recalculate_momentum_gdist(0);
+    }
+    recalculate_parton_functions(divide_xi);
+}
