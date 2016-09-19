@@ -85,17 +85,19 @@ public:
       Fq1(0), Fq2(0), Fq3(0),
       Fkq1(0), Fkq2(0), Fkq3(0) {
     };
-//     void update_kinematics(double z, double xi);
-//     void update_positions(double xx, double xy, double yx, double yy, double bx, double by);
-//     void update_momenta(double q1x, double q1y, double q2x, double q2y, double q3x, double q3y);
-//     void update_auxiliary(double xiprime);
-//     void update_parton_functions();
-//     void set_xi_to_1(size_t core_dimensions) {
-//         update_kinematics(z, 1, core_dimensions);
-//         update_parton_functions();
-//     }
 
-    void recalculate_everything();
+    void recalculate_everything_from_position(const bool quadrupole, const bool divide_xi);
+    void recalculate_everything_from_momentum(const size_t dimensions, const bool exact, const bool divide_xi);
+
+private:
+    void recalculate_from_position(const bool quadrupole);
+    void recalculate_from_momentum(const size_t dimensions);
+    void recalculate_longitudinal();
+    void recalculate_exact_longitudinal();
+    void recalculate_coupling();
+    void recalculate_position_gdist(const bool quadrupole);
+    void recalculate_momentum_gdist(const size_t dimensions, const bool exact);
+    void recalculate_parton_functions(const bool divide_xi);
 };
 
 #endif // _INTEGRATIONCONTEXT_H_

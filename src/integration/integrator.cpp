@@ -181,7 +181,8 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
             l_imag += t_imag;
         }
         ictx.xi = 1;
-        ictx.recalculate_everything();
+        /* TODO put the same thing here used below in cubature_wrapper
+         */
         for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
             const HardFactorTerm* h = (*it);
             h->Fs(&ictx, &t_real, &t_imag);
@@ -211,7 +212,18 @@ void cubature_wrapper(unsigned int ncoords, const double* coordinates, void* clo
     double real, imag, jacobian;
     Integrator* integrator = static_cast<Integrator*>(closure);
     integrator->current_integration_region->update(integrator->ictx, coordinates);
-    integrator->ictx.recalculate_everything();
+    /* TODO put here something that implements the following pseudocode:
+     *
+     * if (current_integration_region->position_like) {
+     *     ictx.recalculate_everything_from_position(current_integration_region->is_quadrupole, current_integration_region->divide_xi);
+     * }
+     * else {
+     *     ictx.recalculate_everything_from_momentum(current_integration_region->momentum_dimensions, current_integration_region->exact, current_integration_region->divide_xi);
+     * }
+     *
+     * NOTE: an idea is to add a field evaluation_profile to Integrator, initialized from a profile=... line
+     * in the hard factor definitions, and use that to store the settings for exact and divide_xi
+     */
     // computing the Jacobian here allows the method to access the untransformed coordinates
     jacobian = integrator->current_integration_region->jacobian(integrator->ictx);
     integrator->evaluate_integrand(&real, &imag);

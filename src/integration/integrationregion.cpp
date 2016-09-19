@@ -289,8 +289,17 @@ void NLOClippedKinematicsIntegrationRegion::fill_max(const Context& ctx, double*
 }
 
 static inline double xahat(const IntegrationContext& ictx) {
-    // This happens to be the same as xg, but I write it out explicitly here
-    // just in case the definition of xg ever changes or something
+    /* We have to use sqrt(pT2) / z instead of just using kT because this
+     * function will be called from update(), which is called before
+     * most of the values in the IntegrationContext are updated, and in
+     * particular before kT is set to sqrt(pT2) / z. The only values in
+     * ictx which we can count on to be updated are those which are set
+     * right within update(), namely z.
+     *
+     * This formula also happens to be the same as that used for ictx.xg,
+     * but that's basically a coincidence. It serves a different purpose
+     * here.
+     */
     return sqrt(ictx.ctx.pT2) / (ictx.z * ictx.ctx.sqs) * exp(-ictx.ctx.Y);
 }
 

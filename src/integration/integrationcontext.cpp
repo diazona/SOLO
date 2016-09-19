@@ -26,82 +26,101 @@
 
 #define checkfinite(d) assert(gsl_finite(d))
 
-void IntegrationContext::recalculate_everything() {
-    // These are the things that should have been manually set
-    checkfinite(z);
-    checkfinite(xi);
+void IntegrationContext::recalculate_from_position(const bool quadrupole) {
     checkfinite(xx);
     checkfinite(xy);
     checkfinite(yx);
     checkfinite(yy);
-    checkfinite(bx);
-    checkfinite(by);
-    checkfinite(q1x);
-    checkfinite(q1y);
-    checkfinite(q2x);
-    checkfinite(q2y);
-    checkfinite(q3x);
-    checkfinite(q3y);
-
-    // Update dipole sizes from positions
     rx = xx - yx;
     ry = xy - yy;
     r2 = rx*rx + ry*ry;
-    sx = xx - bx;
-    sy = xy - by;
-    s2 = sx*sx + sy*sy;
-    tx = yx - bx;
-    ty = yy - by;
-    t2 = tx*tx + ty*ty;
+    if (quadrupole) {
+        checkfinite(bx);
+        checkfinite(by);
+        sx = xx - bx;
+        sy = xy - by;
+        s2 = sx*sx + sy*sy;
+        tx = yx - bx;
+        ty = yy - by;
+        t2 = tx*tx + ty*ty;
+    }
+}
 
-    // Update momenta
-    q12 = q1x*q1x + q1y*q1y;
-    q22 = q2x*q2x + q2y*q2y;
-    q32 = q3x*q3x + q3y*q3y;
-    assert(q12 >= 0);
-    assert(q22 >= 0);
-    assert(q32 >= 0);
+void IntegrationContext::recalculate_from_momentum(const size_t dimensions) {
+    switch (dimensions) { // intentionally omitting break statements
+        case 3:
+            checkfinite(q3x);
+            checkfinite(q3y);
+            q32 = q3x*q3x + q3y*q3y;
+            assert(q32 >= 0);
+        case 2:
+            checkfinite(q2x);
+            checkfinite(q2y);
+            q22 = q2x*q2x + q2y*q2y;
+            assert(q22 >= 0);
+        case 1:
+            checkfinite(q1x);
+            checkfinite(q1y);
+            q12 = q1x*q1x + q1y*q1y;
+            assert(q12 >= 0);
+        case 0:
+            break;
+        default:
+            assert(false);
+    }
+}
 
-    // Update kinematical variables
+void IntegrationContext::recalculate_longitudinal() {
     z2 = z*z;
-    // the definition of kT is also referenced in ExactKinematicIntegrationRegion
     kT2 = ctx.pT2 / z2;
     kT = sqrt(kT2);
-    xg = kT / ctx.sqs * exp(-ctx.Y); // doubles as \hat{x}_a
-    xi2 = xi*xi;
-
-    // the definition of xp is also referenced in ExactKinematicIntegrationRegion
-    xp = ctx.tau / (z * xi);
-    xa = exp(-ctx.Y) / ctx.sqs * (kT + ((kT - q1x)*(kT - q1x) + q1y*q1y) / kT * xi / (1 - xi));
+    xi2 = xi * xi;
+    /* NOTE: this conflicts with the xp used by previous versions of SOLO.
+     * Previous versions defined it as tau / (z * xi). We now express this
+     * as xp / xi, consistent with the notation in e.g. arxiv:1604.00225
+     */
+    xp = ctx.tau / z;
+    xg = kT / ctx.sqs * exp(-ctx.Y);
     Yg = -log(xg);
+}
+
+void IntegrationContext::recalculate_exact_longitudinal() {
+    xa = exp(-ctx.Y) / ctx.sqs * (kT + ((kT - q1x) * (kT - q1x) + q1y * q1y) / kT * xi / (1 - xi));
     Ya = -log(xa);
-    Qs2 = ctx.gdist->Qs2(Ya);
-    Fk = ctx.gdist->F(kT2, Ya);
+}
+
+void IntegrationContext::recalculate_coupling() {
     alphas = ctx.cpl->alphas(kT2);
     alphas_2pi = alphas * 0.5 * M_1_PI;
+}
 
-    // Calculate the new gluon distribution values
-    // this has to be done after kinematics are updated
-    if (r2 > 0) {
-        S2r = ctx.gdist->S2(r2, Ya);
-        if (s2 > 0 || t2 > 0) {
-            S4rst = ctx.gdist->S4(r2, s2, t2, Ya);
-        }
-        else {
-            S4rst = NAN;
-        }
+void IntegrationContext::recalculate_position_gdist(const bool quadrupole) {
+    S2r = ctx.gdist->S2(r2, Yg);
+    S4rst = quadrupole ? ctx.gdist->S4(r2, s2, t2, Yg) : NAN;
+}
+
+void IntegrationContext::recalculate_momentum_gdist(const size_t dimensions, const bool exact) {
+    double Y = exact ? Ya : Yg;
+    Qs2 = ctx.gdist->Qs2(Y);
+    switch (dimensions) { // intentionally omitting break statements
+        case 3:
+            Fq3 = ctx.gdist->F(q32, Y);
+            Fkq3 = ctx.gdist->F((kT - q3x) * (kT - q3x) + q3y * q3y, Y);
+        case 2:
+            Fq2 = ctx.gdist->F(q22, Y);
+            Fkq2 = ctx.gdist->F((kT - q2x) * (kT - q2x) + q2y * q2y, Y);
+        case 1:
+            Fq1 = ctx.gdist->F(q12, Y);
+            Fkq1 = ctx.gdist->F((kT - q1x) * (kT - q1x) + q1y * q1y, Y);
+        case 0:
+            Fk = ctx.gdist->F(kT2, Y);
+            break;
+        default:
+            assert(false);
     }
-    else {
-        S2r = NAN;
-    }
+}
 
-    Fq1 = ctx.gdist->F(q12, Ya);
-    Fkq1 = ctx.gdist->F((kT - q1x)*(kT - q1x) + q1y*q1y, Ya);
-    Fq2 = ctx.gdist->F(q22, Ya);
-    Fkq2 = ctx.gdist->F((kT - q2x)*(kT - q2x) + q2y*q2y, Ya);
-    Fq3 = ctx.gdist->F(q32, Ya);
-    Fkq3 = ctx.gdist->F((kT - q3x)*(kT - q3x) + q3y*q3y, Ya);
-
+void IntegrationContext::recalculate_parton_functions(const bool divide_xi) {
     // Finally, update the parton functions
     double qqfactor = 0.0, ggfactor = 0.0, gqfactor = 0.0, qgfactor = 0.0;
 
@@ -112,7 +131,7 @@ void IntegrationContext::recalculate_everything() {
 
     // Calculate the new quark/gluon factors
     mu2 = ctx.fs->mu2(*this);
-    pdf_object->update(xp, sqrt(mu2));
+    pdf_object->update(divide_xi ? xp / xi : xp, sqrt(mu2));
     ff_object->update(z, mu2);
 
     // Proton contributions:
@@ -177,3 +196,23 @@ void IntegrationContext::recalculate_everything() {
 
     this->qgfactor = qgfactor;
 }
+
+void IntegrationContext::recalculate_everything_from_position(const bool quadrupole, const bool divide_xi) {
+    recalculate_from_position(quadrupole);
+    recalculate_longitudinal();
+    recalculate_coupling();
+    recalculate_position_gdist(quadrupole);
+    recalculate_parton_functions(divide_xi);
+}
+
+void IntegrationContext::recalculate_everything_from_momentum(const size_t dimensions, const bool exact, const bool divide_xi) {
+    recalculate_from_momentum(dimensions);
+    recalculate_longitudinal();
+    if (exact) {
+        recalculate_exact_longitudinal();
+    }
+    recalculate_coupling();
+    recalculate_momentum_gdist(dimensions, exact);
+    recalculate_parton_functions(divide_xi);
+}
+
