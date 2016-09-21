@@ -888,6 +888,7 @@ bool HardFactorParser::hard_factor_definition_empty() const {
       modifiers == default_modifiers &&
       name.empty() &&
       implementation.empty() &&
+      default_implementation.empty() &&
       Fs_real.empty() && Fs_imag.empty() &&
       Fn_real.empty() && Fn_imag.empty() &&
       Fd_real.empty() && Fd_imag.empty() &&
