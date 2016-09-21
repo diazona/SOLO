@@ -30,26 +30,6 @@ using std::vector;
 // for weird technical reasons, this needs to be in a .cpp file, not a header
 HardFactor::~HardFactor() {}
 
-HardFactor::HardFactorOrder HardFactor::get_order() const {
-    /* This default implementation relies on a particular convention
-     * for get_name(), but can be overridden for hard factors where
-     * that convention doesn't apply.
-     */
-    std::string name = get_name();
-    if (name.compare(0, 3, "H01") == 0) {
-        return MIXED;
-    }
-    else if (name.compare(0, 2, "H0") == 0) {
-        return LO;
-    }
-    else if (name.compare(0, 2, "H1") == 0) {
-        return NLO;
-    }
-    else {
-        assert(false);
-    }
-};
-
 size_t HardFactorTerm::get_term_count() const {
     return 1;
 }

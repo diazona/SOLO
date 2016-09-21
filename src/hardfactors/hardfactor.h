@@ -68,7 +68,7 @@ public:
      * of kinematic variables (IntegrationContext::xp, IntegrationContext::xg)
      * are used when evaluating the `HardFactor`.
      */
-    virtual HardFactorOrder get_order() const;
+    virtual HardFactorOrder get_order() const = 0;
 };
 
 /**
