@@ -58,9 +58,22 @@
  */
 #define checkfinite(d) assert(gsl_finite(d))
 
-bool compare_integration_region_pointers(const IntegrationRegion* a, const IntegrationRegion* b) {
-    return a < b;
+bool HardFactorType::operator<(const HardFactorType& other) const {
+    if (integration_region < other.integration_region) {
+        return true;
+    }
+    else if (other.integration_region < integration_region) {
+        return false;
+    }
+    if (modifiers < other.modifiers) {
+        return true;
+    }
+    else if (other.modifiers < modifiers) {
+        return false;
+    }
+    return false;
 }
+
 
 Integrator::Integrator(
     const Context& ctx,
@@ -71,7 +84,6 @@ Integrator::Integrator(
   ictx(ctx, tlctx),
   current_integration_region(NULL),
   xi_preintegrated_term(false),
-  terms(compare_integration_region_pointers),
   xg_min(xg_min),
   xg_max(xg_max),
   callback(NULL),
@@ -93,7 +105,9 @@ Integrator::Integrator(
                 throw KinematicSchemeMismatchException(*term);
             }
             const IntegrationRegion* region = term->get_integration();
-            terms[region].push_back(term);
+            const Modifiers& modifiers = term->get_modifiers();
+            const HardFactorType hrt = {*region, modifiers};
+            terms[hrt].push_back(term);
 #ifndef NDEBUG
             total1++;
 #endif
@@ -123,7 +137,8 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
     }
     double l_real = 0.0, l_imag = 0.0; // l for "local"
     double t_real, t_imag;             // t for temporary
-    HardFactorTermList& current_terms = terms[current_integration_region];
+    HardFactorType current_type = {*current_integration_region, current_modifiers};
+    HardFactorTermList& current_terms = terms[current_type];
     assert(current_terms.size() > 0);
     if (xi_preintegrated_term) {
         // This evaluates the [Fs(1) ln(1 - tau/z) + Fd(1)] term
@@ -418,7 +433,9 @@ void Integrator::integrate(double* real, double* imag, double* error) {
 
     for (HardFactorTypeMap::iterator it = terms.begin(); it != terms.end(); it++) {
         assert(it->second.size() > 0);
-        set_current_integration_type(it->first);
+        HardFactorType hrt = it->first;
+        current_integration_region = &hrt.integration_region;
+        current_modifiers = hrt.modifiers;
 
         xi_preintegrated_term = false;
         integrate_impl(&tmp_result, &tmp_error);

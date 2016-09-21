@@ -622,6 +622,9 @@ void HardFactorParser::parse_line(const string& line) {
             else if (mod == "divide xi") {
                 m.divide_xi = true;
             }
+            else if (mod == "omit xi") {
+                m.divide_xi = false;
+            }
         }
         modifiers = m;
     }
@@ -876,7 +879,7 @@ void HardFactorParser::set_hard_factor_group_callback(void (*callback)(const Har
     this->hard_factor_group_callback = callback;
 }
 
-static const Modifiers default_modifiers;
+static Modifiers default_modifiers;
 
 bool HardFactorParser::hard_factor_definition_empty() const {
     return

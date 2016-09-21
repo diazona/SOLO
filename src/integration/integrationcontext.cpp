@@ -26,6 +26,27 @@
 
 #define checkfinite(d) assert(gsl_finite(d))
 
+bool Modifiers::operator<(const Modifiers& other) const {
+    if (exact_xg < other.exact_xg) {
+        return true;
+    }
+    else if (other.exact_xg < exact_xg) {
+        return false;
+    }
+    if (divide_xi < other.divide_xi) {
+        return true;
+    }
+    else if (other.divide_xi < divide_xi) {
+        return false;
+    }
+    return false;
+}
+
+bool Modifiers::operator==(const Modifiers& other) const {
+    return exact_xg == other.exact_xg && divide_xi == other.divide_xi;
+}
+
+
 void IntegrationContext::recalculate_from_position(const bool quadrupole) {
     checkfinite(xx);
     checkfinite(xy);

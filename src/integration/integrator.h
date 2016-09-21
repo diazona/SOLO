@@ -29,7 +29,16 @@
 #include "integrationregion.h"
 #include "../hardfactors/hardfactor.h"
 #include "quasimontecarlo.h"
-#include "../typedefs.h"
+
+class HardFactorType {
+public:
+    const IntegrationRegion& integration_region;
+    const Modifiers& modifiers;
+
+    bool operator<(const HardFactorType& other) const;
+};
+
+typedef std::map<HardFactorType, HardFactorTermList> HardFactorTypeMap;
 
 /**
  * A class to interface with the GSL Monte Carlo integration routines.
@@ -63,7 +72,7 @@ private:
      * This is a pointer rather than a reference because it starts out being
      * set to NULL.
      */
-    IntegrationRegion const * current_integration_region;
+    const IntegrationRegion* current_integration_region;
     /**
      * Modifiers for the current term.
      */
@@ -114,12 +123,6 @@ public:
      * in turn.
      */
     void integrate(double* real, double* imag, double* error);
-    /**
-     * Sets the current integration type.
-     */
-    void set_current_integration_type(IntegrationRegion const* new_type) {
-        current_integration_region = new_type;
-    }
     /**
      * Sets the callback to be invoked each time the integrand is evaluated.
      */

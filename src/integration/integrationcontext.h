@@ -26,6 +26,10 @@ class Modifiers {
 public:
     bool exact_xg;
     bool divide_xi;
+
+    Modifiers() : exact_xg(false), divide_xi(true) {}
+    bool operator<(const Modifiers& other) const;
+    bool operator==(const Modifiers& other) const;
 };
 
 class IntegrationContext {

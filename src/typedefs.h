@@ -21,7 +21,6 @@
 
 #include <map>
 #include <vector>
-#include "integration/integrationregion.h"
 
 // declared in hardfactor.h
 class HardFactor;
@@ -29,4 +28,3 @@ class HardFactorTerm;
 
 typedef std::vector<const HardFactor*> HardFactorList;
 typedef std::vector<const HardFactorTerm*> HardFactorTermList;
-typedef std::map<const IntegrationRegion*, HardFactorTermList, bool(*)(const IntegrationRegion*, const IntegrationRegion*)> HardFactorTypeMap;
