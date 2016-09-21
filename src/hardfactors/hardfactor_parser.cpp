@@ -28,7 +28,6 @@
 #include "gsl_mu.h"
 #include "hardfactor.h"
 #include "hardfactor_parser.h"
-#include "../typedefs.h"
 #include "../utils/utils.h"
 
 using mu::Parser;

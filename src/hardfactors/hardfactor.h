@@ -25,7 +25,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include "../typedefs.h"
 #include "../integration/integrationcontext.h"
 #include "../integration/integrationregion.h"
 #include "categorymap.h"
@@ -106,6 +105,9 @@ private:
     // necessary because `this` isn't an actual pointer that is stored anywhere
     const HardFactorTerm* p_this;
 };
+
+typedef std::vector<const HardFactor*> HardFactorList;
+typedef std::vector<const HardFactorTerm*> HardFactorTermList;
 
 /**
  * A group of `HardFactor`s which can be calculated together or separately.

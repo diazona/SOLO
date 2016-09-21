@@ -21,7 +21,6 @@
 #include <string>
 #include <muParser.h>
 #include "hardfactor.h"
-#include "../typedefs.h"
 
 /**
  * A ::HardFactorTerm subclass which represents formulas parsed from text.
