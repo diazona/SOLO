@@ -41,8 +41,8 @@ public:
     // calculated
     double z2, xi2;
     double kT2, kT;
-    double xp, xg, xa;
-    double Yg, Ya;
+    double xp, xg;
+    double Yg;
     double rx, ry, r2;
     double sx, sy, s2;
     double tx, ty, t2;
@@ -74,7 +74,7 @@ public:
       q3x(0), q3y(0),
       z2(0), xi2(0),
       kT2(0), kT(0),
-      xp(0), xg(0), xa(0),
+      xp(0), xg(0),
       rx(0), ry(0), r2(0),
       sx(0), sy(0), s2(0),
       tx(0), ty(0), t2(0),
@@ -99,11 +99,10 @@ public:
 private:
     void recalculate_from_position(const bool quadrupole);
     void recalculate_from_momentum(const size_t dimensions);
-    void recalculate_longitudinal();
-    void recalculate_exact_longitudinal();
+    void recalculate_longitudinal(const bool exact_xg);
     void recalculate_coupling();
     void recalculate_position_gdist(const bool quadrupole);
-    void recalculate_momentum_gdist(const size_t dimensions, const bool exact_xg);
+    void recalculate_momentum_gdist(const size_t dimensions);
     void recalculate_parton_functions(const bool divide_xi);
 };
 

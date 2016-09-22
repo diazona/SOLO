@@ -117,7 +117,7 @@ static inline bool xg_in_range(const double xg, const double xg_min, const doubl
 }
 
 void Integrator::evaluate_integrand(double* real, double* imag) {
-    if (!xg_in_range(ictx.xa, xg_min, xg_max)) {
+    if (!xg_in_range(ictx.xg, xg_min, xg_max)) {
         *real = *imag = 0.0;
         return;
     }

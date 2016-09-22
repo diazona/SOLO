@@ -70,7 +70,7 @@ void IntegrationContext::recalculate_from_momentum(const size_t dimensions) {
     }
 }
 
-void IntegrationContext::recalculate_longitudinal() {
+void IntegrationContext::recalculate_longitudinal(const bool exact_xg) {
     z2 = z*z;
     kT2 = ctx.pT2 / z2;
     kT = sqrt(kT2);
@@ -80,13 +80,14 @@ void IntegrationContext::recalculate_longitudinal() {
      * as xp / xi, consistent with the notation in e.g. arxiv:1604.00225
      */
     xp = ctx.tau / z;
-    xg = kT / ctx.sqs * exp(-ctx.Y);
+    if (exact_xg) {
+        assert(q12 > 0);
+        xg = exp(-ctx.Y) / ctx.sqs * (kT + ((kT - q1x) * (kT - q1x) + q1y * q1y) / kT * xi / (1 - xi));
+    }
+    else {
+        xg = kT / ctx.sqs * exp(-ctx.Y);
+    }
     Yg = -log(xg);
-}
-
-void IntegrationContext::recalculate_exact_longitudinal() {
-    xa = exp(-ctx.Y) / ctx.sqs * (kT + ((kT - q1x) * (kT - q1x) + q1y * q1y) / kT * xi / (1 - xi));
-    Ya = -log(xa);
 }
 
 void IntegrationContext::recalculate_coupling() {
@@ -99,8 +100,8 @@ void IntegrationContext::recalculate_position_gdist(const bool quadrupole) {
     S4rst = quadrupole ? ctx.gdist->S4(r2, s2, t2, Yg) : NAN;
 }
 
-void IntegrationContext::recalculate_momentum_gdist(const size_t dimensions, const bool exact) {
-    double Y = exact ? Ya : Yg;
+void IntegrationContext::recalculate_momentum_gdist(const size_t dimensions) {
+    double Y = Yg;
     Qs2 = ctx.gdist->Qs2(Y);
     switch (dimensions) { // intentionally omitting break statements
         case 3:
@@ -199,7 +200,7 @@ void IntegrationContext::recalculate_parton_functions(const bool divide_xi) {
 
 void IntegrationContext::recalculate_everything_from_position(const bool quadrupole, const bool divide_xi) {
     recalculate_from_position(quadrupole);
-    recalculate_longitudinal();
+    recalculate_longitudinal(false);
     recalculate_coupling();
     recalculate_position_gdist(quadrupole);
     recalculate_parton_functions(divide_xi);
@@ -207,27 +208,23 @@ void IntegrationContext::recalculate_everything_from_position(const bool quadrup
 
 void IntegrationContext::recalculate_everything_from_momentum(const size_t dimensions, const bool exact_xg, const bool divide_xi) {
     recalculate_from_momentum(dimensions);
-    recalculate_longitudinal();
-    if (exact_xg) {
-        recalculate_exact_longitudinal();
-    }
+    recalculate_longitudinal(exact_xg);
     recalculate_coupling();
-    recalculate_momentum_gdist(dimensions, exact_xg);
+    recalculate_momentum_gdist(dimensions);
     recalculate_parton_functions(divide_xi);
 }
 
 void IntegrationContext::recalculate_everything(const bool exact_xg, const bool divide_xi) {
     recalculate_from_position(true);
     recalculate_from_momentum(3);
-    recalculate_longitudinal();
-    recalculate_exact_longitudinal();
+    recalculate_longitudinal(exact_xg);
     recalculate_coupling();
     // use some heuristics to guess whether to compute position or momentum gluon distributions
     if (r2 > 0 || s2 > 0 || t2 > 0) {
         recalculate_position_gdist(s2 > 0 || t2 > 0);
     }
     if (q12 > 0 || q22 > 0 || q32 > 0) {
-        recalculate_momentum_gdist(3, exact_xg);
+        recalculate_momentum_gdist(3);
     }
     else {
         recalculate_momentum_gdist(0);
