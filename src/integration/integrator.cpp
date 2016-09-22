@@ -160,9 +160,8 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
         }
     }
     else {
-        // This branch evaluates the [Fs(xi) - Fs(1)] / (1 - xi) + Fn(xi) terms
         double xi_factor = 1.0 / (1 - ictx.xi);
-        checkfinite(xi_factor);
+        // This branch evaluates the [Fs(xi) - Fs(1)] / (1 - xi) + Fn(xi) terms
         for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
             const HardFactorTerm* h = (*it);
             if (ictx.ctx.exact_kinematics) {
@@ -176,14 +175,18 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
             if (h->get_order() == HardFactor::LO) {
                 /* Leading order hard factors are supposed to only have Fd, not Fs or Fn.
                 * If this assumption is violated, it could break things.
-                *
-                * Exercise for the reader: what things? (mwahaha)
                 */
                 assert(t_real == 0);
                 assert(t_imag == 0);
             }
-            l_real += t_real * xi_factor;
-            l_imag += t_imag * xi_factor;
+            else {
+                /* For leading order hard factors, Fs and Fn should give zero, so we
+                * just need to multiply by something finite, so that
+                * when multiplied by zero it gives zero rather than nan.
+                */
+                l_real += t_real * xi_factor;
+                l_imag += t_imag * xi_factor;
+            }
 
             h->Fn(&ictx, &t_real, &t_imag);
             checkfinite(t_real);
@@ -192,19 +195,34 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
                 assert(t_real == 0);
                 assert(t_imag == 0);
             }
-            l_real += t_real;
-            l_imag += t_imag;
+            else {
+                l_real += t_real;
+                l_imag += t_imag;
+            }
         }
         ictx.xi = 1;
         /* TODO replace this with the same thing used below in cubature_wrapper */
         ictx.recalculate_everything(current_modifiers.exact_xg, current_modifiers.divide_xi);
         for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
             const HardFactorTerm* h = (*it);
+            if (h->get_order() == HardFactor::LO) {
+                // as above
+                xi_factor = 1.0;
+            }
+            else {
+                checkfinite(xi_factor);
+            }
             h->Fs(&ictx, &t_real, &t_imag);
             checkfinite(t_real);
             checkfinite(t_imag);
-            l_real -= t_real * xi_factor;
-            l_imag -= t_imag * xi_factor;
+            if (h->get_order() == HardFactor::LO) {
+                assert(t_real == 0);
+                assert(t_imag == 0);
+            }
+            else {
+                l_real -= t_real * xi_factor;
+                l_imag -= t_imag * xi_factor;
+            }
         }
     }
     *real = l_real;
