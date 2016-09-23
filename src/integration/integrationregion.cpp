@@ -213,10 +213,14 @@ size_t LOKinematicsIntegrationRegion::dimensions(const bool xi_preintegrated_ter
 }
 
 
+NLOKinematicsIntegrationRegion::NLOKinematicsIntegrationRegion(const bool lower_zero) :
+  m_lower_zero(lower_zero) {
+}
+
 void NLOKinematicsIntegrationRegion::fill_min(const Context& ctx, const bool xi_preintegrated_term, double* min) const {
     min[0] = ctx.tau;
     if (!xi_preintegrated_term) {
-        min[1] = ctx.tau;
+        min[1] = m_lower_zero ? 0 : ctx.tau;
     }
 }
 
@@ -228,14 +232,22 @@ void NLOKinematicsIntegrationRegion::fill_max(const Context& ctx, const bool xi_
 }
 
 double NLOKinematicsIntegrationRegion::jacobian(const IntegrationContext& ictx, const bool xi_preintegrated_term) const {
-    double jacobian = xi_preintegrated_term ? 1 : (1 - ictx.ctx.tau / ictx.z) / (1 - ictx.ctx.tau);
+    double jacobian = (xi_preintegrated_term || m_lower_zero) ? 1 : (1 - ictx.ctx.tau / ictx.z) / (1 - ictx.ctx.tau);
     checkfinite(jacobian);
     return jacobian;
 }
 
 void NLOKinematicsIntegrationRegion::update(IntegrationContext& ictx, const bool xi_preintegrated_term, const double* values) const {
     ictx.z = values[0];
-    ictx.xi = xi_preintegrated_term ? 1 : linear_transform(values[1], ictx.ctx.tau, 1, ictx.ctx.tau / ictx.z, 1);
+    if (xi_preintegrated_term) {
+        ictx.xi = 1;
+    }
+    else if (m_lower_zero) {
+        ictx.xi = values[1];
+    }
+    else {
+        ictx.xi = linear_transform(values[1], ictx.ctx.tau, 1, ictx.ctx.tau / ictx.z, 1);
+    }
 }
 
 size_t NLOKinematicsIntegrationRegion::dimensions(const bool xi_preintegrated_term) const {

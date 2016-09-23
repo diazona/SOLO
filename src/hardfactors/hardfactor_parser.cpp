@@ -387,6 +387,7 @@ HardFactorParser::~HardFactorParser() {
 // Declare one instance of each IntegrationRegion that might be used by the parser
 static LOKinematicsIntegrationRegion LO;
 static NLOKinematicsIntegrationRegion NLO;
+static NLOKinematicsIntegrationRegion NLOZero(true);
 static NLOClippedKinematicsIntegrationRegion NLOClipped;
 static R1CartesianIntegrationRegion R1C;
 static R1PolarIntegrationRegion R1P;
@@ -470,6 +471,10 @@ void HardFactorParser::parse_line(const string& line) {
         }
         else if (e == "nlo") {
             core = &NLO;
+            order = HardFactor::NLO;
+        }
+        else if (e == "nlo zero") {
+            core = &NLOZero;
             order = HardFactor::NLO;
         }
         else if (e == "nlo clipped") {

@@ -182,11 +182,21 @@ public:
  */
 class NLOKinematicsIntegrationRegion : public CoreIntegrationRegion {
 public:
+    /**
+     * Constructs a new instance.
+     *
+     * @param lower_zero[in] whether to set the lower limit of the `xi`
+     * integration to zero, or leave it at the default of `tau/z`
+     */
+    NLOKinematicsIntegrationRegion(const bool lower_zero = false);
     virtual void fill_min(const Context& ctx, const bool xi_preintegrated_term, double* min) const;
     virtual void fill_max(const Context& ctx, const bool xi_preintegrated_term, double* max) const;
     virtual double jacobian(const IntegrationContext& ictx, const bool xi_preintegrated_term) const;
     virtual void update(IntegrationContext& ictx, const bool xi_preintegrated_term, const double* values) const;
     virtual size_t dimensions(const bool xi_preintegrated_term) const;
+
+private:
+    const bool m_lower_zero;
 };
 
 /**
@@ -194,6 +204,9 @@ public:
  * and xi from tau/z to 1 - pT/(z*sqs)*exp(-y).
  */
 class NLOClippedKinematicsIntegrationRegion : public CoreIntegrationRegion {
+    // implementation note: this could perhaps be absorbed
+    // into NLOKinematicsIntegrationRegion
+    // with a few appropriate constructor parameters
 public:
     virtual void fill_min(const Context& ctx, const bool xi_preintegrated_term, double* min) const;
     virtual void fill_max(const Context& ctx, const bool xi_preintegrated_term, double* max) const;
