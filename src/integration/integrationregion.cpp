@@ -212,6 +212,10 @@ size_t LOKinematicsIntegrationRegion::dimensions(const bool xi_preintegrated_ter
     return 1;
 }
 
+double LOKinematicsIntegrationRegion::effective_xi_min(const IntegrationContext& ictx) const {
+    return 0;
+}
+
 
 NLOKinematicsIntegrationRegion::NLOKinematicsIntegrationRegion(const bool lower_zero) :
   m_lower_zero(lower_zero) {
@@ -232,7 +236,7 @@ void NLOKinematicsIntegrationRegion::fill_max(const Context& ctx, const bool xi_
 }
 
 double NLOKinematicsIntegrationRegion::jacobian(const IntegrationContext& ictx, const bool xi_preintegrated_term) const {
-    double jacobian = (xi_preintegrated_term || m_lower_zero) ? 1 : (1 - ictx.ctx.tau / ictx.z) / (1 - ictx.ctx.tau);
+    double jacobian = (xi_preintegrated_term || m_lower_zero) ? 1 : (1 - effective_xi_min(ictx)) / (1 - ictx.ctx.tau);
     checkfinite(jacobian);
     return jacobian;
 }
@@ -246,12 +250,16 @@ void NLOKinematicsIntegrationRegion::update(IntegrationContext& ictx, const bool
         ictx.xi = values[1];
     }
     else {
-        ictx.xi = linear_transform(values[1], ictx.ctx.tau, 1, ictx.ctx.tau / ictx.z, 1);
+        ictx.xi = linear_transform(values[1], ictx.ctx.tau, 1, effective_xi_min(ictx), 1);
     }
 }
 
 size_t NLOKinematicsIntegrationRegion::dimensions(const bool xi_preintegrated_term) const {
     return xi_preintegrated_term ? 1 : 2;
+}
+
+double NLOKinematicsIntegrationRegion::effective_xi_min(const IntegrationContext& ictx) const {
+    return m_lower_zero ? 0 : ictx.ctx.tau / ictx.z;
 }
 
 
@@ -285,20 +293,23 @@ static inline double xahat(const IntegrationContext& ictx) {
 }
 
 double NLOClippedKinematicsIntegrationRegion::jacobian(const IntegrationContext& ictx, const bool xi_preintegrated_term) const {
-    double jacobian = xi_preintegrated_term ? 1 : (1 - xahat(ictx) - ictx.ctx.tau / ictx.z) / (1 - ictx.ctx.tau);
+    double jacobian = xi_preintegrated_term ? 1 : (1 - xahat(ictx) - effective_xi_min(ictx)) / (1 - ictx.ctx.tau);
     checkfinite(jacobian);
     return jacobian;
 }
 
 void NLOClippedKinematicsIntegrationRegion::update(IntegrationContext& ictx, const bool xi_preintegrated_term, const double* values) const {
     ictx.z = values[0];
-    ictx.xi = xi_preintegrated_term ? 1 : linear_transform(values[1], ictx.ctx.tau, 1, ictx.ctx.tau / ictx.z, 1 - xahat(ictx));
+    ictx.xi = xi_preintegrated_term ? 1 : linear_transform(values[1], ictx.ctx.tau, 1, effective_xi_min(ictx), 1 - xahat(ictx));
 }
 
 size_t NLOClippedKinematicsIntegrationRegion::dimensions(const bool xi_preintegrated_term) const {
     return xi_preintegrated_term ? 1 : 2;
 }
 
+double NLOClippedKinematicsIntegrationRegion::effective_xi_min(const IntegrationContext& ictx) const {
+    return ictx.ctx.tau / ictx.z;
+}
 
 
 CartesianIntegrationRegion::CartesianIntegrationRegion() :

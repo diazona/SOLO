@@ -59,6 +59,14 @@ public:
      * The number of variables being integrated over.
      */
     virtual size_t dimensions(const bool xi_preintegrated_term) const = 0;
+    /**
+     * The minimum of the xi integral corresponding to the given `IntegrationContext`.
+     * In cases where there is no xi integral, i.e. the integrand is independent of xi,
+     * this should return zero, because integrating from 0 to 1 is equivalent to
+     * multiplying by 1. $\int_0^1 \mathrm{d}\xi f(...) = f(...)$
+     */
+    virtual double effective_xi_min(const IntegrationContext& ictx) const = 0;
+
     virtual bool operator<(const CoreIntegrationRegion& other) const;
 };
 
@@ -174,6 +182,7 @@ public:
     virtual double jacobian(const IntegrationContext& ictx, const bool xi_preintegrated_term) const;
     virtual void update(IntegrationContext& ictx, const bool xi_preintegrated_term, const double* values) const;
     virtual size_t dimensions(const bool xi_preintegrated_term) const;
+    virtual double effective_xi_min(const IntegrationContext& ictx) const;
 };
 
 /**
@@ -194,6 +203,7 @@ public:
     virtual double jacobian(const IntegrationContext& ictx, const bool xi_preintegrated_term) const;
     virtual void update(IntegrationContext& ictx, const bool xi_preintegrated_term, const double* values) const;
     virtual size_t dimensions(const bool xi_preintegrated_term) const;
+    virtual double effective_xi_min(const IntegrationContext& ictx) const;
 
 private:
     const bool m_lower_zero;
@@ -213,6 +223,7 @@ public:
     virtual double jacobian(const IntegrationContext& ictx, const bool xi_preintegrated_term) const;
     virtual void update(IntegrationContext& ictx, const bool xi_preintegrated_term, const double* values) const;
     virtual size_t dimensions(const bool xi_preintegrated_term) const;
+    virtual double effective_xi_min(const IntegrationContext& ictx) const;
 };
 
 /**

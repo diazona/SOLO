@@ -141,9 +141,10 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
     HardFactorTermList& current_terms = terms[current_type];
     assert(current_terms.size() > 0);
     if (xi_preintegrated_term) {
-        // This evaluates the [Fs(1) ln(1 - tau/z) + Fd(1)] term
+        // This evaluates the [Fs(1) ln(1 - ximin) + Fd(1)] term
         assert(ictx.xi == 1.0);
-        double log_factor = log(1 - ictx.ctx.tau / ictx.z);
+        double effective_xi_min = current_integration_region->m_core_region.effective_xi_min(ictx);
+        double log_factor = effective_xi_min == 0 ? 0 : log(1 - effective_xi_min);
         checkfinite(log_factor);
         for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
             const HardFactorTerm* h = (*it);
