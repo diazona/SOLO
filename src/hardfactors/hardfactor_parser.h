@@ -43,7 +43,8 @@ public:
         const std::string& name,
         const std::string& implementation,
         const HardFactor::HardFactorOrder order,
-        const std::vector<const IntegrationRegion*> subregions,
+        const CoreIntegrationRegion& core,
+        const std::vector<const AuxiliaryIntegrationRegion*> subregions,
         const Modifiers& modifiers,
         const std::string& Fs_real, const std::string& Fs_imag,
         const std::string& Fn_real, const std::string& Fn_imag,
@@ -346,7 +347,8 @@ private:
     std::string name, implementation, default_implementation;
     HardFactor::HardFactorOrder order;
     Modifiers modifiers;
-    vector<const IntegrationRegion*> subregions;
+    CoreIntegrationRegion* core;
+    vector<const AuxiliaryIntegrationRegion*> subregions;
 
     // callbacks
     void (*hard_factor_callback)(const HardFactor& hf);

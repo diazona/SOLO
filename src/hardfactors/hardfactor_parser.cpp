@@ -157,7 +157,8 @@ ParsedHardFactorTerm::ParsedHardFactorTerm(
     const string& name,
     const string& implementation,
     const HardFactor::HardFactorOrder order,
-    const vector<const IntegrationRegion*> subregions,
+    const CoreIntegrationRegion& core,
+    const vector<const AuxiliaryIntegrationRegion*> subregions,
     const Modifiers& modifiers,
     const string& Fs_real, const string& Fs_imag,
     const string& Fn_real, const string& Fn_imag,
@@ -167,7 +168,7 @@ ParsedHardFactorTerm::ParsedHardFactorTerm(
   m_implementation(implementation),
   m_order(order),
   m_modifiers(modifiers),
-  mp_region(new CompositeIntegrationRegion(subregions)),
+  mp_region(new IntegrationRegion(core, subregions)),
   m_free_region(true) {
     init_term(Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag, variable_list);
 }
@@ -364,11 +365,13 @@ using std::vector;
 static HardFactor::HardFactorOrder sentinel = static_cast<HardFactor::HardFactorOrder>(-1);
 
 HardFactorParser::HardFactorParser(HardFactorRegistry& registry) :
-    order(sentinel),
-    registry(registry),
-    hard_factor_callback(NULL),
-    hard_factor_group_callback(NULL),
-    error_handler(NULL) {
+  registry(registry),
+  order(sentinel),
+  core(NULL),
+  hard_factor_callback(NULL),
+  hard_factor_group_callback(NULL),
+  error_handler(NULL) {
+    reset_current_term();
 }
 
 HardFactorParser::~HardFactorParser() {
@@ -463,15 +466,15 @@ void HardFactorParser::parse_line(const string& line) {
         vector<string> elements = split(value, "*");
         string e = trim(elements[0]);
         if (e == "lo") {
-            subregions.push_back(&LO);
+            core = &LO;
             order = HardFactor::LO;
         }
         else if (e == "nlo") {
-            subregions.push_back(&NLO);
+            core = &NLO;
             order = HardFactor::NLO;
         }
         else if (e == "nlo clipped") {
-            subregions.push_back(&NLOClipped);
+            core = &NLOClipped;
             order = HardFactor::NLO;
         }
         else {
@@ -877,6 +880,7 @@ static const Modifiers default_modifiers;
 
 bool HardFactorParser::hard_factor_definition_empty() const {
     return
+      core == NULL &&
       subregions.empty() &&
       order == sentinel &&
       modifiers == default_modifiers &&
@@ -890,7 +894,7 @@ bool HardFactorParser::hard_factor_definition_empty() const {
 
 bool HardFactorParser::hard_factor_definition_complete() const {
     return
-      !subregions.empty() &&
+      core != NULL &&
       order != sentinel &&
       !name.empty();
 }
@@ -907,6 +911,7 @@ const ParsedHardFactorTerm* HardFactorParser::create_hard_factor_term() {
         name,
         implementation.empty() ? default_implementation : implementation,
         order,
+        *core,
         subregions,
         modifiers,
         Fs_real, Fs_imag,
@@ -927,6 +932,7 @@ void HardFactorParser::reset_current_term() {
     implementation.erase();
     default_implementation.erase();
     order = sentinel;
+    core = NULL;
     subregions.clear();
     modifiers = default_modifiers;
     variable_definitions.clear();

@@ -211,7 +211,7 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
 void cubature_wrapper(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nresults, double* results) {
     double real, imag, jacobian;
     Integrator* integrator = static_cast<Integrator*>(closure);
-    integrator->current_integration_region->update(integrator->ictx, coordinates);
+    integrator->current_integration_region->update(integrator->ictx, integrator->xi_preintegrated_term, coordinates);
     /* TODO put something here which implements the following pseudocode:
      *
      * if (current_integration_region->position_like) {
@@ -223,7 +223,7 @@ void cubature_wrapper(unsigned int ncoords, const double* coordinates, void* clo
      */
     integrator->ictx.recalculate_everything(integrator->current_modifiers.exact_xg, integrator->current_modifiers.divide_xi);
     // computing the Jacobian here allows the method to access the untransformed coordinates
-    jacobian = integrator->current_integration_region->jacobian(integrator->ictx);
+    jacobian = integrator->current_integration_region->jacobian(integrator->ictx, integrator->xi_preintegrated_term);
     integrator->evaluate_integrand(&real, &imag);
     assert(nresults == 1 || nresults == 2);
     results[0] = real * jacobian;
@@ -368,13 +368,13 @@ void cubature_integrate(integrand func, size_t dim, void* closure, double* min, 
 void Integrator::integrate_impl(double* result, double* error) {
     // it should already have been checked that there is at least one term of the appropriate type
     // and the type should be set appropriately
-    size_t dimensions = current_integration_region->dimensions;
+    size_t dimensions = current_integration_region->dimensions(xi_preintegrated_term);
     double min[10];
     double max[10];
     assert(sizeof(min) / sizeof(min[0]) >= dimensions);
     assert(sizeof(max) / sizeof(max[0]) >= dimensions);
-    current_integration_region->fill_min(ictx.ctx, min);
-    current_integration_region->fill_max(ictx.ctx, max);
+    current_integration_region->fill_min(ictx.ctx, xi_preintegrated_term, min);
+    current_integration_region->fill_max(ictx.ctx, xi_preintegrated_term, max);
     switch (dimensions) {
         case 1:
         case 2:

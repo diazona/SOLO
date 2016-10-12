@@ -24,25 +24,52 @@
 #include "integrationcontext.h"
 
 /**
- * Represents the properties of an integration region: the integration
- * variable(s), the limits, and the jacobian.
- *
- * An instance of this class is responsible for setting the number
- * of variables being integrated over and effectively specifying which
- * variables those are. In particular, it needs to set bounds on each
- * variable, and also translate the Monte Carlo integration variables
- * (which must have constant bounds) to the kinematic variables (whose
- * bounds can depend on each other) by calculating the jacobian determinant
- * and setting the value of the kinematic variables using provided values
- * of the integration variables.
+ * Superclass for ::IntegrationRegion components that handle integration
+ * over `z` and `xi`.
  */
-class IntegrationRegion {
+class CoreIntegrationRegion {
 public:
-    /** The number of variables being integrated over */
-    const size_t dimensions;
+    CoreIntegrationRegion();
+    virtual ~CoreIntegrationRegion();
 
-    IntegrationRegion(const size_t dimensions);
-    virtual ~IntegrationRegion();
+    /**
+     * Writes the lower bounds of the integration region into the array
+     * `min` using information from the `Context`.
+     */
+    virtual void fill_min(const Context& ctx, const bool xi_preintegrated_term, double* min) const = 0;
+    /**
+     * Writes the upper bounds of the integration region into the array
+     * `max` using information from the `Context`.
+     */
+    virtual void fill_max(const Context& ctx, const bool xi_preintegrated_term, double* max) const = 0;
+    /**
+     * Calculates the jacobian determinant to convert from the variables being
+     * integrated over to the variables involved in the calculation.
+     *
+     * This gets called after `update()` at each step of the calculation,
+     * so the `IntegrationContext` has been updated with the current coordinates.
+     */
+    virtual double jacobian(const IntegrationContext& ictx, const bool xi_preintegrated_term) const = 0;
+    /**
+     * Updates the variables in the `IntegrationContext` based on the `values`,
+     * which were passed in from the Monte Carlo integration routine.
+     */
+    virtual void update(IntegrationContext& ictx, const bool xi_preintegrated_term, const double* values) const = 0;
+    /**
+     * The number of variables being integrated over.
+     */
+    virtual size_t dimensions(const bool xi_preintegrated_term) const = 0;
+    virtual bool operator<(const CoreIntegrationRegion& other) const;
+};
+
+/**
+ * Superclass for ::IntegrationRegion components that handle integration
+ * over positions and momenta.
+ */
+class AuxiliaryIntegrationRegion {
+public:
+    AuxiliaryIntegrationRegion(const size_t dimensions);
+    virtual ~AuxiliaryIntegrationRegion();
 
     /**
      * Writes the lower bounds of the integration region into the array
@@ -67,83 +94,119 @@ public:
      * which were passed in from the Monte Carlo integration routine.
      */
     virtual void update(IntegrationContext& ictx, const double* values) const = 0;
-
-    virtual bool operator<(const IntegrationRegion& other) const;
+    /**
+     * The number of variables being integrated over.
+     */
+    virtual size_t dimensions() const;
+    virtual bool operator<(const AuxiliaryIntegrationRegion& other) const;
+protected:
+    size_t m_dimensions;
 };
 
 /**
- * Takes a product of integration regions, to represent a multiple integral.
+ * Represents the properties of an integration region: the integration
+ * variable(s), the limits, and the jacobian.
+ *
+ * An instance of this class is responsible for setting the number
+ * of variables being integrated over and effectively specifying which
+ * variables those are. In particular, it needs to set bounds on each
+ * variable, and also translate the Monte Carlo integration variables
+ * (which must have constant bounds) to the kinematic variables (whose
+ * bounds can depend on each other) by calculating the jacobian determinant
+ * and setting the value of the kinematic variables using provided values
+ * of the integration variables.
+ *
+ * An `IntegrationRegion` is made of components: one ::CoreIntegrationRegion,
+ * which handles integration over `z` and `xi`, and zero or more
+ * ::AuxiliaryIntegrationRegion instances, which handle integration over any
+ * additional variables like positions or momenta.
  */
-// IntegrationRegion operator*(const IntegrationRegion& a, const IntegrationRegion& b);
-
-/**
- * An integration region made up of a product of several subregions
- * in distinct spaces.
- */
-class CompositeIntegrationRegion : public IntegrationRegion {
+class IntegrationRegion {
 public:
-    CompositeIntegrationRegion();
-    CompositeIntegrationRegion(const IntegrationRegion& a, const IntegrationRegion& b);
-    CompositeIntegrationRegion(const std::vector<const IntegrationRegion*> subregions);
-    CompositeIntegrationRegion(const size_t n_subregions, const IntegrationRegion** subregions);
+    IntegrationRegion(const CoreIntegrationRegion& core);
+    IntegrationRegion(const CoreIntegrationRegion& core, const AuxiliaryIntegrationRegion& aux);
+    IntegrationRegion(const CoreIntegrationRegion& core, const std::vector<const AuxiliaryIntegrationRegion*> auxregions);
+    IntegrationRegion(const CoreIntegrationRegion& core, const size_t n_auxregions, const AuxiliaryIntegrationRegion** auxregions);
+    virtual ~IntegrationRegion();
 
-    virtual void fill_min(const Context& ctx, double* min) const;
-    virtual void fill_max(const Context& ctx, double* max) const;
-    virtual double jacobian(const IntegrationContext& ictx) const;
-    virtual void update(IntegrationContext& ictx, const double* values) const;
+    /**
+     * Writes the lower bounds of the integration region into the array
+     * `min` using information from the `Context`.
+     */
+    virtual void fill_min(const Context& ctx, const bool xi_preintegrated_term, double* min) const;
+    /**
+     * Writes the upper bounds of the integration region into the array
+     * `max` using information from the `Context`.
+     */
+    virtual void fill_max(const Context& ctx, const bool xi_preintegrated_term, double* max) const;
+    /**
+     * Calculates the jacobian determinant to convert from the variables being
+     * integrated over to the variables involved in the calculation.
+     *
+     * This gets called after `update()` at each step of the calculation,
+     * so the `IntegrationContext` has been updated with the current coordinates.
+     */
+    virtual double jacobian(const IntegrationContext& ictx, const bool xi_preintegrated_term) const;
+    /**
+     * Updates the variables in the `IntegrationContext` based on the `values`,
+     * which were passed in from the Monte Carlo integration routine.
+     */
+    virtual void update(IntegrationContext& ictx, const bool xi_preintegrated_term, const double* values) const;
+    /**
+     * The number of variables being integrated over.
+     */
+    virtual size_t dimensions(const bool xi_preintegrated_term) const;
 
     virtual bool operator<(const IntegrationRegion& other) const;
-    virtual CompositeIntegrationRegion operator*=(const IntegrationRegion& other);
+    virtual IntegrationRegion operator*=(const AuxiliaryIntegrationRegion& other);
 
-    const std::vector<const IntegrationRegion*> m_subregions;
+    const CoreIntegrationRegion& m_core_region;
+    const std::vector<const AuxiliaryIntegrationRegion*> m_subregions;
 };
 
 /**
  * An integration subregion that integrates over z from tau to 1.
  */
-class LOKinematicsIntegrationRegion : public IntegrationRegion {
+class LOKinematicsIntegrationRegion : public CoreIntegrationRegion {
 public:
-    LOKinematicsIntegrationRegion();
-
-    virtual void fill_min(const Context& ctx, double* min) const;
-    virtual void fill_max(const Context& ctx, double* max) const;
-    virtual double jacobian(const IntegrationContext& ictx) const;
-    virtual void update(IntegrationContext& ictx, const double* values) const;
+    virtual void fill_min(const Context& ctx, const bool xi_preintegrated_term, double* min) const;
+    virtual void fill_max(const Context& ctx, const bool xi_preintegrated_term, double* max) const;
+    virtual double jacobian(const IntegrationContext& ictx, const bool xi_preintegrated_term) const;
+    virtual void update(IntegrationContext& ictx, const bool xi_preintegrated_term, const double* values) const;
+    virtual size_t dimensions(const bool xi_preintegrated_term) const;
 };
 
 /**
  * An integration subregion that integrates over z from tau to 1
  * and xi from tau/z to 1.
  */
-class NLOKinematicsIntegrationRegion : public IntegrationRegion {
+class NLOKinematicsIntegrationRegion : public CoreIntegrationRegion {
 public:
-    NLOKinematicsIntegrationRegion();
-
-    virtual void fill_min(const Context& ctx, double* min) const;
-    virtual void fill_max(const Context& ctx, double* max) const;
-    virtual double jacobian(const IntegrationContext& ictx) const;
-    virtual void update(IntegrationContext& ictx, const double* values) const;
+    virtual void fill_min(const Context& ctx, const bool xi_preintegrated_term, double* min) const;
+    virtual void fill_max(const Context& ctx, const bool xi_preintegrated_term, double* max) const;
+    virtual double jacobian(const IntegrationContext& ictx, const bool xi_preintegrated_term) const;
+    virtual void update(IntegrationContext& ictx, const bool xi_preintegrated_term, const double* values) const;
+    virtual size_t dimensions(const bool xi_preintegrated_term) const;
 };
 
 /**
  * An integration subregion that integrates over z from tauhat to 1
  * and xi from tau/z to 1 - pT/(z*sqs)*exp(-y).
  */
-class NLOClippedKinematicsIntegrationRegion : public IntegrationRegion {
+class NLOClippedKinematicsIntegrationRegion : public CoreIntegrationRegion {
 public:
-    NLOClippedKinematicsIntegrationRegion();
-
-    virtual void fill_min(const Context& ctx, double* min) const;
-    virtual void fill_max(const Context& ctx, double* max) const;
-    virtual double jacobian(const IntegrationContext& ictx) const;
-    virtual void update(IntegrationContext& ictx, const double* values) const;
+    virtual void fill_min(const Context& ctx, const bool xi_preintegrated_term, double* min) const;
+    virtual void fill_max(const Context& ctx, const bool xi_preintegrated_term, double* max) const;
+    virtual double jacobian(const IntegrationContext& ictx, const bool xi_preintegrated_term) const;
+    virtual void update(IntegrationContext& ictx, const bool xi_preintegrated_term, const double* values) const;
+    virtual size_t dimensions(const bool xi_preintegrated_term) const;
 };
 
 /**
  * A superclass for integration subregions parametrized in Cartesian
  * coordinates, ranging from -inf to inf.
  */
-class CartesianIntegrationRegion : public IntegrationRegion {
+class CartesianIntegrationRegion : public AuxiliaryIntegrationRegion {
 public:
     CartesianIntegrationRegion();
     virtual void fill_min(const Context& ctx, double* min) const;
@@ -165,7 +228,7 @@ protected:
  * The `m_center` field, initialized from the constructor, allows
  * for a shift in the origin of the polar coordinates.
  */
-class PolarIntegrationRegion : public IntegrationRegion {
+class PolarIntegrationRegion : public AuxiliaryIntegrationRegion {
 public:
     PolarIntegrationRegion();
     virtual void fill_min(const Context& ctx, double* min) const;
