@@ -1,8 +1,8 @@
 /*
  * Part of oneloopcalc
- * 
+ *
  * Copyright 2012 David Zaslavsky
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -26,26 +26,35 @@
 #include <gsl/gsl_monte_vegas.h>
 #include "../configuration/context.h"
 #include "integrationcontext.h"
-#include "integrationtype.h"
+#include "integrationregion.h"
 #include "../hardfactors/hardfactor.h"
 #include "quasimontecarlo.h"
-#include "../typedefs.h"
+
+class HardFactorType {
+public:
+    const IntegrationRegion& integration_region;
+    const Modifiers& modifiers;
+
+    bool operator<(const HardFactorType& other) const;
+};
+
+typedef std::map<HardFactorType, HardFactorTermList> HardFactorTypeMap;
 
 /**
  * A class to interface with the GSL Monte Carlo integration routines.
- * 
+ *
  * Integrator objects basically have two purposes: most importantly,
  * the GSL integration functions accept a void pointer that is passed on to
  * the function being evaluated, which can be used to pass an object that
  * contains all the extra information needed to evaluate the function.
  * For this program, the object passed is an instance of Integrator. It
  * contains the map of hard factors and the IntegrationContext.
- * 
+ *
  * Integrator also contains the code to prepare for and actually invoke
  * the integration functions. It sorts the hard factors by integration type,
  * sets up the functions to be evaluated, creates the random number generator,
  * and so on.
- * 
+ *
  * For functions that have 1D and 2D versions: 1D refers to integrating
  * over z only, whereas 2D refers to integrating over z and y (equivalently,
  * z and xi). The integration that is actually performed will have many more
@@ -57,10 +66,17 @@ class Integrator {
 private:
     /**
      * The type of term being integrated.
-     * 
-     * Types are defined in integrationtype.h.
+     *
+     * Types are defined in integrationregion.h.
+     *
+     * This is a pointer rather than a reference because it starts out being
+     * set to NULL.
      */
-    IntegrationType const* current_type;
+    const IntegrationRegion* current_integration_region;
+    /**
+     * Modifiers for the current term.
+     */
+    Modifiers current_modifiers;
     /**
      * The IntegrationContext object associated with this Integrator.
      */
@@ -81,8 +97,8 @@ private:
     /** A callback function to call each time a quasi Monte Carlo integration finishes */
     void (*quasi_callback)(double*, double*, quasi_monte_state*);
 
-    size_t core_dimensions;
-    
+    bool xi_preintegrated_term;
+
     double xg_min, xg_max;
 public:
     Integrator(const Context& ctx, const ThreadLocalContext& tlctx, const HardFactorList& hflist, const double xg_min, const double xg_max);
@@ -99,20 +115,14 @@ public:
      * in this implementation because it's theoretically supposed to be zero,
      * but it's in the function declaration in case we wanted to calculate
      * the imaginary part for some reason.
-     * 
+     *
      * What is actually integrated by this function is the set of all hard factors
-     * whose IntegrationType matches the current one. The current IntegrationType
+     * whose IntegrationRegion matches the current one. The current IntegrationRegion
      * is set by the method set_current_integration_type(). So the overall workflow
      * is to call set_current_integration_type() and then integrate() for each type
      * in turn.
      */
     void integrate(double* real, double* imag, double* error);
-    /**
-     * Sets the current integration type.
-     */
-    void set_current_integration_type(IntegrationType const* new_type) {
-        current_type = new_type;
-    }
     /**
      * Sets the callback to be invoked each time the integrand is evaluated.
      */
@@ -145,11 +155,10 @@ public:
     }
 private:
     /**
-     * Most of the code for integrating "1D" and "2D" integrals is the same, so it's
-     * abstracted into this method.
+     * Implements the integration
      */
-    void integrate_impl(const size_t core_dimensions, double* result, double* error);
-    
+    void integrate_impl(double* result, double* error);
+
     // the non-member functions that actually implement the integration
     friend void cubature_wrapper(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nresults, double* results);
     friend double gsl_monte_wrapper(double* coordinates, size_t ncoords, void* closure);

@@ -19,32 +19,8 @@
 
 #include <string>
 #include "hardfactor.h"
+#include "../integration/integrationregion.h"
 #include "../utils/utils.h"
-
-namespace position {
-    const PositionIntegrationType dipole(2);
-    const PositionIntegrationType quadrupole(4);
-}
-
-namespace radial {
-    const AngleIndependentPositionIntegrationType dipole(1);
-    const AngleIndependentPositionIntegrationType quadrupole(2);
-    const RescaledAngleIndependentPositionIntegrationType rescaled_dipole(1);
-    const RescaledAngleIndependentPositionIntegrationType rescaled_quadrupole(2);
-}
-
-namespace momentum {
-    const NoIntegrationType none;
-    const MomentumIntegrationType momentum1(2);
-    const MomentumIntegrationType momentum2(4);
-    const MomentumIntegrationType momentum3(6);
-    const RadialMomentumIntegrationType radialmomentum1(2);
-    const RadialMomentumIntegrationType radialmomentum2(4);
-    const RadialMomentumIntegrationType radialmomentum3(6);
-    const XiPIntegrationType momentumxip1(3);
-    const XiPIntegrationType momentumxip2(5);
-    const QLimitedMomentumIntegrationType qlim(2);
-}
 
 using std::list;
 using std::pair;
@@ -53,26 +29,6 @@ using std::vector;
 
 // for weird technical reasons, this needs to be in a .cpp file, not a header
 HardFactor::~HardFactor() {}
-
-HardFactor::HardFactorOrder HardFactor::get_order() const {
-    /* This default implementation relies on a particular convention
-     * for get_name(), but can be overridden for hard factors where
-     * that convention doesn't apply.
-     */
-    std::string name = get_name();
-    if (name.compare(0, 3, "H01") == 0) {
-        return MIXED;
-    }
-    else if (name.compare(0, 2, "H0") == 0) {
-        return LO;
-    }
-    else if (name.compare(0, 2, "H1") == 0) {
-        return NLO;
-    }
-    else {
-        assert(false);
-    }
-};
 
 size_t HardFactorTerm::get_term_count() const {
     return 1;
@@ -172,6 +128,7 @@ HardFactorRegistry::~HardFactorRegistry() {
     }
     hardfactor_groups_to_delete.clear();
 }
+
 
 KinematicSchemeMismatchException::KinematicSchemeMismatchException(const HardFactor& hf) throw() {
     _message = "Mixed-order hard factor ";

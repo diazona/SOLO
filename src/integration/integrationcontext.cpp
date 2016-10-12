@@ -26,128 +26,124 @@
 
 #define checkfinite(d) assert(gsl_finite(d))
 
-void IntegrationContext::update_kinematics(double z, double xi, size_t core_dimensions) {
-    /* when using exact kinematics (ctx.exact_kinematics is true),
-     *  core_dimensions == 1 means we are calculating an LO term
-     *  core_dimensions == 2 means we are calculating an NLO term
-     *
-     * when NOT using exact kinematics, this correlation does NOT hold
-     *  core_dimensions == 1 can be either type of term
-     *  core_dimensions == 2 still means we are calculating an NLO term
-     */
-    assert(core_dimensions == 1 || core_dimensions == 2);
-    assert(z <= 1);
-    assert(z >= ctx.tau);
-
-    this->z = z;
-    this->z2 = this->z*this->z;
-    this->kT2 = ctx.pT2 / this->z2;
-    this->kT = sqrt(this->kT2);
-    this->xg = kT / ctx.sqs * exp(-ctx.Y); // doubles as \hat{x}_a
-    this->xi = xi;
-    this->xi2 = xi*xi;
-
-    this->xp = ctx.tau / (this->z * xi);
-    if (ctx.exact_kinematics) {
-        if (core_dimensions == 1) {
-            // means we are calculating an LO term
-            this->xa = xg;
-        }
-        else {
-            // means we are calculating an NLO term
-            this->xa = exp(-ctx.Y) / ctx.sqs * (kT + ((kT - q1x)*(kT - q1x) + q1y*q1y) / kT * xi / (1 - xi));
-            // qmax is only meaningful for NLO terms with exact kinematics
-            this->qmax = sqrt(kT * (ctx.sqs * exp(ctx.Y) - kT) * (1 - xi) / xi);
-            checkfinite(qmax);
-        }
+bool Modifiers::operator<(const Modifiers& other) const {
+    if (exact_xg < other.exact_xg) {
+        return true;
     }
-    else {
-        // could be either type of term
-        this->xa = xg;
+    else if (other.exact_xg < exact_xg) {
+        return false;
     }
-    this->Yg = -log(this->xg);
-    this->Ya = -log(this->xa);
-    this->Qs2 = ctx.gdist->Qs2(this->Ya);
-    this->Fk = ctx.gdist->F(this->kT2, this->Ya);
-    this->alphas = ctx.cpl->alphas(this->kT2);
-    this->alphas_2pi = this->alphas * 0.5 * M_1_PI;
+    if (divide_xi < other.divide_xi) {
+        return true;
+    }
+    else if (other.divide_xi < divide_xi) {
+        return false;
+    }
+    return false;
 }
 
-void IntegrationContext::update_positions(double xx, double xy, double yx, double yy, double bx, double by) {
+bool Modifiers::operator==(const Modifiers& other) const {
+    return exact_xg == other.exact_xg && divide_xi == other.divide_xi;
+}
+
+
+void IntegrationContext::recalculate_from_position(const bool quadrupole) {
     checkfinite(xx);
     checkfinite(xy);
     checkfinite(yx);
     checkfinite(yy);
-    checkfinite(bx);
-    checkfinite(by);
-    this->xx = xx;
-    this->xy = xy;
-    this->yx = yx;
-    this->yy = yy;
-    this->bx = bx;
-    this->by = by;
-    this->rx = this->xx - this->yx;
-    this->ry = this->xy - this->yy;
-    this->r2 = rx*rx + ry*ry;
-    this->sx = this->xx - this->bx;
-    this->sy = this->xy - this->by;
-    this->s2 = sx*sx + sy*sy;
-    this->tx = this->yx - this->bx;
-    this->ty = this->yy - this->by;
-    this->t2 = tx*tx + ty*ty;
+    rx = xx - yx;
+    ry = xy - yy;
+    r2 = rx*rx + ry*ry;
+    if (quadrupole) {
+        checkfinite(bx);
+        checkfinite(by);
+        sx = xx - bx;
+        sy = xy - by;
+        s2 = sx*sx + sy*sy;
+        tx = yx - bx;
+        ty = yy - by;
+        t2 = tx*tx + ty*ty;
+    }
+}
 
-    // Calculate the new gluon distribution values
-    // this has to be done after kinematics are updated
-    if (r2 > 0) {
-        this->S2r = ctx.gdist->S2(r2, this->Ya);
-        if (s2 > 0 || t2 > 0) {
-            this->S4rst = ctx.gdist->S4(r2, s2, t2, this->Ya);
-        }
-        else {
-            this->S4rst = NAN;
-        }
+void IntegrationContext::recalculate_from_momentum(const size_t dimensions) {
+    switch (dimensions) { // intentionally omitting break statements
+        case 3:
+            checkfinite(q3x);
+            checkfinite(q3y);
+            q32 = q3x*q3x + q3y*q3y;
+            assert(q32 >= 0);
+        case 2:
+            checkfinite(q2x);
+            checkfinite(q2y);
+            q22 = q2x*q2x + q2y*q2y;
+            assert(q22 >= 0);
+        case 1:
+            checkfinite(q1x);
+            checkfinite(q1y);
+            q12 = q1x*q1x + q1y*q1y;
+            assert(q12 >= 0);
+        case 0:
+            break;
+        default:
+            assert(false);
+    }
+}
+
+void IntegrationContext::recalculate_longitudinal(const bool exact_xg) {
+    z2 = z*z;
+    kT2 = ctx.pT2 / z2;
+    kT = sqrt(kT2);
+    xi2 = xi * xi;
+    /* NOTE: this conflicts with the xp used by previous versions of SOLO.
+     * Previous versions defined it as tau / (z * xi). We now express this
+     * as xp / xi, consistent with the notation in e.g. arxiv:1604.00225
+     */
+    xp = ctx.tau / z;
+    if (exact_xg) {
+        assert(q12 > 0);
+        xg = exp(-ctx.Y) / ctx.sqs * (kT + ((kT - q1x) * (kT - q1x) + q1y * q1y) / kT * xi / (1 - xi));
     }
     else {
-        this->S2r = NAN;
+        xg = kT / ctx.sqs * exp(-ctx.Y);
+    }
+    Yg = -log(xg);
+}
+
+void IntegrationContext::recalculate_coupling() {
+    alphas = ctx.cpl->alphas(kT2);
+    alphas_2pi = alphas * 0.5 * M_1_PI;
+}
+
+void IntegrationContext::recalculate_position_gdist(const bool quadrupole) {
+    S2r = ctx.gdist->S2(r2, Yg);
+    S4rst = quadrupole ? ctx.gdist->S4(r2, s2, t2, Yg) : NAN;
+}
+
+void IntegrationContext::recalculate_momentum_gdist(const size_t dimensions) {
+    double Y = Yg;
+    Qs2 = ctx.gdist->Qs2(Y);
+    switch (dimensions) { // intentionally omitting break statements
+        case 3:
+            Fq3 = ctx.gdist->F(q32, Y);
+            Fkq3 = ctx.gdist->F((kT - q3x) * (kT - q3x) + q3y * q3y, Y);
+        case 2:
+            Fq2 = ctx.gdist->F(q22, Y);
+            Fkq2 = ctx.gdist->F((kT - q2x) * (kT - q2x) + q2y * q2y, Y);
+        case 1:
+            Fq1 = ctx.gdist->F(q12, Y);
+            Fkq1 = ctx.gdist->F((kT - q1x) * (kT - q1x) + q1y * q1y, Y);
+        case 0:
+            Fk = ctx.gdist->F(kT2, Y);
+            break;
+        default:
+            assert(false);
     }
 }
 
-void IntegrationContext::update_momenta(double q1x, double q1y, double q2x, double q2y, double q3x, double q3y) {
-    checkfinite(q1x);
-    checkfinite(q1y);
-    checkfinite(q2x);
-    checkfinite(q2y);
-    checkfinite(q3x);
-    checkfinite(q3y);
-    this->q1x = q1x;
-    this->q1y = q1y;
-    this->q2x = q2x;
-    this->q2y = q2y;
-    this->q3x = q3x;
-    this->q3y = q3y;
-    this->q12 = q1x*q1x + q1y*q1y;
-    this->q22 = q2x*q2x + q2y*q2y;
-    this->q32 = q3x*q3x + q3y*q3y;
-
-    assert(q12 >= 0);
-    assert(q22 >= 0);
-    assert(q32 >= 0);
-    this->Fq1 = ctx.gdist->F(q12, this->Ya);
-    this->Fkq1 = ctx.gdist->F((kT - q1x)*(kT - q1x) + q1y*q1y, this->Ya);
-    this->Fq2 = ctx.gdist->F(q22, this->Ya);
-    this->Fkq2 = ctx.gdist->F((kT - q2x)*(kT - q2x) + q2y*q2y, this->Ya);
-    this->Fq3 = ctx.gdist->F(q32, this->Ya);
-    this->Fkq3 = ctx.gdist->F((kT - q3x)*(kT - q3x) + q3y*q3y, this->Ya);
-}
-
-void IntegrationContext::update_auxiliary(double xiprime) {
-    checkfinite(xiprime);
-    assert(xiprime >= 0 && xiprime <= 1);
-    this->xiprime = xiprime;
-    this->xiprime2 = xiprime * xiprime;
-}
-
-void IntegrationContext::update_parton_functions() {
+void IntegrationContext::recalculate_parton_functions(const bool divide_xi) {
+    // Finally, update the parton functions
     double qqfactor = 0.0, ggfactor = 0.0, gqfactor = 0.0, qgfactor = 0.0;
 
     c_mstwpdf* pdf_object = tlctx.pdf_object;
@@ -156,9 +152,9 @@ void IntegrationContext::update_parton_functions() {
     DSSpiNLO::hadron hadron = ctx.hadron;
 
     // Calculate the new quark/gluon factors
-    this->mu2 = ctx.fs->mu2(*this);
-    pdf_object->update(this->xp, sqrt(this->mu2));
-    ff_object->update(this->z, this->mu2);
+    mu2 = ctx.fs->mu2(*this);
+    pdf_object->update(divide_xi ? xp / xi : xp, sqrt(mu2));
+    ff_object->update(z, mu2);
 
     // Proton contributions:
     qqfactor += (pdf_object->cont.upv + pdf_object->cont.usea) * ff_object->fragmentation(DSSpiNLO::up, hadron);
@@ -221,4 +217,38 @@ void IntegrationContext::update_parton_functions() {
     }
 
     this->qgfactor = qgfactor;
+}
+
+void IntegrationContext::recalculate_everything_from_position(const bool quadrupole, const bool divide_xi) {
+    recalculate_from_position(quadrupole);
+    recalculate_longitudinal(false);
+    recalculate_coupling();
+    recalculate_position_gdist(quadrupole);
+    recalculate_parton_functions(divide_xi);
+}
+
+void IntegrationContext::recalculate_everything_from_momentum(const size_t dimensions, const bool exact_xg, const bool divide_xi) {
+    recalculate_from_momentum(dimensions);
+    recalculate_longitudinal(exact_xg);
+    recalculate_coupling();
+    recalculate_momentum_gdist(dimensions);
+    recalculate_parton_functions(divide_xi);
+}
+
+void IntegrationContext::recalculate_everything(const bool exact_xg, const bool divide_xi) {
+    recalculate_from_position(true);
+    recalculate_from_momentum(3);
+    recalculate_longitudinal(exact_xg);
+    recalculate_coupling();
+    // use some heuristics to guess whether to compute position or momentum gluon distributions
+    if (r2 > 0 || s2 > 0 || t2 > 0) {
+        recalculate_position_gdist(s2 > 0 || t2 > 0);
+    }
+    if (q12 > 0 || q22 > 0 || q32 > 0) {
+        recalculate_momentum_gdist(3);
+    }
+    else {
+        recalculate_momentum_gdist(0);
+    }
+    recalculate_parton_functions(divide_xi);
 }

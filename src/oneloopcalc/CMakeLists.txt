@@ -40,7 +40,7 @@ add_executable(oneloopcalc
     ${SOLO_SOURCE_DIR}/hardfactors/hardfactor_parser.cpp
     ${SOLO_SOURCE_DIR}/integration/cubature.c
     ${SOLO_SOURCE_DIR}/integration/integrationcontext.cpp
-    ${SOLO_SOURCE_DIR}/integration/integrationtype.cpp
+    ${SOLO_SOURCE_DIR}/integration/integrationregion.cpp
     ${SOLO_SOURCE_DIR}/integration/integrator.cpp
     ${SOLO_SOURCE_DIR}/utils/utils.cpp)
 target_link_libraries(oneloopcalc gslmuparser interp2d quasimontecarlo dsspinlo gdist ${LIBS})

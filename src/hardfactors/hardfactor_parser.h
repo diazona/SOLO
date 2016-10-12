@@ -21,7 +21,6 @@
 #include <string>
 #include <muParser.h>
 #include "hardfactor.h"
-#include "../typedefs.h"
 
 /**
  * A ::HardFactorTerm subclass which represents formulas parsed from text.
@@ -32,7 +31,20 @@ public:
         const std::string& name,
         const std::string& implementation,
         const HardFactor::HardFactorOrder order,
-        const IntegrationType* type,
+        const IntegrationRegion* region,
+        const Modifiers& modifiers,
+        const std::string& Fs_real, const std::string& Fs_imag,
+        const std::string& Fn_real, const std::string& Fn_imag,
+        const std::string& Fd_real, const std::string& Fd_imag,
+        const std::list<std::pair<std::string, std::string> >& variable_list
+    );
+    ParsedHardFactorTerm(
+        const std::string& name,
+        const std::string& implementation,
+        const HardFactor::HardFactorOrder order,
+        const CoreIntegrationRegion& core,
+        const std::vector<const AuxiliaryIntegrationRegion*> subregions,
+        const Modifiers& modifiers,
         const std::string& Fs_real, const std::string& Fs_imag,
         const std::string& Fn_real, const std::string& Fn_imag,
         const std::string& Fd_real, const std::string& Fd_imag,
@@ -42,8 +54,9 @@ public:
 
     const char* get_name() const { return m_name.c_str(); }
     const char* get_implementation() const { return m_implementation.c_str(); }
-    const IntegrationType* get_type() const { return mp_type; }
+    const IntegrationRegion* get_integration() const { return mp_region; }
     HardFactorOrder get_order() const { return m_order; }
+    const Modifiers& get_modifiers() const { return m_modifiers; }
     void Fs(const IntegrationContext* ictx, double* real, double* imag) const;
     void Fn(const IntegrationContext* ictx, double* real, double* imag) const;
     void Fd(const IntegrationContext* ictx, double* real, double* imag) const;
@@ -76,7 +89,7 @@ private:
      *
      * Accordingly, at each call to Fs() we save the IntegrationContext provided
      * in this variable. Then at the next call, we can check whether the
-     * IntegrationContext passed to Fs() is the same as the one saved. If so,
+     * IntegrationContext passed to Fs() is the same as the one saved. If not,
      * we clear and recreate the name-pointer mappings using the new
      * IntegrationContext, otherwise we do nothing.
      *
@@ -107,11 +120,20 @@ private:
     const std::string m_name;
     const std::string m_implementation;
     const HardFactorOrder m_order;
-    const IntegrationType* mp_type;
+    const Modifiers m_modifiers;
+
+    const IntegrationRegion* mp_region;
+    const bool m_free_region;
 
     size_t aux_variable_count;
     double* aux_variable_storage;
 
+    void init_term(
+        const std::string& Fs_real, const std::string& Fs_imag,
+        const std::string& Fn_real, const std::string& Fn_imag,
+        const std::string& Fd_real, const std::string& Fd_imag,
+        const std::list<std::pair<std::string, std::string> >& variable_list
+    );
     void init_parser(mu::Parser& parser, mu::varmap_type& all_used_variables, const string& aux_variables, const string& real_expr, const string& imag_expr, const char* debug_message);
 #ifndef NDEBUG
     void print_parser_info(const char* message, mu::Parser& parser, const double* real, const double* imag) const;
@@ -125,8 +147,8 @@ private:
  */
 class ParsedCompositeHardFactor : public HardFactor {
 public:
-    ParsedCompositeHardFactor(const string& name, const HardFactor::HardFactorOrder order, const size_t term_count, const HardFactorTerm** terms);
-    ParsedCompositeHardFactor(const string& name, const HardFactor::HardFactorOrder order, const HardFactorTermList terms);
+    ParsedCompositeHardFactor(const string& name, const string& implementation, const HardFactor::HardFactorOrder order, const size_t term_count, const HardFactorTerm** terms);
+    ParsedCompositeHardFactor(const string& name, const string& implementation, const HardFactor::HardFactorOrder order, const HardFactorTermList terms);
     ~ParsedCompositeHardFactor();
 
     const char* get_name() const { return m_name.c_str(); }
@@ -156,13 +178,13 @@ public:
      * three kinds of content:
      *
      * - Elementary hard factor specifications, which contain a name, an integration
-     *   type, an order (`LO` or `NLO`), and formulas to be used to evaluate the
-     *   parts of the hard factor. Each of these is given on a line in `key = value`
-     *   format. For example:
+     *   region specification, optional evaluation modifiers, as well as formulas
+     *   to be used to evaluate the parts of the hard factor. Each of these is given
+     *   on a line in `key = value` format. For example:
      *
      *     name = testhf1
-     *     type = none
-     *     order = LO
+     *     integration = nlo clipped * cartesian position
+     *     modifiers = exact, divide xi
      *     Fs real = 1 + xi2
      *     Fs imag = 1 - xi2
      *     Fn real = 1/z
@@ -312,6 +334,7 @@ private:
     bool hard_factor_definition_empty() const;
     const ParsedHardFactorTerm* create_hard_factor_term();
     void reset_current_term();
+    bool unflushed_groups();
 
     const ParsedCompositeHardFactor* parse_composite_hard_factor(const string& key, const string& value);
     void parse_variable_definition(const string& key, const string& value);
@@ -320,9 +343,11 @@ private:
     std::list<std::string> unparsed_hard_factor_group_specs;
     std::list<std::pair<std::string, std::string> > variable_definitions;
     std::string Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag;
-    std::string name, implementation;
+    std::string name, implementation, default_implementation;
     HardFactor::HardFactorOrder order;
-    const IntegrationType* type;
+    Modifiers modifiers;
+    CoreIntegrationRegion* core;
+    vector<const AuxiliaryIntegrationRegion*> subregions;
 
     // callbacks
     void (*hard_factor_callback)(const HardFactor& hf);

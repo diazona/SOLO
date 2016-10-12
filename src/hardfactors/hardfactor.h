@@ -25,9 +25,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include "../typedefs.h"
 #include "../integration/integrationcontext.h"
-#include "../integration/integrationtype.h"
+#include "../integration/integrationregion.h"
 #include "categorymap.h"
 
 class HardFactorTerm;
@@ -68,7 +67,7 @@ public:
      * of kinematic variables (IntegrationContext::xp, IntegrationContext::xg)
      * are used when evaluating the `HardFactor`.
      */
-    virtual HardFactorOrder get_order() const;
+    virtual HardFactorOrder get_order() const = 0;
 };
 
 /**
@@ -84,8 +83,10 @@ public:
 class HardFactorTerm : public HardFactor {
 public:
     HardFactorTerm() : p_this(this) {};
-    /** The IntegrationType needed to integrate this term. */
-    virtual const IntegrationType* get_type() const = 0;
+    /** The IntegrationRegion needed to integrate this term. */
+    virtual const IntegrationRegion* get_integration() const = 0;
+    /** The evaluation modifiers that apply to this term. */
+    virtual const Modifiers& get_modifiers() const = 0;
     /** The plus-regulated ("singular") part of the term. */
     virtual void Fs(const IntegrationContext* ictx, double* real, double* imag) const { *real = 0; *imag = 0; }
     /** The normal part of the term. */
@@ -104,6 +105,9 @@ private:
     // necessary because `this` isn't an actual pointer that is stored anywhere
     const HardFactorTerm* p_this;
 };
+
+typedef std::vector<const HardFactor*> HardFactorList;
+typedef std::vector<const HardFactorTerm*> HardFactorTermList;
 
 /**
  * A group of `HardFactor`s which can be calculated together or separately.
@@ -135,6 +139,9 @@ public:
      * Adds a HardFactor pointer to the registry under a custom key.
      * It can later be retrieved by the provided key.
      *
+     * @param[in] name the name under which to add the hard factor
+     * @param[in] implementation the implementation code under which
+     * to add the hard factor, which can be empty
      * @param manage true if the HardFactor object should be deleted
      * by the registry
      */
@@ -153,7 +160,7 @@ public:
      * compatibility with previous versions of SOLO.
      *
      * @param[in] name the hard factor name
-     * @param[in] implementation the implementation code
+     * @param[in] implementation the implementation code, which can be empty
      * @return the `HardFactor`, or `NULL` if no hard factor with the given
      * name and implementation could be found.
      */
@@ -218,67 +225,5 @@ public:
     void operator=(const KinematicSchemeMismatchException& other);
     const char* what() const throw();
 };
-
-namespace position {
-
-extern const PositionIntegrationType dipole;
-extern const PositionIntegrationType quadrupole;
-
-class registry : public HardFactorRegistry {
-public:
-    static registry* get_instance() {
-        static registry instance;
-        return &instance;
-    }
-private:
-    registry() {}
-};
-
-}
-
-namespace radial {
-
-extern const AngleIndependentPositionIntegrationType dipole;
-extern const AngleIndependentPositionIntegrationType quadrupole;
-extern const RescaledAngleIndependentPositionIntegrationType rescaled_dipole;
-extern const RescaledAngleIndependentPositionIntegrationType rescaled_quadrupole;
-
-class registry : public HardFactorRegistry {
-public:
-    static registry* get_instance() {
-        static registry instance;
-        return &instance;
-    }
-private:
-    registry() {}
-};
-
-}
-
-namespace momentum {
-
-extern const NoIntegrationType none;
-extern const MomentumIntegrationType momentum1;
-extern const MomentumIntegrationType momentum2;
-extern const MomentumIntegrationType momentum3;
-extern const RadialMomentumIntegrationType radialmomentum1;
-extern const RadialMomentumIntegrationType radialmomentum2;
-extern const RadialMomentumIntegrationType radialmomentum3;
-extern const XiPIntegrationType momentumxip1;
-extern const XiPIntegrationType momentumxip2;
-extern const QLimitedMomentumIntegrationType qlim;
-
-class registry : public HardFactorRegistry {
-public:
-    static registry* get_instance() {
-        static registry instance;
-        return &instance;
-    }
-private:
-    registry() {}
-};
-
-}
-
 
 #endif // _HARD_FACTOR_H_

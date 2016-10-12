@@ -37,7 +37,7 @@
  * and calls integrate() on it.
  * (this happens in ResultsCalculator::calculate())
  *
- * integrate() iterates over the IntegrationTypes, and for each, calls
+ * integrate() iterates over the IntegrationRegions, and for each, calls
  *   integrate_impl() to do the "2D" integral, which calls
  *     vegas_integrate(), which calls
  *       gsl_monte_vegas_integrate(), passing the wrapper function gsl_monte_wrapper as the function to be integrated.
@@ -58,9 +58,39 @@
  */
 #define checkfinite(d) assert(gsl_finite(d))
 
-Integrator::Integrator(const Context& ctx, const ThreadLocalContext& tlctx, const HardFactorList& hflist, const double xg_min, const double xg_max) :
-  ictx(ctx, tlctx), current_type(NULL), core_dimensions(0), terms(compare_integration_types), xg_min(xg_min), xg_max(xg_max),
-  callback(NULL), cubature_callback(NULL), miser_callback(NULL), vegas_callback(NULL), quasi_callback(NULL) {
+bool HardFactorType::operator<(const HardFactorType& other) const {
+    if (integration_region < other.integration_region) {
+        return true;
+    }
+    else if (other.integration_region < integration_region) {
+        return false;
+    }
+    if (modifiers < other.modifiers) {
+        return true;
+    }
+    else if (other.modifiers < modifiers) {
+        return false;
+    }
+    return false;
+}
+
+
+Integrator::Integrator(
+    const Context& ctx,
+    const ThreadLocalContext& tlctx,
+    const HardFactorList& hflist,
+    const double xg_min,
+    const double xg_max) :
+  ictx(ctx, tlctx),
+  current_integration_region(NULL),
+  xi_preintegrated_term(false),
+  xg_min(xg_min),
+  xg_max(xg_max),
+  callback(NULL),
+  cubature_callback(NULL),
+  miser_callback(NULL),
+  vegas_callback(NULL),
+  quasi_callback(NULL) {
     assert(hflist.size() > 0);
 #ifndef NDEBUG
     size_t total1 = 0;
@@ -74,8 +104,10 @@ Integrator::Integrator(const Context& ctx, const ThreadLocalContext& tlctx, cons
             if (ictx.ctx.exact_kinematics && term->get_order() == HardFactor::MIXED) {
                 throw KinematicSchemeMismatchException(*term);
             }
-            const IntegrationType* type = term->get_type();
-            terms[type].push_back(term);
+            const IntegrationRegion* region = term->get_integration();
+            const Modifiers& modifiers = term->get_modifiers();
+            const HardFactorType hrt = {*region, modifiers};
+            terms[hrt].push_back(term);
 #ifndef NDEBUG
             total1++;
 #endif
@@ -99,17 +131,20 @@ static inline bool xg_in_range(const double xg, const double xg_min, const doubl
 }
 
 void Integrator::evaluate_integrand(double* real, double* imag) {
-    if (!xg_in_range(ictx.xa, xg_min, xg_max)) {
+    if (!xg_in_range(ictx.xg, xg_min, xg_max)) {
         *real = *imag = 0.0;
         return;
     }
     double t_real, t_imag;             // t for temporary
+    HardFactorType current_type = {*current_integration_region, current_modifiers};
     HardFactorTermList& current_terms = terms[current_type];
     assert(current_terms.size() > 0);
-    if (core_dimensions == 1) {
+    if (xi_preintegrated_term) {
+        // This evaluates the [Fs(1) ln(1 - ximin) + Fd(1)] term
         assert(ictx.xi == 1.0);
         double l_real = 0.0, l_imag = 0.0; // l for "local"
-        double log_factor = log(1 - ictx.ctx.tau / ictx.z);
+        double effective_xi_min = current_integration_region->m_core_region.effective_xi_min(ictx);
+        double log_factor = effective_xi_min == 0 ? 0 : log(1 - effective_xi_min);
         checkfinite(log_factor);
         for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
             const HardFactorTerm* h = (*it);
@@ -131,11 +166,10 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
         *imag = l_imag;
     }
     else {
-        assert(core_dimensions == 2);
         double l_real = 0.0, l_imag = 0.0; // l for "local"
         double s_real = 0.0, s_imag = 0.0; // s for "subtracted"
         double xi_factor = 1.0 / (1 - ictx.xi);
-        checkfinite(xi_factor);
+        // This branch evaluates the [Fs(xi) - Fs(1)] / (1 - xi) + Fn(xi) terms
         for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
             const HardFactorTerm* h = (*it);
             if (ictx.ctx.exact_kinematics) {
@@ -149,14 +183,18 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
             if (h->get_order() == HardFactor::LO) {
                 /* Leading order hard factors are supposed to only have Fd, not Fs or Fn.
                 * If this assumption is violated, it could break things.
-                *
-                * Exercise for the reader: what things? (mwahaha)
                 */
                 assert(t_real == 0);
                 assert(t_imag == 0);
             }
-            l_real += t_real * xi_factor;
-            l_imag += t_imag * xi_factor;
+            else {
+                /* For leading order hard factors, Fs and Fn should give zero, so we
+                * just need to multiply by something finite, so that
+                * when multiplied by zero it gives zero rather than nan.
+                */
+                l_real += t_real * xi_factor;
+                l_imag += t_imag * xi_factor;
+            }
 
             h->Fn(&ictx, &t_real, &t_imag);
             checkfinite(t_real);
@@ -165,20 +203,37 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
                 assert(t_real == 0);
                 assert(t_imag == 0);
             }
-            l_real += t_real;
-            l_imag += t_imag;
+            else {
+                l_real += t_real;
+                l_imag += t_imag;
+            }
         }
         if (callback) {
             callback(&ictx, l_real, l_imag);
         }
-        ictx.set_xi_to_1(core_dimensions);
+        ictx.xi = 1;
+        /* TODO replace this with the same thing used below in cubature_wrapper */
+        ictx.recalculate_everything(current_modifiers.exact_xg, current_modifiers.divide_xi);
         for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
             const HardFactorTerm* h = (*it);
+            if (h->get_order() == HardFactor::LO) {
+                // as above
+                xi_factor = 1.0;
+            }
+            else {
+                checkfinite(xi_factor);
+            }
             h->Fs(&ictx, &t_real, &t_imag);
             checkfinite(t_real);
             checkfinite(t_imag);
-            s_real += t_real * xi_factor;
-            s_imag += t_imag * xi_factor;
+            if (h->get_order() == HardFactor::LO) {
+                assert(t_real == 0);
+                assert(t_imag == 0);
+            }
+            else {
+                s_real += t_real * xi_factor;
+                s_imag += t_imag * xi_factor;
+            }
         }
         if (callback) {
             callback(&ictx, -s_real, -s_imag);
@@ -195,14 +250,24 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
  *
  * This updates the IntegrationContext using the values in `coordinates`
  * and then evaluates the current list of hard factors. The `coordinates`
- * are interpreted as z, (y if applicable), (xiprime if applicable), rx, ry, etc.
+ * are interpreted as z, (y if applicable), rx, ry, etc.
  */
 void cubature_wrapper(unsigned int ncoords, const double* coordinates, void* closure, unsigned int nresults, double* results) {
     double real, imag, jacobian;
     Integrator* integrator = static_cast<Integrator*>(closure);
-    integrator->current_type->update(integrator->ictx, integrator->core_dimensions, coordinates);
+    integrator->current_integration_region->update(integrator->ictx, integrator->xi_preintegrated_term, coordinates);
+    /* TODO put something here which implements the following pseudocode:
+     *
+     * if (current_integration_region->position_like) {
+     *     ictx.recalculate_everything_from_position(current_integration_region->is_quadrupole, current_integration_region->divide_xi);
+     * }
+     * else {
+     *     ictx.recalculate_everything_from_momentum(current_integration_region->momentum_dimensions, current_integration_region->exact, current_integration_region->divide_xi);
+     * }
+     */
+    integrator->ictx.recalculate_everything(integrator->current_modifiers.exact_xg, integrator->current_modifiers.divide_xi);
     // computing the Jacobian here allows the method to access the untransformed coordinates
-    jacobian = integrator->current_type->jacobian(ncoords, coordinates, integrator->ictx, integrator->core_dimensions);
+    jacobian = integrator->current_integration_region->jacobian(integrator->ictx, integrator->xi_preintegrated_term);
     integrator->evaluate_integrand(&real, &imag);
     assert(nresults == 1 || nresults == 2);
     results[0] = real * jacobian;
@@ -344,16 +409,16 @@ void cubature_integrate(integrand func, size_t dim, void* closure, double* min, 
     }
 }
 
-void Integrator::integrate_impl(size_t core_dimensions, double* result, double* error) {
+void Integrator::integrate_impl(double* result, double* error) {
     // it should already have been checked that there is at least one term of the appropriate type
     // and the type should be set appropriately
-    assert(core_dimensions == 1 || core_dimensions == 2);
-    this->core_dimensions = core_dimensions;
-    size_t dimensions = core_dimensions + current_type->extra_dimensions;
+    size_t dimensions = current_integration_region->dimensions(xi_preintegrated_term);
     double min[10];
     double max[10];
-    current_type->fill_min(ictx.ctx, core_dimensions, min);
-    current_type->fill_max(ictx.ctx, core_dimensions, max);
+    assert(sizeof(min) / sizeof(min[0]) >= dimensions);
+    assert(sizeof(max) / sizeof(max[0]) >= dimensions);
+    current_integration_region->fill_min(ictx.ctx, xi_preintegrated_term, min);
+    current_integration_region->fill_max(ictx.ctx, xi_preintegrated_term, max);
     switch (dimensions) {
         case 1:
         case 2:
@@ -397,11 +462,17 @@ void Integrator::integrate(double* real, double* imag, double* error) {
 
     for (HardFactorTypeMap::iterator it = terms.begin(); it != terms.end(); it++) {
         assert(it->second.size() > 0);
-        set_current_integration_type(it->first);
-        integrate_impl(2, &tmp_result, &tmp_error);
+        HardFactorType hrt = it->first;
+        current_integration_region = &hrt.integration_region;
+        current_modifiers = hrt.modifiers;
+
+        xi_preintegrated_term = false;
+        integrate_impl(&tmp_result, &tmp_error);
         result += tmp_result;
         abserr += tmp_error;
-        integrate_impl(1, &tmp_result, &tmp_error);
+
+        xi_preintegrated_term = true;
+        integrate_impl(&tmp_result, &tmp_error);
         result += tmp_result;
         abserr += tmp_error;
     }

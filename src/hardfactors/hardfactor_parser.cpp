@@ -22,12 +22,12 @@
 #include <istream>
 #include <iostream>
 #include <sstream>
+#include <vector>
 #include <muParser.h>
 #include <gsl/gsl_math.h>
 #include "gsl_mu.h"
 #include "hardfactor.h"
 #include "hardfactor_parser.h"
-#include "../typedefs.h"
 #include "../utils/utils.h"
 
 using mu::Parser;
@@ -35,15 +35,26 @@ using mu::value_type;
 using mu::valmap_type;
 using mu::varmap_type;
 using std::cerr;
+using std::vector;
 
-ParsedCompositeHardFactor::ParsedCompositeHardFactor(const string& name, const HardFactor::HardFactorOrder order, const size_t term_count, const HardFactorTerm** terms) :
+ParsedCompositeHardFactor::ParsedCompositeHardFactor(const string& name, const string& implementation, const HardFactor::HardFactorOrder order, const size_t term_count, const HardFactorTerm** terms) :
   HardFactor(),
-  m_name(name), m_order(order), m_term_count(term_count), m_terms(terms), need_to_free_m_terms(false) {
+  m_name(name),
+  m_implementation(implementation),
+  m_order(order),
+  m_term_count(term_count),
+  m_terms(terms),
+  need_to_free_m_terms(false) {
 }
 
-ParsedCompositeHardFactor::ParsedCompositeHardFactor(const string& name, const HardFactor::HardFactorOrder order, const HardFactorTermList terms) :
+ParsedCompositeHardFactor::ParsedCompositeHardFactor(const string& name, const string& implementation, const HardFactor::HardFactorOrder order, const HardFactorTermList terms) :
   HardFactor(),
-  m_name(name), m_order(order), m_term_count(terms.size()), m_terms(new const HardFactorTerm*[m_term_count]), need_to_free_m_terms(true) {
+  m_name(name),
+  m_implementation(implementation),
+  m_order(order),
+  m_term_count(terms.size()),
+  m_terms(new const HardFactorTerm*[m_term_count]),
+  need_to_free_m_terms(true) {
     const HardFactorTerm** m_terms_end = copy(terms.begin(), terms.end(), m_terms);
     assert(m_terms_end - m_terms == m_term_count);
 }
@@ -121,29 +132,13 @@ value_type norm2(const value_type a1, const value_type a2) {
     return gsl_hypot(a1, a2);
 }
 
-void ParsedHardFactorTerm::init_parser(Parser& parser, varmap_type& all_used_variables, const string& aux_variables, const string& real_expr, const string& imag_expr, const char* debug_message) {
-    parser.SetExpr(aux_variables + e0(real_expr) + "," + e0(imag_expr));
-    mu_load_gsl(parser);
-    parser.DefineFun("F", gluon_distribution_F);
-    parser.DefineFun("S2", gluon_distribution_S2);
-    parser.DefineFun("S4", gluon_distribution_S4);
-    parser.DefineFun("dot", dot2);
-    parser.DefineFun("square", square2);
-    parser.DefineFun("norm", norm2);
-#ifndef NDEBUG
-    print_parser_info(debug_message, parser);
-# endif
-    // use GetUsedVar() to trigger an attempt to parse the expression
-    // we want any parsing errors to be revealed now, not when evaluating expressions
-    varmap_type variables_from_parser = parser.GetUsedVar();
-    all_used_variables.insert(variables_from_parser.begin(), variables_from_parser.end());
-}
 
 ParsedHardFactorTerm::ParsedHardFactorTerm(
     const string& name,
     const string& implementation,
     const HardFactor::HardFactorOrder order,
-    const IntegrationType* type,
+    const IntegrationRegion* region,
+    const Modifiers& modifiers,
     const string& Fs_real, const string& Fs_imag,
     const string& Fn_real, const string& Fn_imag,
     const string& Fd_real, const string& Fd_imag,
@@ -151,47 +146,38 @@ ParsedHardFactorTerm::ParsedHardFactorTerm(
   m_name(name),
   m_implementation(implementation),
   m_order(order),
-  mp_type(type) {
-    aux_variable_count = variable_list.size();
-    ostringstream aux_variables_oss;
-    for (list<pair<string, string> >::const_iterator vi = variable_list.begin(); vi != variable_list.end(); vi++) {
-        string var = vi->first;
-        string expr = vi->second;
-        aux_variables_oss << var << "=" << expr << ",";
-    }
-    string aux_variables = aux_variables_oss.str();
-    varmap_type all_used_variables;
-    init_parser(Fs_parser, all_used_variables, aux_variables, Fs_real, Fs_imag, "Fs");
-    init_parser(Fn_parser, all_used_variables, aux_variables, Fn_real, Fn_imag, "Fn");
-    init_parser(Fd_parser, all_used_variables, aux_variables, Fd_real, Fd_imag, "Fd");
+  m_modifiers(modifiers),
+  mp_region(region),
+  m_free_region(false) {
+    init_term(Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag, variable_list);
+}
 
-    // make sure only existing variables are used
-#define process(var) all_used_variables.erase(#var);
-#include "../integration/ictx_var_list.inc"
-#include "../configuration/ctx_var_list.inc"
-#undef process
-    aux_variable_storage = new double[aux_variable_count];
-    size_t i = 0;
-    for (list<pair<string, string> >::const_iterator vi = variable_list.begin(); vi != variable_list.end(); vi++, i++) {
-        const string& varname = vi->first;
-        Fs_parser.DefineVar(varname, &aux_variable_storage[i]);
-        Fn_parser.DefineVar(varname, &aux_variable_storage[i]);
-        Fd_parser.DefineVar(varname, &aux_variable_storage[i]);
-        all_used_variables.erase(varname);
-    }
-    if (!all_used_variables.empty()) {
-        ostringstream doss;
-        doss << "Invalid variables used:";
-        for (varmap_type::const_iterator it = all_used_variables.begin(); it != all_used_variables.end(); it++) {
-            doss << " " << it->first;
-        }
-        delete[] aux_variable_storage;
-        throw mu::ParserError(doss.str());
-    }
+ParsedHardFactorTerm::ParsedHardFactorTerm(
+    const string& name,
+    const string& implementation,
+    const HardFactor::HardFactorOrder order,
+    const CoreIntegrationRegion& core,
+    const vector<const AuxiliaryIntegrationRegion*> subregions,
+    const Modifiers& modifiers,
+    const string& Fs_real, const string& Fs_imag,
+    const string& Fn_real, const string& Fn_imag,
+    const string& Fd_real, const string& Fd_imag,
+    const list<pair<string, string> >& variable_list) :
+  m_name(name),
+  m_implementation(implementation),
+  m_order(order),
+  m_modifiers(modifiers),
+  mp_region(new IntegrationRegion(core, subregions)),
+  m_free_region(true) {
+    init_term(Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag, variable_list);
 }
 
 ParsedHardFactorTerm::~ParsedHardFactorTerm() {
     delete[] aux_variable_storage;
+    if (m_free_region) {
+        delete mp_region;
+        mp_region = NULL;
+    }
 }
 
 // need to pull some tricks with templates to only call DefineVar on double-type variables
@@ -309,67 +295,121 @@ const string ParsedHardFactorTerm::Fd_expr() const {
     return Fd_parser.GetExpr();
 }
 
+void ParsedHardFactorTerm::init_term(
+    const string& Fs_real, const string& Fs_imag,
+    const string& Fn_real, const string& Fn_imag,
+    const string& Fd_real, const string& Fd_imag,
+    const list<pair<string, string> >& variable_list
+) {
+    aux_variable_count = variable_list.size();
+    ostringstream aux_variables_oss;
+    for (list<pair<string, string> >::const_iterator vi = variable_list.begin(); vi != variable_list.end(); vi++) {
+        string var = vi->first;
+        string expr = vi->second;
+        aux_variables_oss << var << "=" << expr << ",";
+    }
+    string aux_variables = aux_variables_oss.str();
+    varmap_type all_used_variables;
+    init_parser(Fs_parser, all_used_variables, aux_variables, Fs_real, Fs_imag, "Fs");
+    init_parser(Fn_parser, all_used_variables, aux_variables, Fn_real, Fn_imag, "Fn");
+    init_parser(Fd_parser, all_used_variables, aux_variables, Fd_real, Fd_imag, "Fd");
+
+    // make sure only existing variables are used
+#define process(var) all_used_variables.erase(#var);
+#include "../integration/ictx_var_list.inc"
+#include "../configuration/ctx_var_list.inc"
+#undef process
+    aux_variable_storage = new double[aux_variable_count];
+    size_t i = 0;
+    for (list<pair<string, string> >::const_iterator vi = variable_list.begin(); vi != variable_list.end(); vi++, i++) {
+        const string& varname = vi->first;
+        Fs_parser.DefineVar(varname, &aux_variable_storage[i]);
+        Fn_parser.DefineVar(varname, &aux_variable_storage[i]);
+        Fd_parser.DefineVar(varname, &aux_variable_storage[i]);
+        all_used_variables.erase(varname);
+    }
+    if (!all_used_variables.empty()) {
+        ostringstream doss;
+        doss << "Invalid variables used:";
+        for (varmap_type::const_iterator it = all_used_variables.begin(); it != all_used_variables.end(); it++) {
+            doss << " " << it->first;
+        }
+        delete[] aux_variable_storage;
+        throw mu::ParserError(doss.str());
+    }
+}
+
+
+void ParsedHardFactorTerm::init_parser(Parser& parser, varmap_type& all_used_variables, const string& aux_variables, const string& real_expr, const string& imag_expr, const char* debug_message) {
+    parser.SetExpr(aux_variables + e0(real_expr) + "," + e0(imag_expr));
+    mu_load_gsl(parser);
+    parser.DefineFun("F", gluon_distribution_F);
+    parser.DefineFun("S2", gluon_distribution_S2);
+    parser.DefineFun("S4", gluon_distribution_S4);
+    parser.DefineFun("dot", dot2);
+    parser.DefineFun("square", square2);
+    parser.DefineFun("norm", norm2);
+#ifndef NDEBUG
+    print_parser_info(debug_message, parser);
+# endif
+    // use GetUsedVar() to trigger an attempt to parse the expression
+    // we want any parsing errors to be revealed now, not when evaluating expressions
+    varmap_type variables_from_parser = parser.GetUsedVar();
+    all_used_variables.insert(variables_from_parser.begin(), variables_from_parser.end());
+}
+
 using std::ifstream;
 using std::vector;
 
 static HardFactor::HardFactorOrder sentinel = static_cast<HardFactor::HardFactorOrder>(-1);
 
 HardFactorParser::HardFactorParser(HardFactorRegistry& registry) :
-    order(sentinel),
-    type(NULL),
-    registry(registry),
-    hard_factor_callback(NULL),
-    hard_factor_group_callback(NULL),
-    error_handler(NULL) {
+  registry(registry),
+  order(sentinel),
+  core(NULL),
+  hard_factor_callback(NULL),
+  hard_factor_group_callback(NULL),
+  error_handler(NULL) {
+    reset_current_term();
 }
 
 HardFactorParser::~HardFactorParser() {
-    // Try to create one last term from whatever the parser has been fed.
-    // If something goes wrong, we absorb the exception because destructors
-    // shouldn't throw exceptions.
-    try {
-        create_hard_factor_term();
-    }
-    catch (const IncompleteHardFactorDefinitionException& e) {
 #ifndef NDEBUG
-        cerr << "Incomplete hard factor definition on destruction of parser" << endl;
-#endif
+    if (!hard_factor_definition_empty()) {
+        cerr << "Non-empty hard factor definition on destruction of parser" << endl;
     }
-    catch (const InvalidHardFactorDefinitionException& e) {
-#ifndef NDEBUG
-        cerr << "Invalid hard factor definition on destruction of parser: " << e.what() << endl;
-#endif
+    if (unflushed_groups()) {
+        cerr << "Unflushed groups on destruction of parser" << endl;
     }
-    catch (const InvalidHardFactorSpecException& e) {
-#ifndef NDEBUG
-        cerr << "Invalid hard factor specification on destruction of parser: " << e.what() << endl;
 #endif
-    }
-    catch (const mu::ParserError& e) {
-#ifndef NDEBUG
-        cerr << "Parser error on destruction of parser" << endl;
-#endif
-    }
-    reset_current_term();
-    flush_groups();
 }
 
-string default_implementation(const IntegrationType* type) {
-    string implementation;
-    if (type == &position::dipole || type == &position::quadrupole) {
-        implementation = "p";
-    }
-    else if (type == &radial::dipole || type == &radial::quadrupole || type == &radial::rescaled_dipole || type == &radial::rescaled_quadrupole) {
-        implementation = "r";
-    }
-    else if (type == &momentum::momentum1 || type == &momentum::momentum2 || type == &momentum::momentum3 || type == &momentum::momentumxip1 ||
-             type == &momentum::momentumxip2 || type == &momentum::none || type == &momentum::qlim || type == &momentum::radialmomentum1 ||
-             type == &momentum::radialmomentum2 || type == &momentum::radialmomentum3) {
-        implementation = "m";
-    }
-    assert(!implementation.empty());
-    return implementation;
-}
+// Declare one instance of each IntegrationRegion that might be used by the parser
+static LOKinematicsIntegrationRegion LO;
+static NLOKinematicsIntegrationRegion NLO;
+static NLOKinematicsIntegrationRegion NLOZero(true);
+static NLOClippedKinematicsIntegrationRegion NLOClipped;
+static R1CartesianIntegrationRegion R1C;
+static R1PolarIntegrationRegion R1P;
+static R1RadialIntegrationRegion R1R;
+static Q1CartesianIntegrationRegion Q1C;
+static Q1PolarIntegrationRegion Q1P;
+static Q1RadialIntegrationRegion Q1R;
+static Q1ExactKinematicIntegrationRegion Q1E;
+static R2CartesianIntegrationRegion R2C;
+static R2PolarIntegrationRegion R2P;
+static R2RadialIntegrationRegion R2R;
+static Q2CartesianIntegrationRegion Q2C;
+static Q2PolarIntegrationRegion Q2P;
+static Q2RadialIntegrationRegion Q2R;
+static Q2ExactKinematicIntegrationRegion Q2E;
+static R3CartesianIntegrationRegion R3C;
+static R3PolarIntegrationRegion R3P;
+static R3RadialIntegrationRegion R3R;
+static Q3CartesianIntegrationRegion Q3C;
+static Q3PolarIntegrationRegion Q3P;
+static Q3RadialIntegrationRegion Q3R;
+static Q3ExactKinematicIntegrationRegion Q3E;
 
 void HardFactorParser::parse_line(const string& line) {
     // an empty line signals the end of a hard factor term definition
@@ -401,6 +441,7 @@ void HardFactorParser::parse_line(const string& line) {
         split_hardfactor(value, name, implementation);
     }
     else if (key == "order") {
+        cerr << "Obsolete configuration property 'order', should be replaced with 'lo' or 'nlo' in 'integration'" << endl;
         if (value == "lo") {
             order = HardFactor::LO;
         }
@@ -417,58 +458,179 @@ void HardFactorParser::parse_line(const string& line) {
             throw InvalidHardFactorDefinitionException(line, key, value);
         }
     }
-    else if (key == "type") {
-        if (value == "none") {
-            type = &momentum::none;
+    else if (key == "integration") {
+        if (order != sentinel) {
+            cerr << "Warning: 'integration' property will override previous setting of 'order'" << endl;
         }
-        else if (value == "momentum1") {
-            type = &momentum::momentum1;
+        assert(subregions.empty());
+        vector<string> elements = split(value, "*");
+        string e = trim(elements[0]);
+        if (e == "lo") {
+            core = &LO;
+            order = HardFactor::LO;
         }
-        else if (value == "momentum2") {
-            type = &momentum::momentum2;
+        else if (e == "nlo") {
+            core = &NLO;
+            order = HardFactor::NLO;
         }
-        else if (value == "momentum3") {
-            type = &momentum::momentum3;
+        else if (e == "nlo zero") {
+            core = &NLOZero;
+            order = HardFactor::NLO;
         }
-        else if (value == "radial momentum1") {
-            type = &momentum::radialmomentum1;
-        }
-        else if (value == "radial momentum2") {
-            type = &momentum::radialmomentum2;
-        }
-        else if (value == "radial momentum3") {
-            type = &momentum::radialmomentum3;
-        }
-        else if (value == "momentumxip1") {
-            type = &momentum::momentumxip1;
-        }
-        else if (value == "momentumxip2") {
-            type = &momentum::momentumxip2;
-        }
-        else if (value == "qlim") {
-            type = &momentum::qlim;
-        }
-        else if (value == "cartesian dipole") {
-            type = &position::dipole;
-        }
-        else if (value == "cartesian quadrupole") {
-            type = &position::quadrupole;
-        }
-        else if (value == "radial dipole") {
-            type = &radial::dipole;
-        }
-        else if (value == "radial quadrupole") {
-            type = &radial::quadrupole;
-        }
-        else if (value == "radial rescaled dipole") {
-            type = &radial::rescaled_dipole;
-        }
-        else if (value == "radial rescaled quadrupole") {
-            type = &radial::rescaled_quadrupole;
+        else if (e == "nlo clipped") {
+            core = &NLOClipped;
+            order = HardFactor::NLO;
         }
         else {
-            throw InvalidHardFactorDefinitionException(line, key, value, "Unknown integration type:");
+            throw InvalidHardFactorDefinitionException(line, key, value, "Unrecognized integration region");
         }
+        if (elements.size() <= 1) {
+            return;
+        }
+
+        string impl1, impl2, impl3;
+        // first coordinate
+        e = trim(elements[1]);
+        if (e == "cartesian coordinate") {
+            impl1 = "p";
+            subregions.push_back(&R1C);
+        }
+        else if (e == "polar coordinate") {
+            impl1 = "r";
+            subregions.push_back(&R1P);
+        }
+        else if (e == "radial coordinate") {
+            impl1 = "r";
+            subregions.push_back(&R1R);
+        }
+        else if (e == "cartesian momentum") {
+            impl1 = "m";
+            subregions.push_back(&Q1C);
+        }
+        else if (e == "polar momentum") {
+            impl1 = "m";
+            subregions.push_back(&Q1P);
+        }
+        else if (e == "radial momentum") {
+            impl1 = "m";
+            subregions.push_back(&Q1R);
+        }
+        else if (e == "exact limited momentum") {
+            impl1 = "m";
+            subregions.push_back(&Q1E);
+        }
+        else {
+            throw InvalidHardFactorDefinitionException(line, key, value, "Unrecognized integration region");
+        }
+        if (elements.size() <= 2) {
+            default_implementation = impl1;
+            return;
+        }
+
+        // second coordinate
+        e = trim(elements[2]);
+        if (e == "cartesian coordinate") {
+            impl2 = "p";
+            subregions.push_back(&R2C);
+        }
+        else if (e == "polar coordinate") {
+            impl2 = "r";
+            subregions.push_back(&R2P);
+        }
+        else if (e == "radial coordinate") {
+            impl2 = "r";
+            subregions.push_back(&R2R);
+        }
+        else if (e == "cartesian momentum") {
+            impl2 = "m";
+            subregions.push_back(&Q2C);
+        }
+        else if (e == "polar momentum") {
+            impl2 = "m";
+            subregions.push_back(&Q2P);
+        }
+        else if (e == "radial momentum") {
+            impl2 = "m";
+            subregions.push_back(&Q2R);
+        }
+        else if (e == "exact limited momentum") {
+            impl2 = "m";
+            subregions.push_back(&Q2E);
+        }
+        else {
+            throw InvalidHardFactorDefinitionException(line, key, value, "Unrecognized integration region");
+        }
+        if (elements.size() <= 3) {
+            if (impl1 == impl2) {
+                default_implementation = impl1;
+            }
+            else {
+                default_implementation.erase();
+            }
+            return;
+        }
+
+        // third coordinate
+        e = trim(elements[3]);
+        if (e == "cartesian coordinate") {
+            impl3 = "p";
+            subregions.push_back(&R3C);
+        }
+        else if (e == "polar coordinate") {
+            impl3 = "r";
+            subregions.push_back(&R3P);
+        }
+        else if (e == "radial coordinate") {
+            impl3 = "r";
+            subregions.push_back(&R3R);
+        }
+        else if (e == "cartesian momentum") {
+            impl3 = "m";
+            subregions.push_back(&Q3C);
+        }
+        else if (e == "polar momentum") {
+            impl3 = "m";
+            subregions.push_back(&Q3P);
+        }
+        else if (e == "radial momentum") {
+            impl3 = "m";
+            subregions.push_back(&Q3R);
+        }
+        else if (e == "exact limited momentum") {
+            impl3 = "m";
+            subregions.push_back(&Q3E);
+        }
+        else {
+            throw InvalidHardFactorDefinitionException(line, key, value, "Unrecognized integration region");
+        }
+        if (impl1 == impl2 && impl2 == impl3) {
+            default_implementation = impl1;
+        }
+        else {
+            default_implementation.erase();
+        }
+        return;
+    }
+    else if (key == "modifiers") {
+        // This initializes a blank instance of Modifiers with proper defaults in place
+        Modifiers m;
+        vector<string> elements = split(value, ",");
+        for (vector<string>::const_iterator it = elements.begin(); it != elements.end(); it++) {
+            string mod = trim(*it);
+            if (mod == "approximate xtarget") {
+                m.exact_xg = false;
+            }
+            else if (mod == "exact xtarget") {
+                m.exact_xg = true;
+            }
+            else if (mod == "divide xi") {
+                m.divide_xi = true;
+            }
+            else if (mod == "omit xi") {
+                m.divide_xi = false;
+            }
+        }
+        modifiers = m;
     }
     else if (key == "Fs real") {
         Fs_real = value;
@@ -509,6 +671,7 @@ void HardFactorParser::parse_line(const string& line) {
     else {
         throw InvalidHardFactorDefinitionException(line, key, value, "Unknown property:");
     }
+    // nothing should come after this if statement because there are return statements in the branches of the if
 }
 
 void HardFactorParser::parse_file(const string& filename) {
@@ -539,13 +702,14 @@ void HardFactorParser::parse_variable_definition(const string& key, const string
     variable_definitions.push_back(p);
 }
 
-
 const ParsedCompositeHardFactor* HardFactorParser::parse_composite_hard_factor(const string& key, const string& value) {
     assert(hard_factor_definition_empty());
     vector<string> term_labels = split(value, ",+");
     if (term_labels.empty()) {
         throw InvalidHardFactorSpecException(key, "no hard factor terms provided in definition");
     }
+
+    string last_constituent_implementation;
     HardFactorTermList hftlist;
     HardFactor::HardFactorOrder order = sentinel;
     for (vector<string>::const_iterator it = term_labels.begin(); it != term_labels.end(); it++) {
@@ -563,7 +727,29 @@ const ParsedCompositeHardFactor* HardFactorParser::parse_composite_hard_factor(c
             hf = registry.get_hard_factor(name);
         }
         else {
+            /* As we iterate through the constituent hard factor specifications
+             * used to construct the composite hard factor, each specification
+             * either has an implementation code explicitly specified, or doesn't.
+             * For example, in something like
+             *   hf0 = hf1.m + hf2.m + hf3
+             * we have explicitly specified implementation codes for hf1 and hf2,
+             * but not for hf3. The rule here is that, if all the explicitly
+             * specified implementation codes among all the constituents are
+             * the same, that becomes the code for the composite hard factor.
+             * Otherwise, the composite is given a blank implementation code.
+             */
+            if (last_constituent_implementation.empty()) {
+                // the first explicitly given implementation code
+                last_constituent_implementation = implementation;
+                default_implementation = implementation;
+            }
+            else if (last_constituent_implementation != implementation) {
+                // an explicit implementation code doesn't match the previous one
+                default_implementation.erase();
+            }
             hf = registry.get_hard_factor(name, implementation);
+            last_constituent_implementation = implementation;
+            assert(!last_constituent_implementation.empty());
         }
         if (hf == NULL) {
             throw InvalidHardFactorSpecException(s, "no hard factor with that name");
@@ -585,13 +771,10 @@ const ParsedCompositeHardFactor* HardFactorParser::parse_composite_hard_factor(c
     }
 
     split_hardfactor(key, name, implementation);
-    ParsedCompositeHardFactor* hf = new ParsedCompositeHardFactor(name, order, hftlist);
-
     if (implementation.empty()) {
-        // temporary hack: take the type of the composite hard factor
-        // to be the type of its first term
-        implementation = default_implementation(hftlist[0]->get_type());
+        implementation = default_implementation;
     }
+    ParsedCompositeHardFactor* hf = new ParsedCompositeHardFactor(name, implementation, order, hftlist);
 
     registry.add_hard_factor(name, implementation, hf, true);
     hard_factors.push_back(hf);
@@ -601,7 +784,6 @@ const ParsedCompositeHardFactor* HardFactorParser::parse_composite_hard_factor(c
     reset_current_term();
     return hf;
 }
-
 
 const HardFactorGroup* HardFactorParser::parse_hard_factor_group(const string& spec) {
     string specname(spec);
@@ -653,7 +835,7 @@ const HardFactorGroup* HardFactorParser::parse_hard_factor_group(const string& s
 }
 
 void HardFactorParser::flush_groups() {
-    while (!unparsed_hard_factor_group_specs.empty()) {
+    while (unflushed_groups()) {
         string line = unparsed_hard_factor_group_specs.front();
         const HardFactorGroup* hfg = parse_hard_factor_group(line);
         if (hfg != NULL) {
@@ -672,6 +854,9 @@ void HardFactorParser::flush_groups() {
     }
 }
 
+bool HardFactorParser::unflushed_groups() {
+    return !unparsed_hard_factor_group_specs.empty();
+}
 
 void HardFactorParser::split_hardfactor(const string& spec, string& name, string& implementation) {
     vector<string> splitspec;
@@ -698,13 +883,17 @@ void HardFactorParser::set_hard_factor_group_callback(void (*callback)(const Har
     this->hard_factor_group_callback = callback;
 }
 
+static Modifiers default_modifiers;
 
 bool HardFactorParser::hard_factor_definition_empty() const {
     return
-      type == NULL &&
+      core == NULL &&
+      subregions.empty() &&
       order == sentinel &&
+      modifiers == default_modifiers &&
       name.empty() &&
       implementation.empty() &&
+      default_implementation.empty() &&
       Fs_real.empty() && Fs_imag.empty() &&
       Fn_real.empty() && Fn_imag.empty() &&
       Fd_real.empty() && Fd_imag.empty() &&
@@ -713,7 +902,7 @@ bool HardFactorParser::hard_factor_definition_empty() const {
 
 bool HardFactorParser::hard_factor_definition_complete() const {
     return
-      type != NULL &&
+      core != NULL &&
       order != sentinel &&
       !name.empty();
 }
@@ -726,7 +915,17 @@ const ParsedHardFactorTerm* HardFactorParser::create_hard_factor_term() {
         throw IncompleteHardFactorDefinitionException();
     }
 
-    ParsedHardFactorTerm* hf = new ParsedHardFactorTerm(name, implementation.empty() ? default_implementation(type) : implementation, order, type, Fs_real, Fs_imag, Fn_real, Fn_imag, Fd_real, Fd_imag, variable_definitions);
+    ParsedHardFactorTerm* hf = new ParsedHardFactorTerm(
+        name,
+        implementation.empty() ? default_implementation : implementation,
+        order,
+        *core,
+        subregions,
+        modifiers,
+        Fs_real, Fs_imag,
+        Fn_real, Fn_imag,
+        Fd_real, Fd_imag,
+        variable_definitions);
     registry.add_hard_factor(hf, true);
     hard_factors.push_back(hf);
     if (hard_factor_callback != NULL) {
@@ -739,8 +938,11 @@ const ParsedHardFactorTerm* HardFactorParser::create_hard_factor_term() {
 void HardFactorParser::reset_current_term() {
     name.erase();
     implementation.erase();
+    default_implementation.erase();
     order = sentinel;
-    type = NULL;
+    core = NULL;
+    subregions.clear();
+    modifiers = default_modifiers;
     variable_definitions.clear();
     Fs_real.clear();
     Fs_imag.clear();

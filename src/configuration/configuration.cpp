@@ -62,15 +62,8 @@ bool Configuration::contains(const string& key, const size_t n) const {
 }
 
 size_t Configuration::count(const string& key) const {
-    pair<option_iterator_type, option_iterator_type> p = equal_range(canonicalize(key));
-    option_iterator_type it = p.first;
-    size_t i = 0;
-    while (it++ != p.second) {
-        ++i;
-    }
-    return i;
+    return multimap::count(canonicalize(key));
 }
-
 
 void Configuration::set(const string& key, const string& value) {
     string c_key = canonicalize(key);
