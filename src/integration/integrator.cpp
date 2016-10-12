@@ -58,6 +58,10 @@
  */
 #define checkfinite(d) assert(gsl_finite(d))
 
+bool compare_integration_region_pointers(const IntegrationRegion* a, const IntegrationRegion* b) {
+    return a < b;
+}
+
 Integrator::Integrator(
     const Context& ctx,
     const ThreadLocalContext& tlctx,
@@ -67,7 +71,7 @@ Integrator::Integrator(
   ictx(ctx, tlctx),
   current_integration_region(NULL),
   xi_preintegrated_term(false),
-  terms(),
+  terms(compare_integration_region_pointers),
   xg_min(xg_min),
   xg_max(xg_max),
   callback(NULL),

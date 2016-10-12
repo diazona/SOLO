@@ -204,15 +204,17 @@ bool CompositeIntegrationRegion::operator<(const IntegrationRegion& other) const
         }
         else if (m_subregions.size() == p_other->m_subregions.size()) {
             for (size_t i = 0; i < m_subregions.size(); i++) {
-                if (*(m_subregions[i]) < *(p_other->m_subregions[i])) {
+                const IntegrationRegion* i1 = m_subregions[i];
+                const IntegrationRegion* i2 = p_other->m_subregions[i];
+                if (*i1 < *i2) {
                     return true;
                 }
+                else if (*i2 < *i1) {
+                    return false;
+                }
             }
-            return false;
         }
-        else {
-            return false;
-        }
+        return false;
     }
     else {
         return IntegrationRegion::operator<(other);

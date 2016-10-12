@@ -59,8 +59,11 @@ private:
      * The type of term being integrated.
      *
      * Types are defined in integrationtype.h.
+     *
+     * This is a pointer rather than a reference because it starts out being
+     * set to NULL.
      */
-    IntegrationRegion const* current_integration_region;
+    IntegrationRegion const * current_integration_region;
     /**
      * The IntegrationContext object associated with this Integrator.
      */
@@ -101,7 +104,7 @@ public:
      * the imaginary part for some reason.
      *
      * What is actually integrated by this function is the set of all hard factors
-     * whose IntegrationType matches the current one. The current IntegrationType
+     * whose IntegrationRegion matches the current one. The current IntegrationRegion
      * is set by the method set_current_integration_type(). So the overall workflow
      * is to call set_current_integration_type() and then integrate() for each type
      * in turn.
@@ -145,8 +148,7 @@ public:
     }
 private:
     /**
-     * Most of the code for integrating "1D" and "2D" integrals is the same, so it's
-     * abstracted into this method.
+     * Implements the integration
      */
     void integrate_impl(double* result, double* error);
 
