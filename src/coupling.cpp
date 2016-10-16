@@ -60,8 +60,8 @@ FixedCoupling::FixedCoupling(const double alphas) : value(alphas) {
 double FixedCoupling::alphas(const IntegrationContext& ictx) const {
     return value;
 }
-const char* FixedCoupling::name() const {
-    return _name.c_str();
+const string& FixedCoupling::name() const {
+    return _name;
 }
 
 LORunningCoupling::LORunningCoupling(const double LambdaQCD, const double Ncbeta, const double regulator, const CouplingScale scale_scheme) :
@@ -77,8 +77,8 @@ double LORunningCoupling::alphas(const IntegrationContext& ictx) const {
     double l_scale = scale(ictx, m_scale_scheme);
     return coefficient / (log(l_scale + regulator) - log_LambdaQCD);
 }
-const char* LORunningCoupling::name() const {
-    return _name.c_str();
+const string& LORunningCoupling::name() const {
+    return _name;
 }
 
 

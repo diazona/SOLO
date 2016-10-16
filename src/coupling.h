@@ -34,7 +34,7 @@ public:
     Coupling() {}
     virtual ~Coupling() {}
     virtual double alphas(const IntegrationContext& ictx) const = 0;
-    virtual const char* name() const = 0;
+    virtual const std::string& name() const = 0;
 };
 
 class FixedCoupling : public Coupling {
@@ -44,7 +44,7 @@ private:
 public:
     FixedCoupling(const double alphas);
     double alphas(const IntegrationContext& ictx) const;
-    const char* name() const;
+    const std::string& name() const;
 };
 
 class LORunningCoupling : public Coupling {
@@ -57,7 +57,7 @@ private:
 public:
     LORunningCoupling(const double LambdaQCD, const double Ncbeta, const double regulator, const CouplingScale scale_scheme);
     double alphas(const IntegrationContext& ictx) const;
-    const char* name() const;
+    const std::string& name() const;
 };
 
 std::ostream& operator<<(std::ostream& out, const Coupling& cpl);
