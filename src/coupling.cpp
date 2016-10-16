@@ -18,39 +18,71 @@
  */
 
 #include <sstream>
+#include "integration/integrationcontext.h"
 #include "coupling.h"
 
 using namespace std;
 
-FixedCoupling::FixedCoupling(double alphas) : value(alphas) {
+
+static inline double square(double x, double y) {
+    return x * x + y * y;
+}
+
+static inline double scale(const IntegrationContext& ictx, const CouplingScale scale) {
+    switch (scale) {
+        case KT:
+            return ictx.kT2;
+        case PT:
+            return ictx.ctx.pT2;
+        case Q1:
+            return ictx.q12;
+        case Q2:
+            return ictx.q22;
+        case Q3:
+            return ictx.q32;
+        case KQ1:
+            return square(ictx.kT - ictx.q1x, ictx.q1y);
+        case KQ2:
+            return square(ictx.kT - ictx.q2x, ictx.q2y);
+        case KQ3:
+            return square(ictx.kT - ictx.q3x, ictx.q3y);
+        default:
+            assert(false);
+    }
+}
+
+
+FixedCoupling::FixedCoupling(const double alphas) : value(alphas) {
     ostringstream s;
     s << "Fixed(alphas = " << value << ")";
     _name = s.str();
 }
-double FixedCoupling::alphas(double kT2) {
+double FixedCoupling::alphas(const IntegrationContext& ictx) const {
     return value;
 }
-const char* FixedCoupling::name() {
+const char* FixedCoupling::name() const {
     return _name.c_str();
 }
 
-LORunningCoupling::LORunningCoupling(double LambdaQCD, double Ncbeta, double regulator) :
-    log_LambdaQCD(log(LambdaQCD)),
-    coefficient(M_PI / Ncbeta), // π/(Nc × β)
-    regulator(regulator) {
+LORunningCoupling::LORunningCoupling(const double LambdaQCD, const double Ncbeta, const double regulator, const CouplingScale scale_scheme) :
+  log_LambdaQCD(log(LambdaQCD)),
+  coefficient(M_PI / Ncbeta), // π/(Nc × β)
+  regulator(regulator),
+  m_scale_scheme(scale_scheme) {
     ostringstream s;
     s << "LORunning(LambdaQCD = " << LambdaQCD << ", Nc × β = " << Ncbeta << ", regulator = " << regulator << ")";
     _name = s.str();
 }
-double LORunningCoupling::alphas(double kT2) {
-    return coefficient / (log(kT2 + regulator) - log_LambdaQCD);
+double LORunningCoupling::alphas(const IntegrationContext& ictx) const {
+    double l_scale = scale(ictx, m_scale_scheme);
+    return coefficient / (log(l_scale + regulator) - log_LambdaQCD);
 }
-const char* LORunningCoupling::name() {
+const char* LORunningCoupling::name() const {
     return _name.c_str();
 }
 
 
-std::ostream& operator<<(std::ostream& out, Coupling& cpl) {
+ostream& operator<<(ostream& out, const Coupling& cpl) {
     out << cpl.name();
     return out;
 }
