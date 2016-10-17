@@ -24,10 +24,15 @@
 
 class Modifiers {
 public:
-    bool exact_xg;
+    typedef enum {FIXED, APPROX, EXACT} LongitudinalKinematicsScheme;
+    /**
+     * How to set the value of x (or equivalently, the rapidity) used
+     * to evaluate the gluon distribution.
+     */
+    LongitudinalKinematicsScheme xtarget_scheme;
     bool divide_xi;
 
-    Modifiers() : exact_xg(false), divide_xi(true) {}
+    Modifiers() : xtarget_scheme(FIXED), divide_xi(true) {}
     bool operator<(const Modifiers& other) const;
     bool operator==(const Modifiers& other) const;
 };
@@ -96,14 +101,14 @@ public:
       Fkq1(0), Fkq2(0), Fkq3(0) {
     };
 
-    void recalculate_everything(const bool exact_xg, const bool divide_xi);
-    void recalculate_everything_from_position(const bool quadrupole, const bool divide_xi);
-    void recalculate_everything_from_momentum(const size_t dimensions, const bool exact_xg, const bool divide_xi);
+    void recalculate_everything(const Modifiers& modifiers);
+    void recalculate_everything_from_position(const bool quadrupole, const Modifiers& modifiers);
+    void recalculate_everything_from_momentum(const size_t dimensions, const Modifiers& modifiers);
 
 private:
     void recalculate_from_position(const bool quadrupole);
     void recalculate_from_momentum(const size_t dimensions);
-    void recalculate_longitudinal(const bool exact_xg);
+    void recalculate_longitudinal(const Modifiers::LongitudinalKinematicsScheme xtarget_scheme);
     void recalculate_coupling();
     void recalculate_position_gdist(const bool quadrupole);
     void recalculate_momentum_gdist(const size_t dimensions);

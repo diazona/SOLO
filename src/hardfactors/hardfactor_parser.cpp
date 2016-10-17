@@ -617,11 +617,14 @@ void HardFactorParser::parse_line(const string& line) {
         vector<string> elements = split(value, ",");
         for (vector<string>::const_iterator it = elements.begin(); it != elements.end(); it++) {
             string mod = trim(*it);
-            if (mod == "approximate xtarget") {
-                m.exact_xg = false;
+            if (mod == "fixed xtarget") {
+                m.xtarget_scheme = Modifiers::FIXED;
+            }
+            else if (mod == "approximate xtarget") {
+                m.xtarget_scheme = Modifiers::APPROX;
             }
             else if (mod == "exact xtarget") {
-                m.exact_xg = true;
+                m.xtarget_scheme = Modifiers::EXACT;
             }
             else if (mod == "divide xi") {
                 m.divide_xi = true;

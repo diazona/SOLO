@@ -213,7 +213,7 @@ void Integrator::evaluate_integrand(double* real, double* imag) {
         }
         ictx.xi = 1;
         /* TODO replace this with the same thing used below in cubature_wrapper */
-        ictx.recalculate_everything(current_modifiers.exact_xg, current_modifiers.divide_xi);
+        ictx.recalculate_everything(current_modifiers);
         for (HardFactorTermList::const_iterator it = current_terms.begin(); it != current_terms.end(); it++) {
             const HardFactorTerm* h = (*it);
             if (h->get_order() == HardFactor::LO) {
@@ -259,13 +259,13 @@ void cubature_wrapper(unsigned int ncoords, const double* coordinates, void* clo
     /* TODO put something here which implements the following pseudocode:
      *
      * if (current_integration_region->position_like) {
-     *     ictx.recalculate_everything_from_position(current_integration_region->is_quadrupole, current_integration_region->divide_xi);
+     *     ictx.recalculate_everything_from_position(current_integration_region->is_quadrupole, current_modifiers);
      * }
      * else {
-     *     ictx.recalculate_everything_from_momentum(current_integration_region->momentum_dimensions, current_integration_region->exact, current_integration_region->divide_xi);
+     *     ictx.recalculate_everything_from_momentum(current_integration_region->momentum_dimensions, current_modifiers);
      * }
      */
-    integrator->ictx.recalculate_everything(integrator->current_modifiers.exact_xg, integrator->current_modifiers.divide_xi);
+    integrator->ictx.recalculate_everything(integrator->current_modifiers);
     // computing the Jacobian here allows the method to access the untransformed coordinates
     jacobian = integrator->current_integration_region->jacobian(integrator->ictx, integrator->xi_preintegrated_term);
     integrator->evaluate_integrand(&real, &imag);

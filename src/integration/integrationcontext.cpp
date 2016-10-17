@@ -27,10 +27,10 @@
 #define checkfinite(d) assert(gsl_finite(d))
 
 bool Modifiers::operator<(const Modifiers& other) const {
-    if (exact_xg < other.exact_xg) {
+    if (xtarget_scheme < other.xtarget_scheme) {
         return true;
     }
-    else if (other.exact_xg < exact_xg) {
+    else if (other.xtarget_scheme < xtarget_scheme) {
         return false;
     }
     if (divide_xi < other.divide_xi) {
@@ -43,7 +43,7 @@ bool Modifiers::operator<(const Modifiers& other) const {
 }
 
 bool Modifiers::operator==(const Modifiers& other) const {
-    return exact_xg == other.exact_xg && divide_xi == other.divide_xi;
+    return xtarget_scheme == other.xtarget_scheme && divide_xi == other.divide_xi;
 }
 
 
@@ -91,7 +91,7 @@ void IntegrationContext::recalculate_from_momentum(const size_t dimensions) {
     }
 }
 
-void IntegrationContext::recalculate_longitudinal(const bool exact_xg) {
+void IntegrationContext::recalculate_longitudinal(const Modifiers::LongitudinalKinematicsScheme xtarget_scheme) {
     z2 = z*z;
     kT2 = ctx.pT2 / z2;
     kT = sqrt(kT2);
@@ -101,12 +101,19 @@ void IntegrationContext::recalculate_longitudinal(const bool exact_xg) {
      * as xp / xi, consistent with the notation in e.g. arxiv:1604.00225
      */
     xp = ctx.tau / z;
-    if (exact_xg) {
-        assert(q12 > 0);
-        xg = exp(-ctx.Y) / ctx.sqs * (kT + ((kT - q1x) * (kT - q1x) + q1y * q1y) / kT * xi / (1 - xi));
-    }
-    else {
-        xg = kT / ctx.sqs * exp(-ctx.Y);
+    switch (xtarget_scheme) {
+        case Modifiers::EXACT:
+            assert(q12 > 0);
+            xg = exp(-ctx.Y) / ctx.sqs * (kT + ((kT - q1x) * (kT - q1x) + q1y * q1y) / kT * xi / (1 - xi));
+            break;
+        case Modifiers::APPROX:
+            xg = kT / ctx.sqs * exp(-ctx.Y) / (1 - xi);
+            break;
+        case Modifiers::FIXED:
+            xg = kT / ctx.sqs * exp(-ctx.Y);
+            break;
+        default:
+            assert(false);
     }
     Yg = -log(xg);
 }
@@ -219,26 +226,26 @@ void IntegrationContext::recalculate_parton_functions(const bool divide_xi) {
     this->qgfactor = qgfactor;
 }
 
-void IntegrationContext::recalculate_everything_from_position(const bool quadrupole, const bool divide_xi) {
+void IntegrationContext::recalculate_everything_from_position(const bool quadrupole, const Modifiers& modifiers) {
     recalculate_from_position(quadrupole);
-    recalculate_longitudinal(false);
+    recalculate_longitudinal(modifiers.xtarget_scheme);
     recalculate_coupling();
     recalculate_position_gdist(quadrupole);
-    recalculate_parton_functions(divide_xi);
+    recalculate_parton_functions(modifiers.divide_xi);
 }
 
-void IntegrationContext::recalculate_everything_from_momentum(const size_t dimensions, const bool exact_xg, const bool divide_xi) {
+void IntegrationContext::recalculate_everything_from_momentum(const size_t dimensions, const Modifiers& modifiers) {
     recalculate_from_momentum(dimensions);
-    recalculate_longitudinal(exact_xg);
+    recalculate_longitudinal(modifiers.xtarget_scheme);
     recalculate_coupling();
     recalculate_momentum_gdist(dimensions);
-    recalculate_parton_functions(divide_xi);
+    recalculate_parton_functions(modifiers.divide_xi);
 }
 
-void IntegrationContext::recalculate_everything(const bool exact_xg, const bool divide_xi) {
+void IntegrationContext::recalculate_everything(const Modifiers& modifiers) {
     recalculate_from_position(true);
     recalculate_from_momentum(3);
-    recalculate_longitudinal(exact_xg);
+    recalculate_longitudinal(modifiers.xtarget_scheme);
     recalculate_coupling();
     // use some heuristics to guess whether to compute position or momentum gluon distributions
     if (r2 > 0 || s2 > 0 || t2 > 0) {
@@ -250,5 +257,5 @@ void IntegrationContext::recalculate_everything(const bool exact_xg, const bool 
     else {
         recalculate_momentum_gdist(0);
     }
-    recalculate_parton_functions(divide_xi);
+    recalculate_parton_functions(modifiers.divide_xi);
 }
