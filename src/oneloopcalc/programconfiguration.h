@@ -31,8 +31,6 @@ public:
     double xg_min() const { return m_xg_min; }
     double xg_max() const { return m_xg_max; }
 
-    const std::vector<std::string> hfspecs() const { return m_hfspecs; }
-
     const Configuration& config() const { return m_conf; }
 private:
     /** Indicates whether the --print-config or --no-print-config option was specified */
@@ -53,14 +51,6 @@ private:
      * specified on the command line will be stored in this.
      */
     Configuration m_conf;
-    /**
-     * The list of transverse momenta given on the command line, if any
-     */
-    std::vector<std::string> m_pT;
-    /**
-     * The list of hard factors from the groups given on the command line
-     */
-    std::vector<std::string> m_hfspecs;
 
     double m_xg_min, m_xg_max;
 };

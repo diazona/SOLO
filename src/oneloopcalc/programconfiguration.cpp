@@ -23,7 +23,10 @@ ProgramConfiguration::ProgramConfiguration(const int argc, char const * const * 
     m_xg_min(0),
     m_xg_max(1)
 {
+    // Variables to hold command line options that override the config files
+    vector<string> pT;
     string gdist_type;
+    vector<string> hfspecs;
 
     // parse command line options
     bool current_arg_is_config_line = false;
@@ -114,7 +117,7 @@ ProgramConfiguration::ProgramConfiguration(const int argc, char const * const * 
         else if (::isdigit(a[0])) {
             vector<string> pTnums = split(a, ",");
             for (vector<string>::iterator it = pTnums.begin(); it != pTnums.end(); it++) {
-                m_pT.push_back(trim(*it, " \t"));
+                pT.push_back(trim(*it, " \t"));
             }
         }
         else {
@@ -127,28 +130,30 @@ ProgramConfiguration::ProgramConfiguration(const int argc, char const * const * 
                 config.close();
             }
             else {
-                m_conf.add("hardfactor_specifications", a);
+                hfspecs.push_back(a);
             }
         }
     }
 
-    if (!m_pT.empty()) {
+    if (!pT.empty()) {
         m_conf.erase("pT");
-        for (vector<string>::iterator it = m_pT.begin(); it != m_pT.end(); it++) {
+        for (vector<string>::iterator it = pT.begin(); it != pT.end(); it++) {
             m_conf.add("pT", *it);
         }
     }
     if (!gdist_type.empty()) {
         m_conf.set("gdist", gdist_type);
     }
+    if (!hfspecs.empty()) {
+        m_conf.erase("hardfactor_specifications");
+        for (vector<string>::iterator it = hfspecs.begin(); it != hfspecs.end(); it++) {
+            m_conf.add("hardfactor_specifications", *it);
+        }
+    }
 
     if (!m_conf.contains("hardfactor_specifications")) {
         m_conf.add("hardfactor_specifications", "lo");
         m_conf.add("hardfactor_specifications", "nlo");
-    }
-    pair<Configuration::iterator,Configuration::iterator> hf_bounds = m_conf.equal_range("hardfactor_specifications");
-    for (Configuration::iterator it = hf_bounds.first; it != hf_bounds.second; it++) {
-        m_hfspecs.push_back(it->second);
     }
 }
 

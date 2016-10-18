@@ -16,6 +16,7 @@
 
 using std::bitset;
 using std::ostream;
+using std::pair;
 using std::vector;
 using trace_variable::trace_vars;
 
@@ -145,7 +146,15 @@ ResultsCalculator::ResultsCalculator(const ProgramConfiguration& pc) :
     xg_max(pc.xg_max())
 {
     assert(hfgroups.empty());
-    parse_hf_specs(pc.hfspecs());
+
+    vector<string> hfspecs;
+    const pair<Configuration::const_iterator,Configuration::const_iterator> hf_bounds = pc.config().equal_range("hardfactor_specifications");
+    for (Configuration::const_iterator it = hf_bounds.first; it != hf_bounds.second; it++) {
+        hfspecs.push_back(it->second);
+    }
+    parse_hf_specs(hfspecs);
+    // done with hfspecs
+
     _hfglen = hfgroups.size();
     assert(_hfglen > 0);
     if (separate) {
