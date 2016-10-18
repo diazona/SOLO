@@ -265,14 +265,14 @@ double NLOKinematicsIntegrationRegion::effective_xi_min(const IntegrationContext
 
 void NLOClippedKinematicsIntegrationRegion::fill_min(const Context& ctx, const bool xi_preintegrated_term, double* min) const {
     min[0] = ctx.tauhat;
-    if (xi_preintegrated_term) {
+    if (!xi_preintegrated_term) {
         min[1] = ctx.tau;
     }
 }
 
 void NLOClippedKinematicsIntegrationRegion::fill_max(const Context& ctx, const bool xi_preintegrated_term, double* max) const {
     max[0] = 1;
-    if (xi_preintegrated_term) {
+    if (!xi_preintegrated_term) {
         max[1] = 1;
     }
 }
