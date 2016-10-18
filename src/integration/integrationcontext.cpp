@@ -119,7 +119,7 @@ void IntegrationContext::recalculate_longitudinal(const Modifiers::LongitudinalK
 }
 
 void IntegrationContext::recalculate_coupling() {
-    alphas = ctx.cpl->alphas(kT2);
+    alphas = ctx.cpl->alphas(*this);
     alphas_2pi = alphas * 0.5 * M_1_PI;
 }
 

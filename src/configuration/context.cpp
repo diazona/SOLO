@@ -32,6 +32,7 @@
 #include "../integration/integrator.h"
 #include "../log.h"
 #include "../utils/utils.h"
+#include "../coupling.h"
 
 using namespace std;
 
@@ -578,11 +579,18 @@ void ContextCollection::create_contexts() {
         check_property_default(alphas, double, parse_double, 0.2)
         m_cpl = new FixedCoupling(alphas);
     }
-    else if (coupling_type == "running") {
+    else if (coupling_type == "running" || coupling_type == "running kT" || coupling_type == "running pT") {
         check_property_default(lambdaQCD, double, parse_double, sqrt(0.0588))
         check_property_default(regulator, double, parse_double, 1.0)
         check_property_default(Ncbeta, double, parse_double, (11.0 * Nc - 2.0 * Nf) / 12.0)
-        m_cpl = new LORunningCoupling(lambdaQCD, Ncbeta, regulator);
+        CouplingScale scale_scheme = KT;
+        if (coupling_type == "running" || coupling_type == "running kT") {
+            scale_scheme = KT;
+        }
+        else if (coupling_type == "running pT") {
+            scale_scheme = PT;
+        }
+        m_cpl = new LORunningCoupling(lambdaQCD, Ncbeta, regulator, scale_scheme);
     }
     else {
         throw InvalidPropertyValueException<string>("coupling_type", coupling_type);

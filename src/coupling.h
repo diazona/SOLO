@@ -24,36 +24,42 @@
 #include <ostream>
 #include <string>
 
+// declared in integration/integrationcontext.h
+class IntegrationContext;
+
+typedef enum {KT, PT, Q1, Q2, Q3, KQ1, KQ2, KQ3} CouplingScale;
+
 class Coupling {
 public:
     Coupling() {}
     virtual ~Coupling() {}
-    virtual double alphas(double kT2) = 0;
-    virtual const char* name() = 0;
+    virtual double alphas(const IntegrationContext& ictx) const = 0;
+    virtual const std::string& name() const = 0;
 };
 
 class FixedCoupling : public Coupling {
 private:
-    double value;
+    const double value;
     std::string _name;
 public:
-    FixedCoupling(double alphas);
-    double alphas(double kT2);
-    const char* name();
+    FixedCoupling(const double alphas);
+    double alphas(const IntegrationContext& ictx) const;
+    const std::string& name() const;
 };
 
 class LORunningCoupling : public Coupling {
 private:
-    double log_LambdaQCD;
-    double coefficient;
-    double regulator; // position of the Landau pole
+    const double log_LambdaQCD;
+    const double coefficient;
+    const double regulator; // position of the Landau pole
+    const CouplingScale m_scale_scheme;
     std::string _name;
 public:
-    LORunningCoupling(double LambdaQCD, double Ncbeta, double regulator);
-    double alphas(double kT2);
-    const char* name();
+    LORunningCoupling(const double LambdaQCD, const double Ncbeta, const double regulator, const CouplingScale scale_scheme);
+    double alphas(const IntegrationContext& ictx) const;
+    const std::string& name() const;
 };
 
-std::ostream& operator<<(std::ostream& out, Coupling& cpl);
+std::ostream& operator<<(std::ostream& out, const Coupling& cpl);
 
 #endif // _COUPLING_H_
