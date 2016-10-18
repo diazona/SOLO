@@ -515,6 +515,7 @@ void ContextCollection::create_contexts() {
     check_property_default( css_r2_max, double, parse_double, 0) // 0 is a dummy value for when the regularization is not being used
     check_property_default( resummation_constant, double, parse_double, 1)
     check_property_default( xif, double, parse_double, 0)
+    check_property_default( X0ev, double, parse_double, 1)
     check_property_default( exact_kinematics, bool, parse_boolean, false)
 
     // Adapted from the GSL source code - basically this reimplements gsl_rng_env_setup
@@ -638,6 +639,7 @@ void ContextCollection::create_contexts() {
                       m_gdist, m_cpl, m_fs, _c0r_optimization, css_r_regularization, css_r2_max,
                       resummation_constant,
                       xif,
+                      X0ev,
                       exact_kinematics,
                       projectile, hadron,
                       integration_strategy,

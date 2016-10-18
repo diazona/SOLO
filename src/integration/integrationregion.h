@@ -211,19 +211,26 @@ private:
 
 /**
  * An integration subregion that integrates over z from tauhat to 1
- * and xi from tau/z to 1 - pT/(z*sqs)*exp(-y).
+ * and xi from tau/z to 1 - pT/(z*sqs)*exp(-y), with an optional scaling
+ * that sets the upper limit to 1 - pT/(z*sqs)*exp(-y)/X0ev. The scale
+ * `X0ev` is taken from the ::Context.
  */
 class NLOClippedKinematicsIntegrationRegion : public CoreIntegrationRegion {
     // implementation note: this could perhaps be absorbed
     // into NLOKinematicsIntegrationRegion
     // with a few appropriate constructor parameters
 public:
+    NLOClippedKinematicsIntegrationRegion(const bool lower_zero = false, const bool enable_ximax_scaling = false);
     virtual void fill_min(const Context& ctx, const bool xi_preintegrated_term, double* min) const;
     virtual void fill_max(const Context& ctx, const bool xi_preintegrated_term, double* max) const;
     virtual double jacobian(const IntegrationContext& ictx, const bool xi_preintegrated_term) const;
     virtual void update(IntegrationContext& ictx, const bool xi_preintegrated_term, const double* values) const;
     virtual size_t dimensions(const bool xi_preintegrated_term) const;
     virtual double effective_xi_min(const IntegrationContext& ictx) const;
+
+private:
+    const bool m_lower_zero;
+    const bool m_ximax_scaling;
 };
 
 /**

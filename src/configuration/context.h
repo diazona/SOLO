@@ -220,8 +220,17 @@ public:
 
     /**
      * The rapidity factorization scale xi_f from Ducloue/Lappi/Zhu,
-     * DOI 10.1103/PhysRevD.93.114016 */
+     * DOI 10.1103/PhysRevD.93.114016
+     */
     double xif;
+
+    /**
+     * The rapidity evolution separation scale X_0 from
+     * Iancu/Mueller/Triantafyllopoulos, arXiv:1608.05293 equation (3.13)
+     * I don't name this `X0` to help distinguish it from `x0`,
+     * the saturation scale parameter.
+     */
+    double X0ev;
 
     /** Whether to use exact (or approximate) kinematic expressions */
     bool exact_kinematics;

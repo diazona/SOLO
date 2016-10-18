@@ -263,10 +263,15 @@ double NLOKinematicsIntegrationRegion::effective_xi_min(const IntegrationContext
 }
 
 
+NLOClippedKinematicsIntegrationRegion::NLOClippedKinematicsIntegrationRegion(const bool lower_zero, const bool enable_ximax_scaling) :
+  m_lower_zero(lower_zero),
+  m_ximax_scaling(enable_ximax_scaling) {
+}
+
 void NLOClippedKinematicsIntegrationRegion::fill_min(const Context& ctx, const bool xi_preintegrated_term, double* min) const {
     min[0] = ctx.tauhat;
     if (!xi_preintegrated_term) {
-        min[1] = ctx.tau;
+        min[1] = m_lower_zero ? 0 : ctx.tau;
     }
 }
 
@@ -277,7 +282,7 @@ void NLOClippedKinematicsIntegrationRegion::fill_max(const Context& ctx, const b
     }
 }
 
-static inline double xahat(const IntegrationContext& ictx) {
+static inline double xahat(const IntegrationContext& ictx, const bool enable_ximax_scaling) {
     /* We have to use sqrt(pT2) / z instead of just using kT because this
      * function will be called from update(), which is called before
      * most of the values in the IntegrationContext are updated, and in
@@ -289,18 +294,35 @@ static inline double xahat(const IntegrationContext& ictx) {
      * but that's basically a coincidence. It serves a different purpose
      * here.
      */
-    return sqrt(ictx.ctx.pT2) / (ictx.z * ictx.ctx.sqs) * exp(-ictx.ctx.Y);
+    return sqrt(ictx.ctx.pT2) / (ictx.z * ictx.ctx.sqs) * exp(-ictx.ctx.Y) / (enable_ximax_scaling ? ictx.ctx.X0ev : 1);
 }
 
 double NLOClippedKinematicsIntegrationRegion::jacobian(const IntegrationContext& ictx, const bool xi_preintegrated_term) const {
-    double jacobian = xi_preintegrated_term ? 1 : (1 - xahat(ictx) - effective_xi_min(ictx)) / (1 - ictx.ctx.tau);
+    double jacobian;
+    if (xi_preintegrated_term) {
+        jacobian = 1;
+    }
+    else if (m_lower_zero) {
+        jacobian = (1 - xahat(ictx, m_ximax_scaling) - effective_xi_min(ictx));
+    }
+    else {
+        jacobian = (1 - xahat(ictx, m_ximax_scaling) - effective_xi_min(ictx)) / (1 - ictx.ctx.tau);
+    }
     checkfinite(jacobian);
     return jacobian;
 }
 
 void NLOClippedKinematicsIntegrationRegion::update(IntegrationContext& ictx, const bool xi_preintegrated_term, const double* values) const {
     ictx.z = values[0];
-    ictx.xi = xi_preintegrated_term ? 1 : linear_transform(values[1], ictx.ctx.tau, 1, effective_xi_min(ictx), 1 - xahat(ictx));
+    if (xi_preintegrated_term) {
+        ictx.xi = 1;
+    }
+    else if (m_lower_zero) {
+        ictx.xi = linear_transform(values[1], 0, 1, effective_xi_min(ictx), 1 - xahat(ictx, m_ximax_scaling));
+    }
+    else {
+        ictx.xi = linear_transform(values[1], ictx.ctx.tau, 1, effective_xi_min(ictx), 1 - xahat(ictx, m_ximax_scaling));
+    }
 }
 
 size_t NLOClippedKinematicsIntegrationRegion::dimensions(const bool xi_preintegrated_term) const {
@@ -308,7 +330,7 @@ size_t NLOClippedKinematicsIntegrationRegion::dimensions(const bool xi_preintegr
 }
 
 double NLOClippedKinematicsIntegrationRegion::effective_xi_min(const IntegrationContext& ictx) const {
-    return ictx.ctx.tau / ictx.z;
+    return m_lower_zero ? 0 : ictx.ctx.tau / ictx.z;
 }
 
 

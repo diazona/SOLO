@@ -389,6 +389,9 @@ static LOKinematicsIntegrationRegion LO;
 static NLOKinematicsIntegrationRegion NLO;
 static NLOKinematicsIntegrationRegion NLOZero(true);
 static NLOClippedKinematicsIntegrationRegion NLOClipped;
+static NLOClippedKinematicsIntegrationRegion NLOClippedZero(true);
+static NLOClippedKinematicsIntegrationRegion NLOClippedLimited(false, true);
+static NLOClippedKinematicsIntegrationRegion NLOClippedZeroLimited(true, true);
 static R1CartesianIntegrationRegion R1C;
 static R1PolarIntegrationRegion R1P;
 static R1RadialIntegrationRegion R1R;
@@ -479,6 +482,18 @@ void HardFactorParser::parse_line(const string& line) {
         }
         else if (e == "nlo clipped") {
             core = &NLOClipped;
+            order = HardFactor::NLO;
+        }
+        else if (e == "nlo clipped zero") {
+            core = &NLOClippedZero;
+            order = HardFactor::NLO;
+        }
+        else if (e == "nlo clipped limited") {
+            core = &NLOClippedLimited;
+            order = HardFactor::NLO;
+        }
+        else if (e == "nlo clipped zero limited") {
+            core = &NLOClippedZeroLimited;
             order = HardFactor::NLO;
         }
         else {
