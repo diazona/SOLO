@@ -19,6 +19,7 @@ ProgramConfiguration::ProgramConfiguration(const int argc, char const * const * 
     m_separate(false),
     m_print_config(true),
     m_print_integration_progress(true),
+    m_print_hardfactor_definitions(true),
     m_conf(canonicalize),
     m_xg_min(0),
     m_xg_max(1)
@@ -93,6 +94,22 @@ ProgramConfiguration::ProgramConfiguration(const int argc, char const * const * 
         }
         else if (a == "--no-print-integration-progress") {
             m_print_integration_progress = false;
+        }
+        else if (a == "--print-hardfactor-definitions") {
+            m_print_hardfactor_definitions = true;
+        }
+        else if (a == "--no-print-hardfactor-definitions") {
+            m_print_hardfactor_definitions = false;
+        }
+        else if (a == "--verbose") {
+            m_print_config = true;
+            m_print_integration_progress = true;
+            m_print_hardfactor_definitions = true;
+        }
+        else if (a == "--quiet") {
+            m_print_config = false;
+            m_print_integration_progress = false;
+            m_print_hardfactor_definitions = false;
         }
         else if (a == "--minmax") {
             m_minmax = true;

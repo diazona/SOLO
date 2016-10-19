@@ -156,14 +156,16 @@ int run(int argc, char** argv) {
         vector<string> hfdefs = rc.cc[0].hardfactor_definitions;
         for (vector<string>::const_iterator it = hfdefs.begin(); it != hfdefs.end(); it++) {
             string hf_definition_filename = *it;
-            ifstream hfdefs(hf_definition_filename.c_str());
-            if (!hfdefs) {
-                ostringstream oss;
-                oss << "Error opening hard factor definition file: " << hf_definition_filename;
-                throw ios_base::failure(oss.str());
+            if (pc.print_hardfactor_definitions()) {
+                ifstream hfdefs(hf_definition_filename.c_str());
+                if (!hfdefs) {
+                    ostringstream oss;
+                    oss << "Error opening hard factor definition file: " << hf_definition_filename;
+                    throw ios_base::failure(oss.str());
+                }
+                cerr << "BEGIN hf definition file " << hf_definition_filename << endl << hfdefs.rdbuf() << "END hf definition file " << hf_definition_filename << endl;
+                hfdefs.close();
             }
-            cerr << "BEGIN hf definition file " << hf_definition_filename << endl << hfdefs.rdbuf() << "END hf definition file " << hf_definition_filename << endl;
-            hfdefs.close();
             if (pc.print_config()) {
                 cout << "# hard factor definition file hash: " << hf_definition_filename << ": " << sha1_file(hf_definition_filename) << endl;
             }

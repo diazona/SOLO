@@ -19,6 +19,8 @@ public:
     bool print_config() const { return m_print_config; }
     /** Indicates whether the --print-integration-progress or --no-print-integration-progress option was specified */
     bool print_integration_progress() const { return m_print_integration_progress; }
+    /** Indicates whether the --print-hardfactor-definitions or --no-print-hardfactor-definitions option was specified */
+    bool print_hardfactor_definitions() const { return m_print_hardfactor_definitions; }
     /** Indicates whether the --trace option was specified */
     bool trace() const { return m_trace; }
     /** Indicates whether the --trace-gdist option was specified */
@@ -37,6 +39,8 @@ private:
     bool m_print_config;
     /** Indicates whether the --print-integration-progress or --no-print-integration-progress option was specified */
     bool m_print_integration_progress;
+    /** Indicates whether the --print-hardfactor-definitions or --no-print-hardfactor-definitions option was specified */
+    bool m_print_hardfactor_definitions;
     /** Indicates whether the --trace option was specified */
     bool m_trace;
     /** Indicates whether the --trace-gdist option was specified */
