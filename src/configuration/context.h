@@ -137,8 +137,7 @@ string canonicalize(const string& i_key);
  *
  *     Context c = { x0, mass_number, ...,
  *       Context::compute_Q02x0lambda(...),
- *       Context::compute_tau(...),
- *       Context::compute_tauhat(...),
+ *       Context::compute_tau(...)
  *     };
  *
  * After creating a `Context`, call check_kinematics() on it to make sure the
@@ -271,17 +270,12 @@ public:
     double Q02x0lambda;
     /** The precomputed value of tau = pT / sqs * exp(Y) */
     double tau;
-    /** The precomputed value of tauhat = pT / sqs * (exp(Y) + exp(-Y)) */
-    double tauhat;
 
     static inline double compute_Q02x0lambda(double centrality, double mass_number, double x0, double lambda) {
         return centrality * pow(mass_number, 1.0/3.0) * pow(x0, lambda);
     }
     static inline double compute_tau(double pT, double sqs, double Y) {
         return pT / sqs * exp(Y);
-    }
-    static inline double compute_tauhat(double pT, double sqs, double Y) {
-        return pT / sqs * (exp(Y) + exp(-Y));
     }
 
     void check_kinematics() const;

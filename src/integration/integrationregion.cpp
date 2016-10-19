@@ -269,7 +269,8 @@ NLOClippedKinematicsIntegrationRegion::NLOClippedKinematicsIntegrationRegion(con
 }
 
 void NLOClippedKinematicsIntegrationRegion::fill_min(const Context& ctx, const bool xi_preintegrated_term, double* min) const {
-    min[0] = ctx.tauhat;
+    // This is the lowest value of z that prevents the integration range of xi from being empty
+    min[0] = ctx.tau * (1 + exp(-2 * ctx.Y) / (m_ximax_scaling ? ctx.X0ev : 1));
     if (!xi_preintegrated_term) {
         min[1] = m_lower_zero ? 0 : ctx.tau;
     }
@@ -294,7 +295,10 @@ static inline double xahat(const IntegrationContext& ictx, const bool enable_xim
      * but that's basically a coincidence. It serves a different purpose
      * here.
      */
-    return sqrt(ictx.ctx.pT2) / (ictx.z * ictx.ctx.sqs) * exp(-ictx.ctx.Y) / (enable_ximax_scaling ? ictx.ctx.X0ev : 1);
+    double x = sqrt(ictx.ctx.pT2) / (ictx.z * ictx.ctx.sqs) * exp(-ictx.ctx.Y) / (enable_ximax_scaling ? ictx.ctx.X0ev : 1);
+    checkfinite(x);
+    assert(x >= 0 && x <= 1);
+    return x;
 }
 
 double NLOClippedKinematicsIntegrationRegion::jacobian(const IntegrationContext& ictx, const bool xi_preintegrated_term) const {
@@ -314,6 +318,7 @@ double NLOClippedKinematicsIntegrationRegion::jacobian(const IntegrationContext&
 
 void NLOClippedKinematicsIntegrationRegion::update(IntegrationContext& ictx, const bool xi_preintegrated_term, const double* values) const {
     ictx.z = values[0];
+    checkfinite(ictx.z);
     if (xi_preintegrated_term) {
         ictx.xi = 1;
     }
@@ -323,6 +328,8 @@ void NLOClippedKinematicsIntegrationRegion::update(IntegrationContext& ictx, con
     else {
         ictx.xi = linear_transform(values[1], ictx.ctx.tau, 1, effective_xi_min(ictx), 1 - xahat(ictx, m_ximax_scaling));
     }
+    checkfinite(ictx.xi);
+    assert(ictx.xi >= 0 && ictx.xi <= 1);
 }
 
 size_t NLOClippedKinematicsIntegrationRegion::dimensions(const bool xi_preintegrated_term) const {
@@ -455,9 +462,11 @@ double ExactKinematicIntegrationRegion::limit(const IntegrationContext& ictx) co
 #ifndef NDEBUG
     if (xi != 1) {
         double lim2 = sqrt((xp * ictx.ctx.sqs * ictx.ctx.sqs - kT2) * (1 - xi) / xi);
-        assert(gsl_fcmp(lim1, lim2, 1e-10) == 0);
+        checkfinite(lim2);
+        assert(gsl_fcmp(lim1, lim2, 1e-13) == 0);
     }
 #endif
+    checkfinite(lim1);
     return lim1;
 }
 

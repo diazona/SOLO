@@ -210,10 +210,11 @@ private:
 };
 
 /**
- * An integration subregion that integrates over z from tauhat to 1
- * and xi from tau/z to 1 - pT/(z*sqs)*exp(-y), with an optional scaling
- * that sets the upper limit to 1 - pT/(z*sqs)*exp(-y)/X0ev. The scale
- * `X0ev` is taken from the ::Context.
+ * An integration subregion that integrates over `z` up to 1
+ * and `xi` from `tau/z` to `1 - pT/(z*sqs)*exp(-y)`, with an optional scaling
+ * that sets the upper limit to `1 - pT/(z*sqs)*exp(-y)/X0ev`. The scale
+ * `X0ev` is taken from the ::Context. The lower limit of `z` is computed
+ * from the limit on `xi`, such that the integration region is never empty.
  */
 class NLOClippedKinematicsIntegrationRegion : public CoreIntegrationRegion {
     // implementation note: this could perhaps be absorbed

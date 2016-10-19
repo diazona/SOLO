@@ -656,8 +656,7 @@ void ContextCollection::create_contexts() {
                       vegas_initial_iterations, vegas_incremental_iterations, quasi_iterations,
                       inf, cutoff,
                       Context::compute_Q02x0lambda(centrality, mass_number, x0, lambda),
-                      Context::compute_tau(pT, sqs, Y),
-                      Context::compute_tauhat(pT, sqs, Y)
+                      Context::compute_tau(pT, sqs, Y)
                     };
                     c.check_kinematics();
                     push_back(c);
@@ -780,14 +779,8 @@ void Context::check_kinematics() const {
     if (compute_tau(sqrt(pT2), sqs, Y) != tau) {
         throw InvalidPropertyValueException<double>("tau", tau, "value provided in initializer does not match the one calculated from other context parameters");
     }
-    if (compute_tauhat(sqrt(pT2), sqs, Y) != tauhat) {
-        throw InvalidPropertyValueException<double>("tauhat", tauhat, "value provided in initializer does not match the one calculated from other context parameters");
-    }
     if (tau > 1) {
         throw InvalidKinematicsException("τ > 1: empty phase space");
-    }
-    if (tauhat > 1) {
-        throw InvalidKinematicsException("\\hat{τ} > 1: empty phase space");
     }
     if (css_r_regularization) {
         assert(css_r2_max > 0);

@@ -29,5 +29,4 @@ process(inf)
 process(cutoff)
 process(Q02x0lambda)
 process(tau)
-process(tauhat)
 #endif
