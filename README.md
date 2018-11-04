@@ -566,9 +566,7 @@ Instructions for the build system, CMake
 DSS fragmentation function data
 
 `pinlo_extended.dat`  
-DSS fragmentation function data with extrapolation to lower z (the
-significance of this file will be described in an upcoming long paper
-about SOLO)
+DSS fragmentation function data with extrapolation to lower z
 
 `mstw2008nlo.00.dat`  
 MSTW PDF data
