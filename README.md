@@ -12,6 +12,14 @@ arXiv:1307.4057 [hep-ph]
 Please cite this paper if you use the results of the code in a publication.
 
 
+Maintenance Status
+==================================================
+
+SOLO is written and maintained by me, David Zaslavsky. I no longer work
+in academia, so the code is not actively being developed, but I'm happy
+to answer questions about the program to the best of my ability. You
+can email me with questions about SOLO at david.zaslavsky@mailaps.org.
+
 Quick start
 ==================================================
 
