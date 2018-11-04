@@ -11,6 +11,8 @@ arXiv:1307.4057 [hep-ph]
 
 Please cite this paper if you use the results of the code in a publication.
 
+Official documentation for the program is kept at
+https://diazona.github.io/SOLO/.
 
 Maintenance Status
 ==================================================
@@ -20,62 +22,26 @@ in academia, so the code is not actively being developed, but I'm happy
 to answer questions about the program to the best of my ability. You
 can email me with questions about SOLO at david.zaslavsky@mailaps.org.
 
-Quick start
+Installation
 ==================================================
 
-## With git and CMake
-
 The quickest and intended way to compile the code is as follows: first, ensure
-that git, GSL, MuParser, and CMake are properly installed (as well as a C++
-compiler; GCC is recommended). Then run the following commands:
+that [git](https://git-scm.com/), [GSL](https://www.gnu.org/software/gsl/),
+[MuParser](https://github.com/beltoforion/muparser), and
+[CMake](https://cmake.org/) are properly installed (as well as a C++ compiler
+such as [GCC](https://www.gnu.org/software/gcc/)). Then, in a shell, run
+the following commands:
 
     git clone https://github.com/diazona/SOLO.git
     cd SOLO
     git submodule init
     git submodule update
 
-Skip to the section entitled "Additional downloads and compilation" below.
-
-## Without git and CMake
-
-If you are on a computer without git or CMake available, you can download the
-source code manually. Go to
-
-    https://github.com/diazona/SOLO/releases
-
-Click on the link to download the latest release as either a ZIP or GZIP TAR
-file. When you extract it, you will see (among other things) empty directories
-named `gsl-muparser`, `interp2d`, `quasimontecarlo`. These will need to be
-filled with the source files for the `gsl-muparser`, `interp2d`, and 
-quasimontecarlo` libraries respectively.
-
-To obtain `interp2d`, go to
-
-    https://github.com/diazona/interp2d/releases
-
-and download the latest release. The archive contains a folder named something
-like `interp2d-0.1` which contains the source files for the library; move all
-those files into the `interp2d` folder from the extracted SOLO download.
-Similarly, to obtain quasimontecarlo, go to
-
-    https://github.com/diazona/quasimontecarlo/releases
-
-and download the latest release, then move the files that are in the directory
-`quasimontecarlo-0.1` or similar to the `quasimontecarlo` folder from the SOLO
-download. And the same for `gsl-muparser`: go to
-
-    https://github.com/diazona/gsl-muparser/releases
-
-and download the latest release, then move the files from `gsl-muparser-0.1` or
-similar to `gsl-muparser` in SOLO.
-
-## Additional downloads and compilation
-
-At this point you will need to manually download the MSTW PDF interface from
-http://mstwpdf.hepforge.org/code/code.html. Extract the files `mstwpdf.cc` and
-`mstwpdf.h` from the tarball and place them in SOLO's `src/` directory. (We are
-not authorized to distribute the MSTW PDF interface as part of SOLO, which is
-why this has to be done manually.) Then, from the directory `SOLO/` (the parent
+Then, download the MSTW PDF code from http://mstwpdf.hepforge.org/code/code.html.
+Extract the files `mstwpdf.cc` and `mstwpdf.h` from the tarball and place
+them in SOLO's `src/` directory. (We are not authorized to distribute
+the MSTW PDF interface as part of SOLO, which is why this has to be done
+manually.) Then, from the directory `SOLO/` (the parent
 directory of `src/`), run these commands:
     
     mkdir build
@@ -83,7 +49,13 @@ directory of `src/`), run these commands:
     cmake .. && make
 
 At the end of this you should have a `build/src/` directory containing the
-programs.
+program `oneloopcalc` and other programs.
+
+Other ways of installing the program (e.g. without git, or without Cmake)
+are described in [the documentation](https://diazona.github.io/SOLO/).
+
+Running the program
+==================================================
 
 ## Additional files
 
@@ -109,9 +81,7 @@ archive at the MSTW PDF site http://mstwpdf.hepforge.org/code/code.html.
 The filename is `PINLO.DAT`. Unfortunately we (authors of SOLO) are not aware of
 a website where this file is directly available.
 
-
-Running
-==================================================
+## Invocation
 
 The program is invoked as
 
@@ -199,7 +169,7 @@ where the <options> can include any number of the following, in any order:
         key2=value2
         
     and so on. Keys are case-insensitive. The canonical list of keys which
-    are used is the code in context.cpp. Here's a mostly-complete list:
+    are used is the code in `context.cpp`. Here's a mostly-complete list:
     
     - `A` (no default)
 
