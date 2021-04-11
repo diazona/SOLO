@@ -20,7 +20,8 @@ Maintenance Status
 SOLO is written and maintained by me, David Zaslavsky. I no longer work
 in academia, so the code is not actively being developed, but I'm happy
 to answer questions about the program to the best of my ability. You
-can email me with questions about SOLO at david.zaslavsky@mailaps.org.
+can email me with questions about SOLO at diazona@ellipsix.net or
+the email address listed in my GitHub profile, if different.
 
 Installation
 ==================================================
